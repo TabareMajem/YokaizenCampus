@@ -1,0 +1,5 @@
+{
+  "name": "Yokaizen Campus: Post-Code Orchestrator",
+  "description": "A futuristic educational interface where students command AI agents to solve complex system problems instead of writing code. Features a node-based canvas, AI agent orchestration, and output auditing.",
+  "requestFramePermissions": []
+}

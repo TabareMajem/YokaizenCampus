@@ -1,0 +1,104 @@
+# ============================================
+# Yokaizen Campus Backend - .gitignore
+# ============================================
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+build/
+*.js.map
+
+# TypeScript
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Prisma
+prisma/migrations/**/migration_lock.toml
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+*.tmp
+
+# Upload directories
+uploads/
+!uploads/.gitkeep
+
+# Cache
+.cache/
+.npm/
+.eslintcache
+
+# Debug
+*.pem
+
+# Stripe CLI
+.stripe/
+
+# Docker volumes (if local)
+data/
+postgres_data/
+redis_data/
+
+# Lock files (uncomment if you want to ignore)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Sentry
+.sentryclirc
+
+# Generated documentation
+docs/
+api-docs/
+
+# Certificates
+*.crt
+*.key
+*.pem
+
+# Local development
+.local/

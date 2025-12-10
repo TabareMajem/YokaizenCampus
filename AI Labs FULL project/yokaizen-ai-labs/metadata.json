@@ -1,0 +1,8 @@
+{
+  "name": "Yokaizen AI Labs",
+  "description": "A gamified, mobile-first micro-learning platform for AI literacy. Master Prompting, Ethics, and Systems Thinking in 5-minute bursts.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera"
+  ]
+}

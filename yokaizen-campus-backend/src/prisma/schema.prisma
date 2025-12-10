@@ -1,0 +1,480 @@
+// Yokaizen Campus - Database Schema
+// The Central Cortex Data Layer
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== ENUMS ====================
+
+enum UserRole {
+  STUDENT
+  TEACHER
+  ADMIN
+  PARENT
+}
+
+enum SubscriptionTier {
+  FREE
+  PRO
+  NGO_GRANT
+}
+
+enum PhilosophyMode {
+  FINLAND  // Exploratory, minimal structure
+  KOREA    // Intense, competitive, structured
+  JAPAN    // Balance, craftsman mindset
+}
+
+enum GraphStatus {
+  FLOW      // Student is in the zone
+  STUCK     // Student needs help
+  IDLE      // Not actively working
+  COMPLETED // Session completed
+}
+
+enum GrantStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum ChaosEventType {
+  SOLAR_FLARE   // Disables SCOUT nodes
+  LOGIC_ROT     // Reduces ARCHITECT confidence
+  DDOS          // Increases latency
+  MEMORY_LEAK   // Slow performance
+  QUANTUM_NOISE // Random glitches
+}
+
+// ==================== CORE MODELS ====================
+
+model User {
+  id                String            @id @default(uuid())
+  email             String            @unique
+  passwordHash      String            @map("password_hash")
+  fullName          String            @map("full_name")
+  role              UserRole          @default(STUDENT)
+  avatarUrl         String?           @map("avatar_url")
+  isActive          Boolean           @default(true) @map("is_active")
+  
+  // Gamification
+  level             Int               @default(1)
+  xp                Int               @default(0)
+  credits           Int               @default(100) // "Fuel"
+  
+  // Subscription
+  subscriptionTier  SubscriptionTier  @default(FREE) @map("subscription_tier")
+  stripeCustomerId  String?           @map("stripe_customer_id")
+  stripeSubscriptionId String?        @map("stripe_subscription_id")
+  
+  // Philosophy preference
+  philosophyMode    PhilosophyMode    @default(JAPAN) @map("philosophy_mode")
+  
+  // Relations
+  school            School?           @relation(fields: [schoolId], references: [id])
+  schoolId          String?           @map("school_id")
+  
+  // Teaching relations
+  classroomsAsTeacher  Classroom[]       @relation("TeacherClassrooms")
+  classroomsAsStudent  ClassroomStudent[]
+  
+  // Graph sessions
+  graphSessions     GraphSession[]
+  
+  // Audit trail
+  auditLogs         AuditLog[]
+  
+  // Career path
+  careerPath        CareerPath?
+  
+  // Parent relations
+  parentOf          ParentChild[]     @relation("ParentRelation")
+  childOf           ParentChild[]     @relation("ChildRelation")
+  
+  // AI Usage
+  aiUsageLogs       AIUsageLog[]
+  
+  // AR Scans
+  arScans           ARScan[]
+  
+  // Timestamps
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+  lastLoginAt       DateTime?         @map("last_login_at")
+  lastActiveAt      DateTime?         @map("last_active_at")
+  
+  @@map("users")
+}
+
+model School {
+  id                String            @id @default(uuid())
+  name              String
+  domain            String?           @unique // For SSO
+  
+  // Subscription
+  subscriptionTier  SubscriptionTier  @default(FREE) @map("subscription_tier")
+  
+  // Limits
+  maxStudents       Int               @default(100) @map("max_students")
+  maxTeachers       Int               @default(10) @map("max_teachers")
+  
+  // API Keys for school-managed AI
+  geminiOrgKey      String?           @map("gemini_org_key")
+  openaiOrgKey      String?           @map("openai_org_key")
+  
+  // Credit pool for students
+  credits           Int               @default(10000)
+  
+  // Settings
+  anonymizeStudents Boolean           @default(false) @map("anonymize_students")
+  contentFilter     Boolean           @default(true) @map("content_filter")
+  
+  // Relations
+  users             User[]
+  classrooms        Classroom[]
+  
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+  
+  @@map("schools")
+}
+
+model Classroom {
+  id                String            @id @default(uuid())
+  name              String
+  accessCode        String            @unique @map("access_code") @db.VarChar(6)
+  isActive          Boolean           @default(true) @map("is_active")
+  
+  // Settings
+  maxStudents       Int               @default(30) @map("max_students")
+  anonymizeStudents Boolean           @default(true) @map("anonymize_students")
+  
+  // Philosophy override for the class
+  currentPhilosophy PhilosophyMode    @default(JAPAN) @map("current_philosophy")
+  
+  // Relations
+  teacher           User              @relation("TeacherClassrooms", fields: [teacherId], references: [id])
+  teacherId         String            @map("teacher_id")
+  
+  school            School?           @relation(fields: [schoolId], references: [id])
+  schoolId          String?           @map("school_id")
+  
+  students          ClassroomStudent[]
+  graphSessions     GraphSession[]
+  chaosEvents       ChaosEvent[]
+  broadcasts        Broadcast[]
+  
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+  
+  @@map("classrooms")
+}
+
+model ClassroomStudent {
+  id                String            @id @default(uuid())
+  
+  classroom         Classroom         @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  classroomId       String            @map("classroom_id")
+  
+  student           User              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId         String            @map("student_id")
+  
+  // Anonymized identifier for GDPR/COPPA
+  anonymousId       String            @default(uuid()) @map("anonymous_id")
+  
+  joinedAt          DateTime          @default(now()) @map("joined_at")
+  
+  @@unique([classroomId, studentId])
+  @@map("classroom_students")
+}
+
+model GraphSession {
+  id                String            @id @default(uuid())
+  
+  // Relations
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            String            @map("user_id")
+  
+  classroom         Classroom?        @relation(fields: [classroomId], references: [id], onDelete: SetNull)
+  classroomId       String?           @map("classroom_id")
+  
+  // The Canvas State (JSONB)
+  nodes             Json              @default("[]") // Array of AgentNodes
+  connections       Json              @default("[]") // Array of edges
+  
+  // Status for teacher dashboard
+  status            GraphStatus       @default(IDLE)
+  sentimentScore    Int               @default(50) @map("sentiment_score") // 0-100
+  
+  // Metadata
+  title             String?
+  command           String?           // Original "Antigravity" command
+  
+  // Timestamps
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+  
+  @@map("graph_sessions")
+}
+
+model AuditLog {
+  id                String            @id @default(uuid())
+  
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            String            @map("user_id")
+  
+  actionType        String            @map("action_type")
+  details           String?           @db.Text
+  
+  // Snapshot of graph stats at this moment
+  meta              Json?             // { nodeCount, connectionCount, xpGained, etc. }
+  
+  timestamp         DateTime          @default(now())
+  
+  @@index([userId, timestamp])
+  @@map("audit_logs")
+}
+
+model CareerPath {
+  id                String            @id @default(uuid())
+  
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            String            @unique @map("user_id")
+  
+  // Unlocked nodes in the skill tree
+  unlockedNodes     String[]          @default(["SCOUT"]) @map("unlocked_nodes")
+  
+  // Stats (RPG-style)
+  stats             Json              @default("{\"orchestration\": 10, \"resilience\": 10, \"creativity\": 10, \"logic\": 10, \"ethics\": 10}")
+  
+  // Achievements
+  achievements      String[]          @default([])
+  
+  // Total chaos events survived
+  chaosEventsSurvived Int             @default(0) @map("chaos_events_survived")
+  
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+  
+  @@map("career_paths")
+}
+
+model ParentChild {
+  id                String            @id @default(uuid())
+  
+  parent            User              @relation("ParentRelation", fields: [parentId], references: [id], onDelete: Cascade)
+  parentId          String            @map("parent_id")
+  
+  child             User              @relation("ChildRelation", fields: [childId], references: [id], onDelete: Cascade)
+  childId           String            @map("child_id")
+  
+  // Relationship type
+  relationshipType  String            @default("PARENT") @map("relationship_type")
+  
+  // Verification
+  isVerified        Boolean           @default(false) @map("is_verified")
+  verificationToken String?           @map("verification_token")
+  verifiedAt        DateTime?         @map("verified_at")
+  
+  createdAt         DateTime          @default(now()) @map("created_at")
+  
+  @@unique([parentId, childId])
+  @@map("parent_children")
+}
+
+// ==================== NGO/GRANT MODELS ====================
+
+model GrantApplication {
+  id                String            @id @default(uuid())
+  
+  // Applicant info (optional - can be applied without account)
+  applicantId       String?           @map("applicant_id")
+  
+  orgName           String            @map("org_name")
+  orgType           String            @default("NGO") @map("org_type")
+  contactEmail      String            @map("contact_email")
+  contactName       String            @map("contact_name")
+  contactPhone      String?           @map("contact_phone")
+  region            String
+  country           String            @default("Unknown")
+  website           String?
+  taxId             String?           @map("tax_id")
+  
+  // Application details
+  description       String            @db.Text
+  studentCount      Int               @map("student_count")
+  useCase           String            @db.Text @map("use_case")
+  additionalInfo    String?           @db.Text @map("additional_info")
+  
+  status            GrantStatus       @default(PENDING)
+  reviewNotes       String?           @map("review_notes") @db.Text
+  reviewedBy        String?           @map("reviewed_by")
+  
+  // Approved grant details
+  creditAllocation  Int?              @map("credit_allocation")
+  creditsUsed       Int               @default(0) @map("credits_used")
+  validUntil        DateTime?         @map("valid_until")
+  approvedAt        DateTime?         @map("approved_at")
+  
+  // Documents and messages stored as JSON
+  documents         Json              @default("[]")
+  messages          Json              @default("[]")
+  
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+  
+  @@map("grant_applications")
+}
+
+// ==================== GAMIFICATION MODELS ====================
+
+model ARMarker {
+  id                String            @id @default(uuid())
+  
+  codeContent       String            @unique @map("code_content") // QR code string
+  unlocksAgent      String            @map("unlocks_agent") // Agent node type (can be empty for XP-only rewards)
+  loreText          String            @db.Text @map("lore_text")
+  
+  // Rewards
+  xpReward          Int               @default(100) @map("xp_reward")
+  
+  // Settings
+  isActive          Boolean           @default(true) @map("is_active")
+  isOneTime         Boolean           @default(false) @map("is_one_time")
+  
+  // Validity period
+  validFrom         DateTime?         @map("valid_from")
+  validUntil        DateTime?         @map("valid_until")
+  
+  // Scan limits
+  maxScans          Int?              @map("max_scans")
+  scanCount         Int               @default(0) @map("scan_count")
+  
+  // Location data (JSON)
+  locationData      String?           @map("location_data") @db.Text
+  
+  // Creator
+  createdBy         String            @map("created_by")
+  
+  // Relations
+  scans             ARScan[]
+  
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+  
+  @@map("ar_markers")
+}
+
+model ARScan {
+  id                String            @id @default(uuid())
+  
+  marker            ARMarker          @relation(fields: [markerId], references: [id], onDelete: Cascade)
+  markerId          String            @map("marker_id")
+  
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            String            @map("user_id")
+  
+  // Scan location
+  latitude          Float?
+  longitude         Float?
+  
+  // Result
+  successful        Boolean           @default(true)
+  
+  scannedAt         DateTime          @default(now()) @map("scanned_at")
+  
+  @@index([userId, markerId])
+  @@map("ar_scans")
+}
+
+model ChaosEvent {
+  id                String            @id @default(uuid())
+  
+  classroom         Classroom         @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  classroomId       String            @map("classroom_id")
+  
+  eventType         ChaosEventType    @map("event_type")
+  duration          Int               @default(60) // seconds
+  intensity         Float             @default(0.5) // 0.0 - 1.0
+  
+  triggeredAt       DateTime          @default(now()) @map("triggered_at")
+  triggeredBy       String            @map("triggered_by") // Teacher user ID
+  
+  @@map("chaos_events")
+}
+
+model Broadcast {
+  id                String            @id @default(uuid())
+  
+  classroom         Classroom         @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  classroomId       String            @map("classroom_id")
+  
+  teacherId         String            @map("teacher_id")
+  
+  message           String            @db.Text
+  type              String            @default("INFO") // INFO, WARNING, HINT, CELEBRATION
+  
+  sentAt            DateTime          @default(now()) @map("sent_at")
+  
+  @@map("broadcasts")
+}
+
+// ==================== AI USAGE TRACKING ====================
+
+model AIUsageLog {
+  id                String            @id @default(uuid())
+  
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            String            @map("user_id")
+  schoolId          String?           @map("school_id")
+  
+  // Request details
+  model             String            // e.g., "deepseek-v3", "gemini-1.5-pro"
+  provider          String            // e.g., "openrouter", "google", "anthropic"
+  agentType         String?           @map("agent_type")
+  
+  // Token usage
+  tokensUsed        Int               @default(0) @map("tokens_used")
+  inputTokens       Int?              @map("input_tokens")
+  outputTokens      Int?              @map("output_tokens")
+  
+  // Cost tracking
+  cost              Float             @default(0)
+  creditsDeducted   Int               @default(0) @map("credits_deducted")
+  
+  // Request type
+  requestType       String            @map("request_type") // command, simulate, audit, chat
+  
+  // Response info
+  success           Boolean           @default(true)
+  errorMessage      String?           @map("error_message")
+  
+  timestamp         DateTime          @default(now())
+  
+  @@index([userId, timestamp])
+  @@index([schoolId, timestamp])
+  @@map("ai_usage_logs")
+}
+
+// ==================== REFRESH TOKENS ====================
+
+model RefreshToken {
+  id                String            @id @default(uuid())
+  
+  userId            String            @map("user_id")
+  token             String            @unique
+  
+  expiresAt         DateTime          @map("expires_at")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  
+  @@index([userId])
+  @@map("refresh_tokens")
+}

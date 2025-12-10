@@ -1,0 +1,412 @@
+﻿🎨 COMPREHENSIVE STUDIO ASSET LIST FOR AI LABS
+🎨 COMPLETE "NANO BANANAS" ASSET LIST
+Priority 0: Core Brand & System Assets
+Brand Identity Pack
+* ai-labs-logo-symbol.svg - Main brand symbol
+
+   * Prompt: "Modern AI brain icon with circuit patterns, vibrant indigo and violet gradient, rounded friendly style, geometric but organic, 'nano bananas' playful tech aesthetic, SVG vector"
+   * ai-labs-logo-wordmark.svg - Text logo
+
+      * Prompt: "AI Labs typography logo, modern sans-serif font, indigo to violet gradient, tech-friendly rounded letters, gaming platform style, SVG format"
+      * ai-labs-app-icon-1024.png - App store icon
+
+         * Prompt: "1024x1024 app icon, AI Labs brain symbol, bright gradient background (indigo to violet), rounded square with subtle shadow, premium mobile app style"
+         * splash-screen-mobile.png - Launch screen
+
+            * Prompt: "1242x2688 mobile splash screen, AI Labs logo centered, subtle animated gradient background, minimal clean design, loading indicator space"
+Core Navigation Icons (24px SVG)
+            * nav-home-outline.svg / nav-home-filled.svg
+
+               * Prompt: "Home icon, rounded house silhouette, 2px stroke weight, friendly style, outline and filled versions, SVG 24x24"
+               * nav-games-outline.svg / nav-games-filled.svg
+
+                  * Prompt: "Gaming controller icon, modern gamepad design, rounded corners, 2px stroke, playful but professional, SVG 24x24"
+                  * nav-progress-outline.svg / nav-progress-filled.svg
+
+                     * Prompt: "Progress chart icon, upward trending line with points, growth visualization, clean 2px stroke, SVG 24x24"
+                     * nav-leaderboard-outline.svg / nav-leaderboard-filled.svg
+
+                        * Prompt: "Trophy podium icon, three-tier winner's stand, celebratory style, 2px stroke weight, SVG 24x24"
+                        * nav-profile-outline.svg / nav-profile-filled.svg
+
+                           * Prompt: "User profile icon, rounded person silhouette, friendly avatar style, 2px stroke, SVG 24x24"
+Priority 1: Platform UI Assets
+Challenge Card Backgrounds
+                           * card-bg-gradient-1.webp - Primary background
+
+                              * Prompt: "Subtle diagonal gradient background, indigo to violet, very light opacity, card background style, modern tech aesthetic, 400x240 WebP"
+                              * card-bg-gradient-2.webp - Secondary background
+
+                                 * Prompt: "Soft radial gradient background, violet to amber edges, gentle glow effect, card background style, 400x240 WebP"
+                                 * card-bg-gradient-3.webp - Accent background
+
+                                    * Prompt: "Minimal mesh gradient background, multi-color blend (indigo/violet/amber), very subtle, professional, 400x240 WebP"
+Skill Track Badges (32px SVG)
+                                    * skill-prompting.svg
+
+                                       * Prompt: "Magic wand icon with sparkles, AI prompt engineering symbol, indigo color, rounded style, SVG 32x32"
+                                       * skill-ethics.svg
+
+                                          * Prompt: "Balance scales icon, ethical AI symbol, violet color, justice/fairness representation, SVG 32x32"
+                                          * skill-debugging.svg
+
+                                             * Prompt: "Bug with magnifying glass icon, debugging symbol, green color, investigation theme, SVG 32x32"
+                                             * skill-data.svg
+
+                                                * Prompt: "Database/chart icon, data analysis symbol, amber color, information visualization, SVG 32x32"
+                                                * skill-creation.svg
+
+                                                   * Prompt: "Palette/brush icon, creative AI symbol, pink color, artistic creation theme, SVG 32x32"
+                                                   * skill-meta.svg
+
+                                                      * Prompt: "Brain with gears icon, meta learning symbol, blue color, learning about learning, SVG 32x32"
+Priority 2: Game-Specific Visual Packs
+🧬 Protein Poker Pack
+                                                      * protein-poker-banner.webp - Hero image (1200x675)
+
+                                                         * Prompt: "Molecular biology lab scene, protein structures floating, DNA helix, poker cards morphing into molecules, high-tech laboratory, cinematic lighting, 1200x675 WebP"
+                                                         * protein-poker-icon.png - Game icon (256x256)
+
+                                                            * Prompt: "Protein chain spiral forming poker card shape, molecular bonds, scientific visualization meets gaming, 256x256 PNG"
+                                                            * protein-poker-bg.webp - Game background (1242x2208)
+
+                                                               * Prompt: "Laboratory environment, molecular structures floating, gentle blue-green gradient, scientific equipment silhouettes, mobile vertical, 1242x2208 WebP"
+                                                               * protein-helix.svg - DNA helix prop
+
+                                                                  * Prompt: "Double helix DNA structure, colorful molecular bonds, scientific accuracy, transparent background, SVG"
+                                                                  * protein-chain.svg - Protein chain prop
+
+                                                                     * Prompt: "Protein folding structure, amino acid chain, colorful ribbon representation, scientific visualization, SVG"
+🌍 Climate Time Machine Pack
+                                                                     * climate-banner.webp - Hero image (1200x675)
+
+                                                                        * Prompt: "Earth with climate data overlays, time progression visualization, renewable energy icons, environmental monitoring, cinematic sci-fi, 1200x675 WebP"
+                                                                        * climate-icon.png - Game icon (256x256)
+
+                                                                           * Prompt: "Earth globe with time spiral around it, climate monitoring symbols, environmental theme, 256x256 PNG"
+                                                                           * climate-bg.webp - Game background (1242x2208)
+
+                                                                              * Prompt: "Environmental monitoring station, Earth in background, green-blue color scheme, renewable energy elements, 1242x2208 WebP"
+                                                                              * wind-turbine.svg - Wind turbine prop
+
+                                                                                 * Prompt: "Modern wind turbine, clean energy symbol, white and gray colors, environmental sustainability, SVG"
+                                                                                 * solar-panel.svg - Solar panel prop
+
+                                                                                    * Prompt: "Solar panel array, renewable energy, blue photovoltaic cells, clean technology, SVG"
+🏎️ Autonomous Racing League Pack
+                                                                                    * racing-banner.webp - Hero image (1200x675)
+
+                                                                                       * Prompt: "Futuristic race track, autonomous vehicles, sensor visualization, high-speed racing, neon lighting, cyberpunk style, 1200x675 WebP"
+                                                                                       * racing-icon.png - Game icon (256x256)
+
+                                                                                          * Prompt: "Top-down race car with sensor arrays, autonomous vehicle technology, racing theme, 256x256 PNG"
+                                                                                          * racing-bg.webp - Game background (1242x2208)
+
+                                                                                             * Prompt: "Racing circuit environment, track barriers, sensor networks, speed visualization, dark theme with neon accents, 1242x2208 WebP"
+                                                                                             * race-car-sprite.svg - Car sprite
+
+                                                                                                * Prompt: "Top-down autonomous race car, sensor arrays visible, futuristic design, racing livery, SVG"
+                                                                                                * track-cone.svg - Track cone prop
+
+                                                                                                   * Prompt: "Racing cone with sensors, autonomous driving training, orange and black, technology integration, SVG"
+💰 Wall Street AI Wars Pack
+                                                                                                   * wallstreet-banner.webp - Hero image (1200x675)
+
+                                                                                                      * Prompt: "Financial trading floor, AI algorithms visualization, stock charts, market data streams, professional business environment, 1200x675 WebP"
+                                                                                                      * wallstreet-icon.png - Game icon (256x256)
+
+                                                                                                         * Prompt: "Bull and bear with AI circuits, financial market symbols, trading theme, professional colors, 256x256 PNG"
+                                                                                                         * wallstreet-bg.webp - Game background (1242x2208)
+
+                                                                                                            * Prompt: "Trading desk environment, multiple monitors, financial charts, professional business setting, blue-green color scheme, 1242x2208 WebP"
+                                                                                                            * candlestick-chart.svg - Chart prop
+
+                                                                                                               * Prompt: "Financial candlestick chart, market visualization, green and red candles, trading analysis, SVG"
+                                                                                                               * bull-bear.svg - Market symbols
+
+                                                                                                                  * Prompt: "Bull and bear market symbols, financial icons, professional style, contrasting colors, SVG"
+🎬 Hollywood AI Producer Pack
+                                                                                                                  * hollywood-banner.webp - Hero image (1200x675)
+
+                                                                                                                     * Prompt: "Movie studio set, AI directing robots, film equipment, creative production, cinematic lighting, entertainment industry, 1200x675 WebP"
+                                                                                                                     * hollywood-icon.png - Game icon (256x256)
+
+                                                                                                                        * Prompt: "Movie clapperboard with AI circuits, film production, entertainment technology, 256x256 PNG"
+                                                                                                                        * hollywood-bg.webp - Game background (1242x2208)
+
+                                                                                                                           * Prompt: "Film studio environment, movie sets, production equipment, creative atmosphere, warm cinematic lighting, 1242x2208 WebP"
+                                                                                                                           * clapperboard.svg - Clapperboard prop
+
+                                                                                                                              * Prompt: "Movie clapperboard, film production tool, black and white stripes, cinema equipment, SVG"
+                                                                                                                              * camera.svg - Camera prop
+
+                                                                                                                                 * Prompt: "Professional film camera, movie production equipment, cinematic tool, detailed design, SVG"
+🏙️ Smart City Mayor Pack
+                                                                                                                                 * smartcity-banner.webp - Hero image (1200x675)
+
+                                                                                                                                    * Prompt: "Smart city overview, IoT sensors, connected infrastructure, urban technology, modern cityscape, digital connectivity, 1200x675 WebP"
+                                                                                                                                    * smartcity-icon.png - Game icon (256x256)
+
+                                                                                                                                       * Prompt: "City buildings with network connections, smart city technology, urban AI systems, 256x256 PNG"
+                                                                                                                                       * smartcity-bg.webp - Game background (1242x2208)
+
+                                                                                                                                          * Prompt: "Urban control center, city monitoring screens, smart infrastructure, modern government building, 1242x2208 WebP"
+                                                                                                                                          * city-map.svg - City map prop
+
+                                                                                                                                             * Prompt: "Isometric city map with IoT connections, smart infrastructure visualization, urban planning, SVG"
+                                                                                                                                             * traffic-light.svg - Smart traffic light
+
+                                                                                                                                                * Prompt: "Intelligent traffic light with sensors, smart city infrastructure, connectivity symbols, SVG"
+🚀 Space Mission AI Director Pack
+                                                                                                                                                * space-banner.webp - Hero image (1200x675)
+
+                                                                                                                                                   * Prompt: "Mission control center, space exploration, rocket launch, astronaut training, NASA-style environment, 1200x675 WebP"
+                                                                                                                                                   * space-icon.png - Game icon (256x256)
+
+                                                                                                                                                      * Prompt: "Rocket with AI navigation systems, space exploration technology, mission control theme, 256x256 PNG"
+                                                                                                                                                      * space-bg.webp - Game background (1242x2208)
+
+                                                                                                                                                         * Prompt: "Space mission control room, monitoring screens, rocket telemetry, aerospace technology, 1242x2208 WebP"
+                                                                                                                                                         * rocket.svg - Rocket prop
+
+                                                                                                                                                            * Prompt: "Multi-stage rocket, space exploration vehicle, detailed design, aerospace engineering, SVG"
+                                                                                                                                                            * planet.svg - Planet prop
+
+                                                                                                                                                               * Prompt: "Planet with orbital paths, space exploration target, astronomical object, scientific visualization, SVG"
+🛡️ Defense Systems Strategist Pack
+                                                                                                                                                               * defense-banner.webp - Hero image (1200x675)
+
+                                                                                                                                                                  * Prompt: "Military command center, defense systems, radar screens, cybersecurity visualization, professional military environment, 1200x675 WebP"
+                                                                                                                                                                  * defense-icon.png - Game icon (256x256)
+
+                                                                                                                                                                     * Prompt: "Shield with radar patterns, defense technology, military AI systems, security theme, 256x256 PNG"
+                                                                                                                                                                     * defense-bg.webp - Game background (1242x2208)
+
+                                                                                                                                                                        * Prompt: "Defense command center, security monitoring, military technology, professional environment, 1242x2208 WebP"
+                                                                                                                                                                        * radar.svg - Radar prop
+
+                                                                                                                                                                           * Prompt: "Radar dish with scanning patterns, defense technology, military equipment, surveillance systems, SVG"
+                                                                                                                                                                           * shield.svg - Shield prop
+
+                                                                                                                                                                              * Prompt: "Security shield icon, defense protection, cybersecurity symbol, military technology, SVG"
+Priority 3: Universal UI Components
+Achievement System
+                                                                                                                                                                              * achievement-bronze.svg - Bronze badge
+
+                                                                                                                                                                                 * Prompt: "Bronze achievement badge, circular design, laurel wreath, beginner level, warm bronze color, SVG"
+                                                                                                                                                                                 * achievement-silver.svg - Silver badge
+
+                                                                                                                                                                                    * Prompt: "Silver achievement badge, star design, intermediate level, metallic silver finish, premium look, SVG"
+                                                                                                                                                                                    * achievement-gold.svg - Gold badge
+
+                                                                                                                                                                                       * Prompt: "Gold achievement badge, crown design, advanced level, bright gold color, premium luxury, SVG"
+                                                                                                                                                                                       * achievement-platinum.svg - Platinum badge
+
+                                                                                                                                                                                          * Prompt: "Platinum achievement badge, diamond design, master level, brilliant platinum shine, ultimate prestige, SVG"
+
+
+________________
+
+
+
+
+Studio-Level Nintendo/PlayStation Quality Game Assets
+🧩 Problem-Decomposer Assets
+                                                                                                                                                                                          1. Neural Network Background
+
+                                                                                                                                                                                             * Prompt: "Dark neural network background with glowing cyan and purple nodes connected by energy streams, sci-fi aesthetic, holographic particles, 4K digital art, cyberpunk style, studio lighting"
+                                                                                                                                                                                             2. 3D Brain Icon
+
+                                                                                                                                                                                                * Prompt: "Futuristic 3D brain icon with digital circuit patterns, glowing cyan neural pathways, glass-like transparency, studio-quality 3D rendering, Nintendo game polish"
+                                                                                                                                                                                                3. Hexagonal Mind-Map Nodes
+
+                                                                                                                                                                                                   * Prompt: "Hexagonal floating nodes with neon outlines, holographic shimmer effect, gradient fills cyan to purple, PlayStation game UI quality, clean geometric design"
+                                                                                                                                                                                                   4. Energy Connection Lines
+
+                                                                                                                                                                                                      * Prompt: "Animated energy beams connecting nodes, particle trail effects, electric blue glow, dynamic motion blur, AAA game quality visual effects"
+🎯 Hypothesis Poker Assets
+                                                                                                                                                                                                      5. Luxury Poker Table
+
+                                                                                                                                                                                                         * Prompt: "Premium casino poker table with green felt surface, dramatic casino lighting, gold trim details, leather padding, 4K photorealistic rendering, Vegas luxury aesthetic"
+                                                                                                                                                                                                         6. Holographic Probability Chips
+
+                                                                                                                                                                                                            * Prompt: "Golden casino chips with holographic percentage displays, prismatic light refraction, luxury metallic materials, studio 3D rendering, premium game asset quality"
+                                                                                                                                                                                                            7. Evidence Document Cards
+
+                                                                                                                                                                                                               * Prompt: "Legal document style cards with magnifying glass overlay, professional parchment texture, judicial seal emboss, courtroom lighting, documentary aesthetic"
+                                                                                                                                                                                                               8. Player Avatar Collection
+
+                                                                                                                                                                                                                  * Prompt: "Diverse professional character avatars, business casual attire, friendly expressions, anime-inspired art style, consistent lighting, Nintendo character quality"
+⚡ Data Skeptic Speed-Round Assets
+                                                                                                                                                                                                                  9. Chart Analysis Interface
+
+                                                                                                                                                                                                                     * Prompt: "Futuristic data visualization interface with floating charts, holographic displays, blue-cyan color scheme, sci-fi HUD elements, Iron Man tech aesthetic"
+                                                                                                                                                                                                                     10. Bias Detection Icons
+
+                                                                                                                                                                                                                        * Prompt: "Set of warning icons for bias detection, red alert styling, geometric symbols, clean vector design, consistent iconography, mobile game UI polish"
+🌉 Transfer Bridge Assets
+                                                                                                                                                                                                                        11. Domain Crossover Visualizer
+
+                                                                                                                                                                                                                           * Prompt: "Abstract bridge connecting two floating islands representing different domains, ethereal mist, rainbow light bridges, fantasy game environment, Studio Ghibli inspiration"
+                                                                                                                                                                                                                           12. Concept Fusion Effects
+
+                                                                                                                                                                                                                              * Prompt: "Swirling energy vortex with merging symbols, particle fusion effects, multicolored light streams, magical transformation animation, Disney Pixar quality"
+🌟 General UI Assets
+                                                                                                                                                                                                                              13. Gamification XP Crystals
+
+                                                                                                                                                                                                                                 * Prompt: "Prismatic XP crystals with rainbow light effects, floating animation, luxury gem materials, Breath of the Wild aesthetic, Nintendo polish"
+                                                                                                                                                                                                                                 14. Progress Meter Displays
+
+                                                                                                                                                                                                                                    * Prompt: "Futuristic progress bars with neon cyan fills, holographic displays, sci-fi UI elements, clean minimalist design, high-tech interface"
+                                                                                                                                                                                                                                    15. Achievement Burst Effects
+
+                                                                                                                                                                                                                                       * Prompt: "Golden particle explosion for achievements, confetti burst, celebration effects, warm lighting, Super Mario Galaxy star collection style"
+🎮 Character & Avatar Assets
+                                                                                                                                                                                                                                       16. AI Mentor Characters
+
+                                                                                                                                                                                                                                          * Prompt: "Friendly AI mentor characters in lab coats, diverse ethnicities, approachable expressions, cartoon-realistic style, Pixar character quality"
+                                                                                                                                                                                                                                          17. Student Player Avatars
+
+                                                                                                                                                                                                                                             * Prompt: "Young learner avatars ages 8-17, diverse representation, casual modern clothing, optimistic expressions, Animal Crossing character style"
+🏆 Competitive & Social Assets
+                                                                                                                                                                                                                                             18. Leaderboard Podium
+
+                                                                                                                                                                                                                                                * Prompt: "Futuristic award podium with holographic rankings, golden spotlights, ceremonial aesthetic, Olympic ceremony grandeur, AAA game presentation"
+                                                                                                                                                                                                                                                19. Friend Battle Arena
+
+                                                                                                                                                                                                                                                   * Prompt: "Competitive arena environment with two player zones, energy barriers, digital battleground, Tron-inspired lighting, esports tournament feel"
+📱 Mobile & PWA Assets
+                                                                                                                                                                                                                                                   20. App Icon Set
+
+                                                                                                                                                                                                                                                      * Prompt: "AI Labs app icon with brain-gear hybrid symbol, gradient purple-cyan background, clean vector design, iOS/Android store quality, recognizable brand mark"
+                                                                                                                                                                                                                                                      21. Splash Screen Background
+
+                                                                                                                                                                                                                                                         * Prompt: "Welcome screen with floating AI elements, neural networks, glowing particles, inspirational tech aesthetic, Apple keynote presentation quality"
+This comprehensive asset collection will give AI Labs the studio-level Nintendo/PlayStation visual quality you requested, with each asset designed for Nano bananas generation to create premium game visuals that rival AAA titles! 🎮✨
+
+
+
+
+
+
+
+
+
+
+
+
+________________
+
+
+
+
+________________
+
+
+🎨 PRIORITY 0: CORE BRAND & SYSTEM ASSETS
+Essential foundation for entire platform
+Logo & Branding:
+                                                                                                                                                                                                                                                         * AI Labs Logo Set (SVG): Symbol + wordmark variations
+                                                                                                                                                                                                                                                         * App Icon (1024×1024 PNG): Clean, recognizable at small sizes
+                                                                                                                                                                                                                                                         * Splash Screen (1242×2688 PNG): Mobile launch screen
+                                                                                                                                                                                                                                                         * Loader/Spinner (SVG): Animated loading indicator
+                                                                                                                                                                                                                                                         * Background Patterns (SVG): Subtle light/dark theme patterns
+                                                                                                                                                                                                                                                         * Color Token Swatches: Visual representation of brand palette
+Core Icon Set (24/32px SVG, outline + filled variants):
+                                                                                                                                                                                                                                                         * Navigation: home, games, progress, leaderboard, profile
+                                                                                                                                                                                                                                                         * Actions: play, pause, timer, share, settings, back
+                                                                                                                                                                                                                                                         * Gamification: XP gem, streak flame, achievement star
+________________
+
+
+🎨 PRIORITY 1: PLATFORM UI ASSETS
+Immediate visual impact across all screens
+Navigation & Layout:
+                                                                                                                                                                                                                                                         * Bottom Nav Icons (Custom style, active/inactive states)
+                                                                                                                                                                                                                                                         * Header Emblem: Brand element for top navigation
+                                                                                                                                                                                                                                                         * Card Backgrounds: 3 subtle gradient variants for different content
+Challenge System:
+                                                                                                                                                                                                                                                         * Skill Track Badges (SVG): prompting, ethics, debugging, data, creation, meta
+                                                                                                                                                                                                                                                         * Difficulty Chips (SVG): beginner (green), intermediate (yellow), advanced (red)
+                                                                                                                                                                                                                                                         * Challenge Thumbnails (16:9, WebP): 3 generic variants per skill track (18 total)
+UI Components:
+                                                                                                                                                                                                                                                         * Universal HUD Kit: Primary/secondary/ghost buttons, progress bars
+                                                                                                                                                                                                                                                         * Modal Frames: Dialog backgrounds and borders
+                                                                                                                                                                                                                                                         * Achievement Stickers: Success/fail feedback stamps
+________________
+
+
+🎨 PRIORITY 2: GAME-SPECIFIC VISUAL PACKS
+Unique visual identity for each of the 8 sophisticated AI games
+Each game needs:
+                                                                                                                                                                                                                                                         * Key Art Banner (1200×675 WebP): Hero image for game cards
+                                                                                                                                                                                                                                                         * Square Icon (1024 PNG + 256 WebP): Game selection thumbnail
+                                                                                                                                                                                                                                                         * Wallpaper Background (1242×2208 WebP): Full-screen game backdrop
+                                                                                                                                                                                                                                                         * 4-6 Game Props (SVG/PNG): Domain-specific visual elements
+                                                                                                                                                                                                                                                         * Success/Fail Stamps (SVG): Game completion feedback
+🧬 Protein Poker Pack:
+                                                                                                                                                                                                                                                         * Props: Protein chain spiral, DNA helix, card suit-molecule hybrids, laboratory equipment
+🌍 Climate Time Machine Pack:
+                                                                                                                                                                                                                                                         * Props: Earth globe with data overlay, wind turbine, solar panel array, temperature graphs, climate timeline
+🏎️ Autonomous Racing League Pack:
+                                                                                                                                                                                                                                                         * Props: Top-down race car sprite, track boundary cones, mini-map navigation nodes, speed/sensor HUD
+💰 Wall Street AI Wars Pack:
+                                                                                                                                                                                                                                                         * Props: Candlestick chart visualization, bull/bear market icons, risk assessment meter, portfolio performance chip
+🎬 Hollywood AI Producer Pack:
+                                                                                                                                                                                                                                                         * Props: Movie clapperboard, professional camera, script pages, star rating meter, production timeline
+🏙️ Smart City Mayor Pack:
+                                                                                                                                                                                                                                                         * Props: Isometric city map tiles, smart traffic lights, IoT sensor nodes, citizen data cards, urban dashboard
+🚀 Space Mission AI Director Pack:
+                                                                                                                                                                                                                                                         * Props: Multi-stage rocket, planetary bodies, telemetry HUD interface, mission patch badges, orbital paths
+🛡️ Defense Systems Strategist Pack:
+                                                                                                                                                                                                                                                         * Props: Radar sweep display, security shield icons, drone silhouettes, threat level meters, tactical overlays
+________________
+
+
+🎨 PRIORITY 3: PROGRESS & SOCIAL ASSETS
+Gamification and community features
+Achievement System:
+                                                                                                                                                                                                                                                         * Badge Tiers (SVG): Bronze, silver, gold, platinum variations
+                                                                                                                                                                                                                                                         * Themed Badge Sets: One set per skill track with unique designs
+                                                                                                                                                                                                                                                         * Avatar Frames: Tiered border decorations for profile pictures
+                                                                                                                                                                                                                                                         * Trophy Illustrations: Leaderboard ranking rewards
+                                                                                                                                                                                                                                                         * Share Card Template (1200×630 PNG): Social media sharing format
+________________
+
+
+🎨 PRIORITY 4: ONBOARDING & EMPTY STATES
+User experience polish
+                                                                                                                                                                                                                                                         * 3 Onboarding Illustrations: Welcome flow storytelling
+                                                                                                                                                                                                                                                         * 4 Empty State Scenes: No content, loading, error, offline scenarios
+                                                                                                                                                                                                                                                         * Tooltip Pointers: Interactive guidance elements
+                                                                                                                                                                                                                                                         * Coachmark Graphics: Feature highlighting overlays
+________________
+
+
+🎨 PRIORITY 5: PWA & META ASSETS
+Professional deployment polish
+                                                                                                                                                                                                                                                         * Manifest Icons: 192×192, 512×512 PNG variations
+                                                                                                                                                                                                                                                         * Maskable Icon: Adaptive for different device shapes
+                                                                                                                                                                                                                                                         * Favicon Set: 16×16, 32×32, 180×180 variants
+                                                                                                                                                                                                                                                         * OG Preview Templates: Social sharing thumbnails
+________________
+
+
+🎯 VISUAL STYLE GUIDE FOR "NANO BANANAS" GENERATION
+Color Palette:
+                                                                                                                                                                                                                                                         * Primary: Vibrant indigo (#3B4FE0) - tech/AI theme
+                                                                                                                                                                                                                                                         * Secondary: Electric violet (#7C3AED) - creativity/innovation
+                                                                                                                                                                                                                                                         * Accent: Golden amber (#F59E0B) - achievement/success
+                                                                                                                                                                                                                                                         * Provide light/dark variants for all assets
+Art Style:
+                                                                                                                                                                                                                                                         * Rounded, friendly shapes with 8-12px corner radius
+                                                                                                                                                                                                                                                         * 2px stroke weight for outlined icons
+                                                                                                                                                                                                                                                         * Playful but professional - gaming meets education
+                                                                                                                                                                                                                                                         * Isometric/flat illustration hybrid style
+                                                                                                                                                                                                                                                         * High contrast for mobile visibility
+Technical Specs:
+                                                                                                                                                                                                                                                         * SVG preferred for scalability and theming
+                                                                                                                                                                                                                                                         * WebP for photos (fallback PNG)
+                                                                                                                                                                                                                                                         * Optimize for mobile (390-430px widths)
+                                                                                                                                                                                                                                                         * Dark mode compatible (use theme-tintable colors)
+Would you like me to start with Priority 0 Core Brand Assets while you work on generating these with nano bananas? This will create the foundation for the entire visual transformation!

@@ -1,0 +1,149 @@
+# =========================================
+# Yokaizen AI Labs - Docker Compose
+# Local Development Environment
+# =========================================
+
+version: '3.8'
+
+services:
+  # =========================================
+  # Application Server
+  # =========================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder  # Use builder stage for dev with hot reload
+    container_name: yokaizen-api
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DATABASE_URL=postgresql://yokaizen:yokaizen_secret@postgres:5432/yokaizen_db
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=dev_jwt_secret_change_in_production
+      - JWT_REFRESH_SECRET=dev_refresh_secret_change_in_production
+      - CORS_ORIGINS=http://localhost:3001,http://localhost:5173
+    volumes:
+      - ./src:/app/src:ro  # Mount source for hot reload
+      - ./firebase-admin.json:/app/firebase-admin.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - yokaizen-network
+    command: npm run dev
+    restart: unless-stopped
+
+  # =========================================
+  # PostgreSQL Database
+  # =========================================
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: yokaizen-postgres
+    environment:
+      - POSTGRES_USER=yokaizen
+      - POSTGRES_PASSWORD=yokaizen_secret
+      - POSTGRES_DB=yokaizen_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U yokaizen -d yokaizen_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - yokaizen-network
+    restart: unless-stopped
+
+  # =========================================
+  # Redis Cache & Queue
+  # =========================================
+  redis:
+    image: redis:7-alpine
+    container_name: yokaizen-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - yokaizen-network
+    restart: unless-stopped
+
+  # =========================================
+  # Redis Commander (Dev UI for Redis)
+  # =========================================
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: yokaizen-redis-ui
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - yokaizen-network
+    profiles:
+      - dev-tools
+
+  # =========================================
+  # Adminer (Dev UI for PostgreSQL)
+  # =========================================
+  adminer:
+    image: adminer:latest
+    container_name: yokaizen-adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    networks:
+      - yokaizen-network
+    profiles:
+      - dev-tools
+
+  # =========================================
+  # BullMQ Board (Job Queue UI)
+  # =========================================
+  bull-board:
+    image: deadly0/bull-board:latest
+    container_name: yokaizen-bull-board
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    ports:
+      - "3001:3000"
+    depends_on:
+      - redis
+    networks:
+      - yokaizen-network
+    profiles:
+      - dev-tools
+
+# =========================================
+# Networks
+# =========================================
+networks:
+  yokaizen-network:
+    driver: bridge
+
+# =========================================
+# Volumes
+# =========================================
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
