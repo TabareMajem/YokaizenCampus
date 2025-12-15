@@ -246,7 +246,7 @@ export class PaymentService {
     // Update subscription end date
     if (subscriptionId) {
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-      user.subscriptionEndsAt = new Date(subscription.current_period_end * 1000);
+      user.subscriptionExpiresAt = new Date(subscription.current_period_end * 1000);
       await this.userRepository.save(user);
     }
 
@@ -308,7 +308,7 @@ export class PaymentService {
     }
 
     user.tier = newTier;
-    user.subscriptionEndsAt = new Date(subscription.current_period_end * 1000);
+    user.subscriptionExpiresAt = new Date(subscription.current_period_end * 1000);
     await this.userRepository.save(user);
 
     paymentLogger.info('Subscription updated', {
@@ -330,7 +330,7 @@ export class PaymentService {
     user.tier = UserTier.FREE;
     user.maxEnergy = 100;
     user.stripeSubscriptionId = null;
-    user.subscriptionEndsAt = null;
+    user.subscriptionExpiresAt = null;
     await this.userRepository.save(user);
 
     paymentLogger.info('Subscription cancelled', { userId: user.id });

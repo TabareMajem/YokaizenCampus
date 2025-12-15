@@ -35,9 +35,19 @@ const SQUAD_TIER_CONFIG: Record<SquadTier, {
     maxMembers: 40,
     perks: ['Custom emotes', 'Priority matchmaking', '+15% XP bonus'],
   },
+  [SquadTier.PLATINUM]: {
+    xpRequired: 250000,
+    maxMembers: 50,
+    perks: ['Elite missions', 'Squad colors', '+20% XP bonus'],
+  },
+  [SquadTier.DIAMOND]: {
+    xpRequired: 350000,
+    maxMembers: 75,
+    perks: ['Global broadcast', 'Custom trails', '+22% XP bonus'],
+  },
   [SquadTier.ELITE]: {
     xpRequired: 500000,
-    maxMembers: 50,
+    maxMembers: 100,
     perks: ['Exclusive badge', 'All perks', '+25% XP bonus'],
   },
 };
@@ -101,7 +111,7 @@ export class SquadService {
       description: description || '',
       owner,
       tier: SquadTier.ROOKIE,
-      totalXP: BigInt(0),
+      totalXp: BigInt(0),
       weeklyXP: 0,
       treasury: 0,
       warRating: 1000, // Starting ELO
@@ -176,7 +186,7 @@ export class SquadService {
     if (options.recommended) {
       qb.orderBy('squad.weeklyXP', 'DESC');
     } else {
-      qb.orderBy('squad.totalXP', 'DESC');
+      qb.orderBy('squad.totalXp', 'DESC');
     }
 
     const [squads, total] = await qb
@@ -635,6 +645,7 @@ export class SquadService {
       [MissionType.WEEKLY]: 5,
       [MissionType.WAR]: 10,
       [MissionType.SPECIAL]: 15,
+      [MissionType.RAID]: 20,
     };
 
     const mission = this.missionRepository.create({
@@ -643,7 +654,7 @@ export class SquadService {
       status: MissionStatus.ACTIVE,
       objectives,
       progress: {},
-      participants: [requesterId],
+      participantIds: [requesterId],
       xpReward: 1000 * rewardMultiplier[missionType],
       creditReward: 500 * rewardMultiplier[missionType],
       startedAt: new Date(),
@@ -686,8 +697,8 @@ export class SquadService {
     }
 
     // Add participant if not already
-    if (!mission.participants.includes(userId)) {
-      mission.participants.push(userId);
+    if (!mission.participantIds.includes(userId)) {
+      mission.participantIds.push(userId);
     }
 
     // Update progress
@@ -729,7 +740,7 @@ export class SquadService {
     type: 'xp' | 'wars' | 'weekly'
   ): Promise<Squad[]> {
     const orderBy = {
-      xp: 'totalXP',
+      xp: 'totalXp',
       wars: 'warsWon',
       weekly: 'weeklyXP',
     };
@@ -749,15 +760,16 @@ export class SquadService {
       [MissionType.WEEKLY]: 7 * 24 * 60 * 60 * 1000, // 7 days
       [MissionType.WAR]: 2 * 60 * 60 * 1000, // 2 hours
       [MissionType.SPECIAL]: 72 * 60 * 60 * 1000, // 72 hours
+      [MissionType.RAID]: 4 * 60 * 60 * 1000, // 4 hours
     };
     return durations[type];
   }
 
   private async distributeMissionRewards(mission: SquadMission): Promise<void> {
-    const xpPerParticipant = Math.floor(mission.xpReward / mission.participants.length);
-    const creditsPerParticipant = Math.floor(mission.creditReward / mission.participants.length);
+    const xpPerParticipant = Math.floor(mission.xpReward / mission.participantIds.length);
+    const creditsPerParticipant = Math.floor(mission.creditReward / mission.participantIds.length);
 
-    for (const participantId of mission.participants) {
+    for (const participantId of mission.participantIds) {
       const user = await this.userRepository.findOne({ where: { id: participantId } });
       if (user) {
         user.xp = BigInt(Number(user.xp) + xpPerParticipant);
@@ -768,32 +780,32 @@ export class SquadService {
 
     // Add to squad XP
     const squad = mission.squad;
-    squad.totalXP = BigInt(Number(squad.totalXP) + mission.xpReward);
-    squad.weeklyXP += mission.xpReward;
-    
+    squad.totalXp = Number(squad.totalXp) + mission.xpReward;
+    squad.weeklyXp += mission.xpReward;
+
     // Check for tier upgrade
     await this.checkAndUpgradeTier(squad);
     await this.squadRepository.save(squad);
 
     logger.info('Mission rewards distributed', {
       missionId: mission.id,
-      participants: mission.participants.length,
+      participants: mission.participantIds.length,
       xpPerParticipant,
       creditsPerParticipant,
     });
   }
 
   private async checkAndUpgradeTier(squad: Squad): Promise<void> {
-    const totalXP = Number(squad.totalXP);
+    const totalXP = Number(squad.totalXp);
     const tiers = Object.entries(SQUAD_TIER_CONFIG).sort((a, b) => b[1].xpRequired - a[1].xpRequired);
 
     for (const [tier, config] of tiers) {
       if (totalXP >= config.xpRequired && squad.tier !== tier) {
         const oldTier = squad.tier;
         squad.tier = tier as SquadTier;
-        
+
         logger.info('Squad tier upgraded', { squadId: squad.id, oldTier, newTier: tier });
-        
+
         // Notify squad
         await publishToChannel(`squad:${squad.id}`, {
           type: 'tier_upgraded',

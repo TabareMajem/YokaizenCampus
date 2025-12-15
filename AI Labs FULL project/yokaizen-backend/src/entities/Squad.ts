@@ -6,7 +6,11 @@ import {
   UpdateDateColumn,
   Index,
   OneToMany,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { User } from './User';
+import { SquadMission } from './SquadMission';
 
 export enum SquadTier {
   ROOKIE = 'ROOKIE',
@@ -16,6 +20,12 @@ export enum SquadTier {
   PLATINUM = 'PLATINUM',
   DIAMOND = 'DIAMOND',
   ELITE = 'ELITE',
+}
+
+export enum SquadRole {
+  OWNER = 'OWNER',
+  OFFICER = 'OFFICER',
+  MEMBER = 'MEMBER',
 }
 
 @Entity('squads')
@@ -67,6 +77,16 @@ export class Squad {
   @Column({ type: 'uuid', name: 'owner_id' })
   @Index('idx_squads_owner_id')
   ownerId: string;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'owner_id' })
+  owner: User;
+
+  @OneToMany(() => User, user => user.squad)
+  members: User[];
+
+  @OneToMany(() => SquadMission, mission => mission.squad)
+  missions: SquadMission[];
 
   @Column({ type: 'int', default: 1, name: 'member_count' })
   memberCount: number;

@@ -9,6 +9,9 @@ import {
   Index,
   JoinColumn,
 } from 'typeorm';
+import { Squad, SquadRole } from './Squad';
+import { Inventory } from './Inventory';
+import { Skill } from './Skill';
 
 export enum UserRole {
   USER = 'USER',
@@ -77,10 +80,10 @@ export class User {
   maxEnergy: number;
 
   @Column({ type: 'int', default: 100, name: 'current_energy' })
-  currentEnergy: number;
+  energy: number;
 
   @Column({ type: 'timestamp', nullable: true, name: 'energy_last_updated' })
-  energyLastUpdated: Date;
+  lastEnergyUpdate: Date;
 
   @Column({ type: 'timestamp', nullable: true, name: 'last_login' })
   lastLogin: Date;
@@ -118,7 +121,7 @@ export class User {
   authProvider: string; // 'phone' | 'google' | 'email'
 
   @Column({ type: 'jsonb', nullable: true })
-  preferences: {
+  settings: {
     notifications: boolean;
     soundEffects: boolean;
     darkMode: boolean;
@@ -139,8 +142,28 @@ export class User {
   @Column({ nullable: true, name: 'squad_id' })
   squadId: string;
 
+  @ManyToOne(() => Squad, squad => squad.members)
+  @JoinColumn({ name: 'squad_id' })
+  squad: Squad;
+
+  @Column({
+    type: 'enum',
+    enum: SquadRole,
+    nullable: true,
+  })
+  squadRole: SquadRole;
+
+  @Column({ type: 'int', default: 0, name: 'squad_contributions' })
+  squadContributions: number;
+
   @Column({ type: 'timestamp', nullable: true, name: 'squad_joined_at' })
   squadJoinedAt: Date;
+
+  @OneToMany(() => Inventory, inventory => inventory.user)
+  inventory: Inventory[];
+
+  @OneToMany(() => Skill, skill => skill.user)
+  skills: Skill[];
 
   @Column({ type: 'boolean', default: true, name: 'is_active' })
   isActive: boolean;
@@ -178,17 +201,17 @@ export class User {
 
   // Energy regeneration (1 energy per 5 minutes)
   calculateEnergy(): number {
-    if (!this.energyLastUpdated) {
-      return this.currentEnergy;
+    if (!this.lastEnergyUpdate) {
+      return this.energy;
     }
 
     const now = new Date();
     const minutesPassed = Math.floor(
-      (now.getTime() - this.energyLastUpdated.getTime()) / (1000 * 60)
+      (now.getTime() - this.lastEnergyUpdate.getTime()) / (1000 * 60)
     );
     const energyGained = Math.floor(minutesPassed / 5);
 
-    return Math.min(this.maxEnergy, this.currentEnergy + energyGained);
+    return Math.min(this.maxEnergy, this.energy + energyGained);
   }
 
   // Check if user can perform action requiring energy

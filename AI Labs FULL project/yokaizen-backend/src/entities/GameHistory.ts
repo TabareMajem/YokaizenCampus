@@ -20,6 +20,12 @@ export enum GameType {
   SQUAD_WAR = 'SQUAD_WAR',
   DAILY_CHALLENGE = 'DAILY_CHALLENGE',
   WEEKLY_TOURNAMENT = 'WEEKLY_TOURNAMENT',
+  QUICK_FIRE = 'QUICK_FIRE',
+  DEEP_DIVE = 'DEEP_DIVE',
+  CHALLENGE = 'CHALLENGE',
+  CREATIVE = 'CREATIVE',
+  SQUAD_MISSION = 'SQUAD_MISSION',
+  AI_GENERATED = 'AI_GENERATED',
 }
 
 export enum GameDifficulty {
@@ -146,7 +152,7 @@ export class GameHistory {
     accuracy: number | null
   ): number {
     const baseXp = Math.floor(score / 10);
-    
+
     let difficultyMultiplier = 1;
     switch (difficulty) {
       case GameDifficulty.EASY:
@@ -178,7 +184,7 @@ export class GameHistory {
     isFirstTime: boolean
   ): number {
     let baseCredits = Math.floor(score / 100);
-    
+
     switch (difficulty) {
       case GameDifficulty.HARD:
         baseCredits *= 1.25;

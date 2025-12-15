@@ -5,7 +5,10 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { Squad } from './Squad';
 
 export enum MissionType {
   DAILY = 'DAILY',
@@ -32,6 +35,10 @@ export class SquadMission {
   @Column({ type: 'uuid', name: 'squad_id' })
   @Index('idx_squad_missions_squad_id')
   squadId: string;
+
+  @ManyToOne(() => Squad, squad => squad.missions)
+  @JoinColumn({ name: 'squad_id' })
+  squad: Squad;
 
   @Column({ length: 200 })
   name: string;
@@ -104,8 +111,8 @@ export class SquadMission {
   @Column({ type: 'int', default: 0, name: 'difficulty_level' })
   difficultyLevel: number;
 
-  @Column({ type: 'float', default: 0 })
-  progress: number;
+  @Column({ type: 'jsonb', default: {} })
+  progress: Record<string, number>;
 
   @Column({ type: 'timestamp', nullable: true, name: 'started_at' })
   startedAt: Date;

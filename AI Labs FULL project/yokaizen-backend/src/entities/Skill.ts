@@ -4,7 +4,10 @@ import {
   Column,
   CreateDateColumn,
   Index,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { User } from './User';
 
 export enum SkillCategory {
   COGNITIVE = 'COGNITIVE',
@@ -23,6 +26,11 @@ export class Skill {
   @Column({ type: 'uuid', name: 'user_id' })
   @Index('idx_skills_user_id')
   userId: string;
+
+  @ManyToOne(() => User, user => user.skills)
+  @JoinColumn({ name: 'user_id' })
+  user: User;
+
 
   @Column({ name: 'skill_tree_node_id' })
   @Index('idx_skills_node_id')
@@ -184,5 +192,8 @@ export const SkillTree = {
     },
   ],
 };
+
+// Backwards compatible alias
+export const SKILL_TREE = SkillTree;
 
 export default Skill;

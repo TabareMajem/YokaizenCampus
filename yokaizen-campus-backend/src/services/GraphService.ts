@@ -1,5 +1,12 @@
 import { prisma } from '../utils/prisma';
-import { redis } from '../utils/redis';
+import { getRedisClient } from '../utils/redis';
+
+// Use getter to ensure client is initialized
+const redis = {
+  get setex() { return getRedisClient().setex.bind(getRedisClient()); },
+  get get() { return getRedisClient().get.bind(getRedisClient()); },
+  get del() { return getRedisClient().del.bind(getRedisClient()); }
+};
 import { AppError, NotFoundError, ForbiddenError } from '../middleware/errorHandler';
 import { GraphStatus, SubscriptionTier } from '@prisma/client';
 import { aiEngine } from './AiEngine';
@@ -250,7 +257,7 @@ export class GraphService {
       // Get inputs from connected nodes
       const inputConnections = connections.filter(c => c.target === nodeId);
       const inputs = inputConnections.map(c => results.get(c.source)).filter(Boolean);
-      const combinedInput = inputs.length > 0 
+      const combinedInput = inputs.length > 0
         ? inputs.join('\n---\n')
         : node.data.input || '';
 
@@ -317,7 +324,7 @@ export class GraphService {
   ): Promise<AuditResult> {
     const session = await this.getSession(sessionId, userId);
     const nodes = session.nodes as GraphNode[];
-    
+
     const node = nodes.find(n => n.id === nodeId);
     if (!node) {
       throw new NotFoundError('Node not found in graph');

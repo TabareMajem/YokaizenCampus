@@ -13,10 +13,10 @@ export const initializeFirebase = (): admin.app.App => {
   try {
     // Try to load service account from file
     const credentialsPath = path.resolve(config.firebase.credentialsPath);
-    
+
     if (fs.existsSync(credentialsPath)) {
       const serviceAccount = JSON.parse(fs.readFileSync(credentialsPath, 'utf-8'));
-      
+
       firebaseApp = admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
         projectId: config.firebase.projectId,
@@ -25,7 +25,7 @@ export const initializeFirebase = (): admin.app.App => {
     } else if (process.env.FIREBASE_SERVICE_ACCOUNT) {
       // Load from environment variable (useful for cloud deployments)
       const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-      
+
       firebaseApp = admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
         projectId: config.firebase.projectId,
@@ -97,11 +97,15 @@ export const revokeRefreshTokens = async (uid: string): Promise<void> => {
   await auth.revokeRefreshTokens(uid);
 };
 
+// Backwards compatible alias
+export const verifyFirebaseToken = verifyIdToken;
+
 export default {
   initializeFirebase,
   getFirebaseAuth,
   getFirebaseStorage,
   verifyIdToken,
+  verifyFirebaseToken,
   getFirebaseUser,
   getFirebaseUserByPhone,
   createCustomToken,

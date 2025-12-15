@@ -10,6 +10,8 @@ export interface JWTPayload {
   email: string;
   role: UserRole;
   tier: SubscriptionTier;
+  subscriptionTier?: SubscriptionTier;
+  philosophyMode?: PhilosophyMode;
   schoolId?: string;
   iat?: number;
   exp?: number;
@@ -119,7 +121,7 @@ export interface AgentNode {
   };
 }
 
-export type AgentNodeType = 
+export type AgentNodeType =
   | 'SCOUT'       // Fast, low cost, gathers raw text
   | 'ARCHITECT'   // High cost, structures data
   | 'CRITIC'      // Evaluates outputs
@@ -130,6 +132,20 @@ export type AgentNodeType =
   | 'DEBUGGER'    // Fixes errors
   | 'CREATIVE'    // Generates creative content
   | 'ANALYST';    // Data analysis
+
+export interface JWTPayload {
+  userId: string;
+  email: string;
+  role: UserRole;
+  tier: SubscriptionTier;
+  subscriptionTier?: SubscriptionTier; // Alias for tier
+  philosophyMode?: PhilosophyMode;
+  schoolId?: string;
+  iat?: number;
+  exp?: number;
+}
+
+export type AgentType = AgentNodeType;
 
 export interface GraphEdge {
   id: string;

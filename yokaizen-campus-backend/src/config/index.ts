@@ -99,7 +99,9 @@ export const config = {
   corsOrigins: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3001', 'http://localhost:7787'],
 
   features: {
-    mockAI: process.env.ENABLE_MOCK_AI === 'true' || !process.env.OPENAI_API_KEY,
+    // IMPORTANT: Mock AI must be explicitly enabled - do NOT enable by default
+    // In production, missing API keys should cause errors, not silent mock responses
+    mockAI: process.env.ENABLE_MOCK_AI === 'true',
     contentFilter: process.env.ENABLE_CONTENT_FILTER !== 'false',
   },
 

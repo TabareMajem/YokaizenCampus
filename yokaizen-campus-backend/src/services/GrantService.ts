@@ -13,6 +13,7 @@ interface GrantApplicationInput {
   studentCount: number;
   website?: string;
   taxId?: string;
+  useCase: string; // Required by schema
   additionalInfo?: string;
 }
 
@@ -57,6 +58,7 @@ export class GrantService {
         studentCount: input.studentCount,
         website: input.website,
         taxId: input.taxId,
+        useCase: input.useCase,
         additionalInfo: input.additionalInfo,
         status: GrantStatus.PENDING
       }
@@ -89,16 +91,16 @@ export class GrantService {
   async getApplicationStatus(email: string) {
     const applications = await prisma.grantApplication.findMany({
       where: { contactEmail: email },
-      orderBy: { submittedAt: 'desc' },
+      orderBy: { createdAt: 'desc' },
       select: {
         id: true,
         orgName: true,
         status: true,
-        submittedAt: true,
+        createdAt: true, // was submittedAt
         reviewedAt: true,
         reviewNotes: true,
-        approvedCredits: true,
-        approvedDuration: true
+        creditAllocation: true, // was approvedCredits
+        validUntil: true // was approvedDuration
       }
     });
 
@@ -145,8 +147,11 @@ export class GrantService {
         reviewedAt: new Date(),
         reviewedBy: reviewerId,
         reviewNotes,
-        approvedCredits: status === GrantStatus.APPROVED ? approvedCredits : null,
-        approvedDuration: status === GrantStatus.APPROVED ? approvedDuration : null
+        creditAllocation: status === GrantStatus.APPROVED ? approvedCredits : null,
+        // Calculate validUntil if approvedDuration provided
+        validUntil: status === GrantStatus.APPROVED && approvedDuration
+          ? (() => { const d = new Date(); d.setMonth(d.getMonth() + approvedDuration); return d; })()
+          : null,
       }
     });
 
@@ -173,7 +178,7 @@ export class GrantService {
     return {
       applicationId,
       status,
-      message: status === GrantStatus.APPROVED 
+      message: status === GrantStatus.APPROVED
         ? 'Application approved. Access credentials have been sent to the contact email.'
         : 'Application has been reviewed.'
     };
@@ -198,7 +203,7 @@ export class GrantService {
     const [applications, total] = await Promise.all([
       prisma.grantApplication.findMany({
         where: { status: GrantStatus.PENDING },
-        orderBy: { submittedAt: 'asc' },
+        orderBy: { createdAt: 'asc' },
         skip,
         take: limit
       }),
@@ -253,7 +258,7 @@ export class GrantService {
     const [applications, total] = await Promise.all([
       prisma.grantApplication.findMany({
         where,
-        orderBy: { submittedAt: 'desc' },
+        orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
         include: {
@@ -320,7 +325,7 @@ export class GrantService {
       }),
       prisma.grantApplication.aggregate({
         where: { status: GrantStatus.APPROVED },
-        _sum: { approvedCredits: true }
+        _sum: { creditAllocation: true }
       }),
       prisma.grantApplication.aggregate({
         where: { status: GrantStatus.APPROVED },
@@ -334,8 +339,8 @@ export class GrantService {
         pending: pendingCount,
         approved: approvedCount,
         rejected: rejectedCount,
-        approvalRate: totalApplications > 0 
-          ? Math.round((approvedCount / totalApplications) * 100) 
+        approvalRate: totalApplications > 0
+          ? Math.round((approvedCount / totalApplications) * 100)
           : 0
       },
       byRegion: byRegion.map(r => ({
@@ -347,7 +352,7 @@ export class GrantService {
         count: o._count
       })),
       impact: {
-        totalCreditsApproved: totalCreditsApproved._sum.approvedCredits || 0,
+        totalCreditsApproved: totalCreditsApproved._sum.creditAllocation || 0,
         totalStudentsReached: totalStudentsReached._sum.studentCount || 0
       }
     };
@@ -378,18 +383,18 @@ export class GrantService {
       throw new AppError('Can only extend approved grants', 400);
     }
 
-    const newDuration = (application.approvedDuration || 0) + additionalMonths;
+    // Calculate new expiry
+    const currentExpiry = application.validUntil || new Date();
+    const newExpiry = new Date(currentExpiry);
+    newExpiry.setMonth(newExpiry.getMonth() + additionalMonths);
 
     const updated = await prisma.grantApplication.update({
       where: { id: applicationId },
-      data: { approvedDuration: newDuration }
+      data: { validUntil: newExpiry }
     });
 
     // Update school expiry if linked
     if (application.schoolId) {
-      const newExpiry = new Date();
-      newExpiry.setMonth(newExpiry.getMonth() + newDuration);
-
       await prisma.school.update({
         where: { id: application.schoolId },
         data: { grantExpiresAt: newExpiry }
@@ -437,11 +442,11 @@ export class GrantService {
       throw new AppError('Can only add credits to approved grants', 400);
     }
 
-    const newCredits = (application.approvedCredits || 0) + additionalCredits;
+    const newCredits = (application.creditAllocation || 0) + additionalCredits;
 
     await prisma.grantApplication.update({
       where: { id: applicationId },
-      data: { approvedCredits: newCredits }
+      data: { creditAllocation: newCredits }
     });
 
     // Add credits to school if linked
@@ -479,9 +484,10 @@ export class GrantService {
         name: application.orgName,
         domain: this.generateSchoolDomain(application.orgName),
         subscriptionTier: SubscriptionTier.NGO_GRANT,
-        credits: application.approvedCredits || 10000,
-        grantApplicationId: application.id,
-        grantExpiresAt: this.calculateGrantExpiry(application.approvedDuration || 12)
+        credits: application.creditAllocation || 10000,
+        // No grantApplicationId in School model? Schema check required. 
+        // Schema says School has NO grantApplicationId field. Remove it.
+        grantExpiresAt: application.validUntil
       }
     });
 

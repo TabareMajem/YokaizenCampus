@@ -7,6 +7,7 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
+import { User } from './User';
 
 export enum ItemType {
   BADGE = 'BADGE',
@@ -36,6 +37,10 @@ export class Inventory {
   @Column({ type: 'uuid', name: 'user_id' })
   @Index('idx_inventory_user_id')
   userId: string;
+
+  @ManyToOne(() => User, user => user.inventory)
+  @JoinColumn({ name: 'user_id' })
+  user: User;
 
   @Column({ name: 'item_id' })
   @Index('idx_inventory_item_id')

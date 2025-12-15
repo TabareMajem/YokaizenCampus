@@ -1,5 +1,6 @@
-import { Request } from 'express';
 import { User, UserTier, UserRole } from '../entities/User';
+
+export { UserRole, UserTier };
 
 // Extended Express Request with authenticated user
 export interface AuthenticatedRequest extends Request {
@@ -10,6 +11,7 @@ export interface AuthenticatedRequest extends Request {
 // Authenticated user payload
 export interface AuthUser {
   id: string;
+  userId?: string; // alias for id
   firebaseUid: string;
   email?: string;
   phone?: string;
@@ -22,10 +24,12 @@ export interface AuthUser {
 // JWT Token payload
 export interface JWTPayload {
   sub: string; // user id
+  userId?: string; // alias for sub
   firebaseUid: string;
   email?: string;
   role: UserRole;
   tier: UserTier;
+  squadId?: string; // for socket.io
   iat?: number;
   exp?: number;
 }
@@ -191,7 +195,7 @@ export interface SocketEvents {
   'leave_room': { squadId: string };
   'mission_start': { squadId: string; missionId: string };
   'game_update': { gameType: string; score: number; combo: number };
-  
+
   // Server -> Client
   'room_joined': { squadId: string; members: string[] };
   'member_joined': { userId: string; username: string };
@@ -217,42 +221,42 @@ export const ErrorCodes = {
   TOKEN_EXPIRED: 'AUTH_1002',
   INSUFFICIENT_PERMISSIONS: 'AUTH_1003',
   USER_BANNED: 'AUTH_1004',
-  
+
   // Validation errors (2000s)
   INVALID_INPUT: 'VAL_2001',
   MISSING_REQUIRED_FIELD: 'VAL_2002',
   INVALID_FORMAT: 'VAL_2003',
-  
+
   // Resource errors (3000s)
   NOT_FOUND: 'RES_3001',
   ALREADY_EXISTS: 'RES_3002',
   CONFLICT: 'RES_3003',
-  
+
   // Rate limit errors (4000s)
   RATE_LIMITED: 'RATE_4001',
   QUOTA_EXCEEDED: 'RATE_4002',
-  
+
   // Payment errors (5000s)
   PAYMENT_FAILED: 'PAY_5001',
   INSUFFICIENT_CREDITS: 'PAY_5002',
   SUBSCRIPTION_REQUIRED: 'PAY_5003',
-  
+
   // Game errors (6000s)
   GAME_SESSION_INVALID: 'GAME_6001',
   GAME_SESSION_EXPIRED: 'GAME_6002',
   INVALID_SCORE: 'GAME_6003',
   INSUFFICIENT_ENERGY: 'GAME_6004',
-  
+
   // AI errors (7000s)
   AI_SERVICE_ERROR: 'AI_7001',
   AI_RATE_LIMITED: 'AI_7002',
   AI_CONTENT_FILTERED: 'AI_7003',
-  
+
   // Squad errors (8000s)
   SQUAD_FULL: 'SQUAD_8001',
   NOT_SQUAD_MEMBER: 'SQUAD_8002',
   SQUAD_PERMISSION_DENIED: 'SQUAD_8003',
-  
+
   // Internal errors (9000s)
   INTERNAL_ERROR: 'INT_9001',
   DATABASE_ERROR: 'INT_9002',

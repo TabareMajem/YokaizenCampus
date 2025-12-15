@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { parentController } from '../controllers';
 import { authenticate, requireRole } from '../middleware/auth';
+import { UserRole } from '@prisma/client';
 
 const router = Router();
 
@@ -11,7 +12,7 @@ router.use(authenticate);
 router.post('/link', requireRole(['PARENT']), parentController.linkChild);
 router.get('/children', requireRole(['PARENT']), parentController.getChildren);
 router.delete('/children/:studentId', requireRole(['PARENT']), parentController.unlinkChild);
-router.get('/dashboard', requireRole(['PARENT']), parentController.getDashboard);
+router.get('/dashboard', requireRole(UserRole.PARENT), parentController.getDashboard);
 
 // Child information (for parents)
 router.get('/child/:studentId/report', requireRole(['PARENT']), parentController.getChildReport);

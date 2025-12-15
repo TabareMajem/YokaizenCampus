@@ -63,7 +63,7 @@ export class AIController {
 
     const graph = await aiEngine.generateGraph(
       command,
-      req.user!.id,
+      req.user!.userId,
       req.user!.subscriptionTier,
       (philosophy || req.user!.philosophyMode || 'JAPAN') as PhilosophyMode,
       {
@@ -94,7 +94,7 @@ export class AIController {
       nodeType as AgentType,
       context,
       input,
-      req.user!.id,
+      req.user!.userId,
       req.user!.subscriptionTier,
       {
         philosophy: (philosophy || req.user!.philosophyMode || 'JAPAN') as PhilosophyMode,
@@ -120,7 +120,7 @@ export class AIController {
 
     const result = await aiEngine.auditOutput(
       validation.data.output,
-      req.user!.id,
+      req.user!.userId,
       req.user!.subscriptionTier,
       {
         context: validation.data.context,
@@ -154,7 +154,7 @@ export class AIController {
 
     const result = await aiEngine.chat(
       messages,
-      req.user!.id,
+      req.user!.userId,
       req.user!.subscriptionTier,
       {
         nodeType: nodeType as AgentType,
@@ -229,7 +229,7 @@ export class AIController {
     const { period } = req.query;
 
     const usage = await aiEngine.getUserUsage(
-      req.user!.id,
+      req.user!.userId,
       (period as 'day' | 'week' | 'month') || 'month'
     );
 
@@ -263,7 +263,7 @@ export class AIController {
       throw new ValidationError('Response ID and rating are required');
     }
 
-    await aiEngine.submitFeedback(req.user!.id, {
+    await aiEngine.submitFeedback(req.user!.userId, {
       responseId,
       rating,
       comment,

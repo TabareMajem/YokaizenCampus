@@ -1,5 +1,16 @@
 import { prisma } from '../utils/prisma';
-import { redis } from '../utils/redis';
+import { getRedisClient } from '../utils/redis';
+
+// Use getter to ensure client is initialized
+const redis = {
+  get smembers() { return getRedisClient().smembers.bind(getRedisClient()); },
+  get hgetall() { return getRedisClient().hgetall.bind(getRedisClient()); },
+  get hset() { return getRedisClient().hset.bind(getRedisClient()); },
+  get expire() { return getRedisClient().expire.bind(getRedisClient()); },
+  get sadd() { return getRedisClient().sadd.bind(getRedisClient()); },
+  get srem() { return getRedisClient().srem.bind(getRedisClient()); },
+  get del() { return getRedisClient().del.bind(getRedisClient()); }
+};
 import { generateAccessCode, generateAnonymousId } from '../utils/helpers';
 import { AppError, NotFoundError, ForbiddenError } from '../middleware/errorHandler';
 import { PhilosophyMode, GraphStatus, UserRole } from '@prisma/client';
@@ -9,7 +20,7 @@ interface CreateClassroomInput {
   teacherId: string;
   name: string;
   philosophyMode?: PhilosophyMode;
-  isAnonymized?: boolean;
+  anonymizeStudents?: boolean;
 }
 
 interface JoinClassroomInput {
@@ -48,6 +59,11 @@ interface ClassroomLiveData {
   };
 }
 
+interface GrantCreditsResult {
+  students: string[];
+  totalCredits: number;
+}
+
 export class ClassroomService {
   private readonly CLASSROOM_STATE_PREFIX = 'classroom:state:';
   private readonly STUDENT_STATUS_PREFIX = 'student:status:';
@@ -58,7 +74,7 @@ export class ClassroomService {
    * Create a new classroom
    */
   async createClassroom(input: CreateClassroomInput) {
-    const { teacherId, name, philosophyMode = PhilosophyMode.JAPAN, isAnonymized = false } = input;
+    const { teacherId, name, philosophyMode = PhilosophyMode.JAPAN, anonymizeStudents = false } = input;
 
     // Verify teacher exists and has correct role
     const teacher = await prisma.user.findUnique({
@@ -101,7 +117,7 @@ export class ClassroomService {
         accessCode: accessCode!,
         currentPhilosophy: philosophyMode,
         isActive: true,
-        isAnonymized,
+        anonymizeStudents,
         schoolId: teacher.schoolId
       },
       include: {
@@ -171,7 +187,7 @@ export class ClassroomService {
     }
 
     // Generate anonymous ID if classroom is anonymized
-    const anonymousId = classroom.isAnonymized ? generateAnonymousId() : null;
+    const anonymousId = classroom.anonymizeStudents ? generateAnonymousId() : null;
 
     // Create enrollment
     const enrollment = await prisma.classroomStudent.create({
@@ -241,7 +257,7 @@ export class ClassroomService {
     }
 
     // If anonymized and requester is not teacher, mask names
-    if (classroom.isAnonymized && !isTeacher && !isAdmin) {
+    if (classroom.anonymizeStudents && !isTeacher && !isAdmin) {
       classroom.students = classroom.students.map(enrollment => ({
         ...enrollment,
         student: {
@@ -301,7 +317,7 @@ export class ClassroomService {
       const statusKey = `${this.STUDENT_STATUS_PREFIX}${classroomId}:${enrollment.studentId}`;
       const statusData = await redis.hgetall(statusKey);
 
-      const displayName = classroom.isAnonymized 
+      const displayName = classroom.anonymizeStudents
         ? enrollment.anonymousId || 'Anonymous'
         : enrollment.student.fullName;
 
@@ -366,7 +382,7 @@ export class ClassroomService {
     status: Partial<StudentStatus>
   ) {
     const statusKey = `${this.STUDENT_STATUS_PREFIX}${classroomId}:${studentId}`;
-    
+
     const updates: Record<string, string> = {
       lastActive: new Date().toISOString()
     };
@@ -431,7 +447,7 @@ export class ClassroomService {
       name?: string;
       currentPhilosophy?: PhilosophyMode;
       isActive?: boolean;
-      isAnonymized?: boolean;
+      anonymizeStudents?: boolean;
     }
   ) {
     const classroom = await prisma.classroom.findUnique({
@@ -605,6 +621,57 @@ export class ClassroomService {
       joinedAt: e.joinedAt,
       anonymousId: e.anonymousId
     }));
+  }
+
+  /**
+   * Grant credits to students
+   */
+  async grantCredits(classroomId: string, teacherId: string, amount: number, studentIds?: string[]): Promise<GrantCreditsResult> {
+    const classroom = await prisma.classroom.findUnique({
+      where: { id: classroomId },
+      include: { students: { select: { studentId: true } } }
+    });
+
+    if (!classroom) {
+      throw new NotFoundError('Classroom not found');
+    }
+
+    if (classroom.teacherId !== teacherId) {
+      const isAdmin = await this.isUserAdmin(teacherId);
+      if (!isAdmin) {
+        throw new ForbiddenError('Only the classroom teacher can grant credits');
+      }
+    }
+
+    let targetStudentIds: string[] = [];
+
+    if (studentIds && studentIds.length > 0) {
+      // successful verification only targets students in this classroom
+      const enrolledIds = new Set(classroom.students.map((s: { studentId: string }) => s.studentId));
+      targetStudentIds = studentIds.filter(id => enrolledIds.has(id));
+    } else {
+      // Target all students
+      targetStudentIds = classroom.students.map((s: { studentId: string }) => s.studentId);
+    }
+
+    if (targetStudentIds.length === 0) {
+      return { students: [], totalCredits: 0 };
+    }
+
+    // Update credits
+    await prisma.user.updateMany({
+      where: { id: { in: targetStudentIds } },
+      data: { credits: { increment: amount } }
+    });
+
+    // Log for each student (optional, maybe bulk log later if performance issue)
+    // For now, simple logging
+    // await prisma.auditLog.createMany(...) // createMany is available in modern Prisma
+
+    return {
+      students: targetStudentIds,
+      totalCredits: targetStudentIds.length * amount
+    };
   }
 
   /**

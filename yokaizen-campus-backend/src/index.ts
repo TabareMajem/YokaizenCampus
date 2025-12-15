@@ -98,6 +98,7 @@ const gracefulShutdown = async (signal: string) => {
     console.log('Database disconnected');
 
     // Close Redis connection
+    const redis = getRedisClient();
     await redis.quit();
     console.log('Redis disconnected');
 

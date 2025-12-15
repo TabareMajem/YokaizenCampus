@@ -42,10 +42,10 @@ async function generateAISummary(
       suggestedAction: 'Check if students need help getting started or if there are technical issues.',
     },
   };
-  
+
   // Determine state based on aggregates
   let state = 'good';
-  
+
   if (aggregates.idleCount > aggregates.totalStudents * 0.5) {
     state = 'idle';
   } else if (aggregates.stuckCount > aggregates.totalStudents * 0.4) {
@@ -55,7 +55,7 @@ async function generateAISummary(
   } else if (aggregates.velocity > 80 && aggregates.averageSentiment > 70) {
     state = 'excellent';
   }
-  
+
   // Add alert-specific context
   if (alerts.some(a => a.type === 'sentiment_drop' && a.severity === 'high')) {
     return {
@@ -63,7 +63,7 @@ async function generateAISummary(
       suggestedAction: 'Consider a brief break or encouraging message to reset the mood.',
     };
   }
-  
+
   return summaries[state];
 }
 
@@ -74,11 +74,11 @@ function analyzeGraphComplexity(
 ): { complexity: 'simple' | 'moderate' | 'complex' | 'chaotic'; score: number } {
   const nodeCount = Array.isArray(nodes) ? nodes.length : 0;
   const connectionCount = Array.isArray(connections) ? connections.length : 0;
-  
+
   // Calculate complexity score
   const ratio = nodeCount > 0 ? connectionCount / nodeCount : 0;
   const score = (nodeCount * 10) + (connectionCount * 5) + (ratio * 20);
-  
+
   if (nodeCount === 0) {
     return { complexity: 'simple', score: 0 };
   }
@@ -100,7 +100,7 @@ function detectAlerts(
   previousAggregates?: ClassroomAggregates
 ): AthenaAlert[] {
   const alerts: AthenaAlert[] = [];
-  
+
   // Check for stuck cluster
   const stuckStudents = students.filter(s => s.status === 'STUCK');
   if (stuckStudents.length >= 3) {
@@ -111,7 +111,7 @@ function detectAlerts(
       severity: stuckStudents.length >= 5 ? 'high' : 'medium',
     });
   }
-  
+
   // Check for sentiment drop
   const lowSentimentStudents = students.filter(s => s.sentimentScore < 40);
   if (lowSentimentStudents.length >= 2) {
@@ -122,7 +122,7 @@ function detectAlerts(
       severity: lowSentimentStudents.length >= 4 ? 'high' : 'medium',
     });
   }
-  
+
   // Check for idle students
   const idleStudents = students.filter(s => s.status === 'IDLE');
   if (idleStudents.length > students.length * 0.3 && idleStudents.length >= 2) {
@@ -133,10 +133,10 @@ function detectAlerts(
       severity: 'low',
     });
   }
-  
+
   // Check for complexity issues (if we had access to graph data)
   // This would be enhanced with actual graph analysis
-  
+
   return alerts;
 }
 
@@ -146,7 +146,7 @@ function calculateTrends(
   previous?: ClassroomAggregates
 ): AthenaTrend[] {
   const trends: AthenaTrend[] = [];
-  
+
   if (!previous) {
     return [
       { metric: 'velocity', direction: 'stable', change: 0 },
@@ -154,7 +154,7 @@ function calculateTrends(
       { metric: 'engagement', direction: 'stable', change: 0 },
     ];
   }
-  
+
   // Velocity trend
   const velocityChange = current.velocity - previous.velocity;
   trends.push({
@@ -162,7 +162,7 @@ function calculateTrends(
     direction: velocityChange > 5 ? 'up' : velocityChange < -5 ? 'down' : 'stable',
     change: velocityChange,
   });
-  
+
   // Sentiment trend
   const sentimentChange = current.averageSentiment - previous.averageSentiment;
   trends.push({
@@ -170,7 +170,7 @@ function calculateTrends(
     direction: sentimentChange > 5 ? 'up' : sentimentChange < -5 ? 'down' : 'stable',
     change: sentimentChange,
   });
-  
+
   // Engagement (flow + stuck vs idle)
   const currentEngagement = ((current.flowCount + current.stuckCount) / Math.max(current.totalStudents, 1)) * 100;
   const previousEngagement = ((previous.flowCount + previous.stuckCount) / Math.max(previous.totalStudents, 1)) * 100;
@@ -180,27 +180,22 @@ function calculateTrends(
     direction: engagementChange > 10 ? 'up' : engagementChange < -10 ? 'down' : 'stable',
     change: engagementChange,
   });
-  
+
   return trends;
 }
 
 // Main Athena service class
 export class AthenaService {
-  private classroomId: string;
-  private previousAggregates?: ClassroomAggregates;
-  
-  constructor(classroomId: string) {
-    this.classroomId = classroomId;
-  }
-  
+  constructor() { }
+
   // Get live student statuses from Redis
-  async getStudentStatuses(): Promise<StudentLiveStatus[]> {
-    const redisData = await classroomCache.getStudentStatuses(this.classroomId);
-    const handsData = await classroomCache.getRaisedHands(this.classroomId);
-    
+  async getStudentStatuses(classroomId: string): Promise<StudentLiveStatus[]> {
+    const redisData = await classroomCache.getStudentStatuses(classroomId);
+    const handsData = await classroomCache.getRaisedHands(classroomId);
+
     // Get student details from database
     const classroom = await prisma.classroom.findUnique({
-      where: { id: this.classroomId },
+      where: { id: classroomId },
       include: {
         students: {
           include: {
@@ -214,16 +209,16 @@ export class AthenaService {
         },
       },
     });
-    
+
     if (!classroom) {
       return [];
     }
-    
+
     const anonymize = classroom.school?.anonymizeStudents || false;
-    
+
     // Merge Redis data with student info
     const statuses: StudentLiveStatus[] = [];
-    
+
     for (const enrollment of classroom.students) {
       const studentId = enrollment.studentId;
       const redisStatus = redisData[studentId] as {
@@ -232,9 +227,9 @@ export class AthenaService {
         nodeCount?: number;
         lastUpdate?: number;
       } | undefined;
-      
+
       const handStatus = handsData[studentId] as { raised?: boolean } | undefined;
-      
+
       statuses.push({
         id: studentId,
         displayName: anonymize ? enrollment.anonymousId : enrollment.student.fullName,
@@ -245,14 +240,14 @@ export class AthenaService {
         raisedHand: handStatus?.raised || false,
       });
     }
-    
+
     return statuses;
   }
-  
+
   // Calculate classroom aggregates
   calculateAggregates(students: StudentLiveStatus[]): ClassroomAggregates {
     const total = students.length;
-    
+
     if (total === 0) {
       return {
         totalStudents: 0,
@@ -263,16 +258,16 @@ export class AthenaService {
         velocity: 0,
       };
     }
-    
+
     const flowCount = students.filter(s => s.status === 'FLOW').length;
     const stuckCount = students.filter(s => s.status === 'STUCK').length;
     const idleCount = students.filter(s => s.status === 'IDLE').length;
     const averageSentiment = Math.round(
       students.reduce((sum, s) => sum + s.sentimentScore, 0) / total
     );
-    
+
     const velocity = calculateVelocity(flowCount, stuckCount, idleCount, averageSentiment);
-    
+
     return {
       totalStudents: total,
       flowCount,
@@ -282,20 +277,20 @@ export class AthenaService {
       velocity,
     };
   }
-  
+
   // Generate full Athena insight
-  async generateInsight(): Promise<AthenaInsight> {
-    const students = await this.getStudentStatuses();
+  async generateInsight(classroomId: string, previousAggregates?: ClassroomAggregates): Promise<AthenaInsight> {
+    const students = await this.getStudentStatuses(classroomId);
     const aggregates = this.calculateAggregates(students);
-    const alerts = detectAlerts(students, this.previousAggregates);
-    const trends = calculateTrends(aggregates, this.previousAggregates);
-    
+    const alerts = detectAlerts(students, previousAggregates);
+    const trends = calculateTrends(aggregates, previousAggregates);
+
     // Get AI-generated summary
     const { summary, suggestedAction } = await generateAISummary(aggregates, alerts);
-    
+
     // Store current aggregates for future trend calculation
-    this.previousAggregates = aggregates;
-    
+    // this.previousAggregates = aggregates; // Stateless service cannot store this.
+
     return {
       velocity: aggregates.velocity,
       summary,
@@ -304,9 +299,9 @@ export class AthenaService {
       trends,
     };
   }
-  
+
   // Get quick heatmap data (optimized for polling)
-  async getHeatmapData(): Promise<{
+  async getHeatmapData(classroomId: string): Promise<{
     students: Array<{
       id: string;
       displayName: string;
@@ -316,9 +311,9 @@ export class AthenaService {
     }>;
     aggregates: ClassroomAggregates;
   }> {
-    const students = await this.getStudentStatuses();
+    const students = await this.getStudentStatuses(classroomId);
     const aggregates = this.calculateAggregates(students);
-    
+
     return {
       students: students.map(s => ({
         id: s.id,
@@ -330,38 +325,38 @@ export class AthenaService {
       aggregates,
     };
   }
-  
+
   // Analyze student graph sessions
-  async analyzeGraphSessions(): Promise<{
+  async analyzeGraphSessions(classroomId: string): Promise<{
     complexityDistribution: Record<string, number>;
     averageNodeCount: number;
     averageConnections: number;
     recommendations: string[];
   }> {
     const sessions = await prisma.graphSession.findMany({
-      where: { classroomId: this.classroomId },
+      where: { classroomId },
       select: { nodes: true, connections: true },
     });
-    
+
     const complexities = { simple: 0, moderate: 0, complex: 0, chaotic: 0 };
     let totalNodes = 0;
     let totalConnections = 0;
-    
+
     for (const session of sessions) {
       const nodes = session.nodes as unknown[];
       const connections = session.connections as unknown[];
-      
+
       const analysis = analyzeGraphComplexity(nodes, connections);
       complexities[analysis.complexity]++;
       totalNodes += Array.isArray(nodes) ? nodes.length : 0;
       totalConnections += Array.isArray(connections) ? connections.length : 0;
     }
-    
+
     const sessionCount = Math.max(sessions.length, 1);
-    
+
     // Generate recommendations
     const recommendations: string[] = [];
-    
+
     if (complexities.simple > sessionCount * 0.5) {
       recommendations.push('Many graphs are simple. Consider encouraging students to explore more complex workflows.');
     }
@@ -371,7 +366,7 @@ export class AthenaService {
     if (totalNodes / sessionCount < 3) {
       recommendations.push('Average node count is low. Students may need help understanding available agent types.');
     }
-    
+
     return {
       complexityDistribution: complexities,
       averageNodeCount: Math.round(totalNodes / sessionCount),
@@ -383,7 +378,7 @@ export class AthenaService {
 
 // Factory function
 export function createAthenaService(classroomId: string): AthenaService {
-  return new AthenaService(classroomId);
+  return new AthenaService();
 }
 
 // Aggregate insights for a school (admin view)
@@ -400,29 +395,29 @@ export async function getSchoolInsights(schoolId: string): Promise<{
       _count: { select: { students: true } },
     },
   });
-  
+
   const velocities: Array<{ id: string; name: string; velocity: number }> = [];
-  
+
   for (const classroom of classrooms) {
     const athena = createAthenaService(classroom.id);
-    const students = await athena.getStudentStatuses();
+    const students = await athena.getStudentStatuses(classroom.id);
     const aggregates = athena.calculateAggregates(students);
-    
+
     velocities.push({
       id: classroom.id,
       name: classroom.name,
       velocity: aggregates.velocity,
     });
   }
-  
+
   velocities.sort((a, b) => b.velocity - a.velocity);
-  
+
   return {
     totalClassrooms: classrooms.length,
-    activeClassrooms: classrooms.filter(c => c.isActive).length,
-    totalStudents: classrooms.reduce((sum, c) => sum + c._count.students, 0),
+    activeClassrooms: classrooms.filter((c: any) => c.isActive).length,
+    totalStudents: classrooms.reduce((sum: number, c: any) => sum + (c._count?.students || 0), 0),
     averageVelocity: velocities.length > 0
-      ? Math.round(velocities.reduce((sum, v) => sum + v.velocity, 0) / velocities.length)
+      ? Math.round(velocities.reduce((sum: number, v: any) => sum + v.velocity, 0) / velocities.length)
       : 0,
     topPerformingClassrooms: velocities.slice(0, 5),
   };

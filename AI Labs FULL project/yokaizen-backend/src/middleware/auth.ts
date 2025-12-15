@@ -20,11 +20,15 @@ export const authenticate = async (
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = await authService.validateAccessToken(token);
+    const decoded = await authService.validateToken(token);
 
     req.user = {
-      userId: decoded.userId,
+      id: decoded.id,
+      userId: decoded.id,
       firebaseUid: decoded.firebaseUid,
+      email: decoded.email,
+      phone: decoded.phone,
+      username: decoded.username,
       tier: decoded.tier,
       role: decoded.role,
       squadId: decoded.squadId,
@@ -50,10 +54,14 @@ export const optionalAuth = async (
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.split(' ')[1];
       try {
-        const decoded = await authService.validateAccessToken(token);
+        const decoded = await authService.validateToken(token);
         req.user = {
-          userId: decoded.userId,
+          id: decoded.id,
+          userId: decoded.id,
           firebaseUid: decoded.firebaseUid,
+          email: decoded.email,
+          phone: decoded.phone,
+          username: decoded.username,
           tier: decoded.tier,
           role: decoded.role,
           squadId: decoded.squadId,
@@ -152,7 +160,7 @@ export const requireOwnershipOrAdmin = (
       }
 
       const ownerId = await getResourceOwnerId(req);
-      
+
       if (!ownerId) {
         throw ApiError.notFound('Resource not found');
       }

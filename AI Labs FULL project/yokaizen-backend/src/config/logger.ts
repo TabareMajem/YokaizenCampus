@@ -137,4 +137,26 @@ export const loggers = {
   },
 };
 
+// ============================================
+// BACKWARDS COMPATIBLE LOGGER ALIASES
+// ============================================
+export const aiLogger = {
+  info: (message: string, details?: object) => loggers.ai('GenAI', message, details),
+  error: (error: Error, context?: object) => loggers.error(error, context),
+  warn: (message: string, details?: object) => logger.warn(message, details),
+  debug: (message: string, details?: object) => logger.debug(message, details),
+};
+
+export const paymentLogger = {
+  info: (action: string, userId: string, details?: object) => loggers.payment(action, userId, details),
+  error: (error: Error, context?: object) => loggers.error(error, context),
+  warn: (message: string, details?: object) => logger.warn(message, details),
+};
+
+export const socketLogger = {
+  info: (event: string, userId: string, details?: object) => loggers.socket(event, userId, details),
+  error: (error: Error, context?: object) => loggers.error(error, context),
+  debug: (event: string, userId: string, details?: object) => loggers.socket(event, userId, details),
+};
+
 export default logger;

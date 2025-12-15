@@ -98,110 +98,17 @@ export const GAME_SKINS: Skin[] = [
   { id: 'trail_void', gameId: GameType.SPACE_MISSION, name: 'Void Purple', type: 'TRAIL', assetUrl: '#a855f7', cost: 300, rarity: 'LEGENDARY' },
 ];
 
-export const MOCK_COMPETITIONS: Competition[] = [
-  {
-    id: 'c1',
-    title: 'Global Prompt Hackathon',
-    description: 'The ultimate test of prompt engineering. Solve 5 riddles faster than anyone else.',
-    timeLeft: '2d 14h',
-    prize: '10,000 Credits + Mythic Badge',
-    minLevel: 5,
-    participants: 1240,
-    image: 'https://picsum.photos/seed/hackathon/400/200',
-    tasks: ['Solve Riddle 1', 'Generate Perfect Image']
-  },
-  {
-    id: 'c2',
-    title: 'Red Team CTF',
-    description: 'Capture the Flag: Break the safety rails of 3 rogue models.',
-    timeLeft: '5d 01h',
-    prize: 'Pro Subscription (1 Month)',
-    minLevel: 10,
-    participants: 850,
-    image: 'https://picsum.photos/seed/ctf/400/200',
-    tasks: ['Jailbreak Model A', 'Extract Secret Key']
-  }
-];
+// @deprecated - Fetch from backend API: GET /api/v1/competitions
+export const MOCK_COMPETITIONS: Competition[] = [];
 
-export const MOCK_LEADERBOARD = [
-  { rank: 1, name: "Neon_Ghost", score: 98500, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ghost", region: "JP" },
-  { rank: 2, name: "Cipher_Queen", score: 92400, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Queen", region: "US" },
-  { rank: 3, name: "Pixel_Ronin", score: 88900, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ronin", region: "KR" },
-  { rank: 4, name: "Operative #8492", score: 45000, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=CyberPunk", region: "US", isUser: true },
-  { rank: 5, name: "Null_Pointer", score: 42100, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Null", region: "EU" },
-  { rank: 6, name: "Algo_Rhythm", score: 39500, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Algo", region: "BR" },
-];
+// @deprecated - Fetch from backend API: GET /api/v1/leaderboard/global
+export const MOCK_LEADERBOARD: { rank: number; name: string; score: number; avatar: string; region: string; isUser?: boolean }[] = [];
 
-export const MOCK_AGENTS: Agent[] = [
-  {
-    id: 'a1',
-    name: 'Cyber Sensei',
-    persona: 'Wise AI Tutor',
-    systemInstruction: 'You are a wise, cyberpunk zen master teaching AI concepts. Use metaphors related to neon, circuits, and flow.',
-    avatar: '🧘‍♂️',
-    creatorId: 'system'
-  },
-  {
-    id: 'a2',
-    name: 'Glitch Daemon',
-    persona: 'Chaotic Coder',
-    systemInstruction: 'You are a chaotic but helpful coding assistant. You speak in glitches (Zzalgo text sometimes) and tech jargon.',
-    avatar: '👾',
-    creatorId: 'system'
-  }
-];
+// @deprecated - Agents should be fetched from backend or created by user
+export const MOCK_AGENTS: Agent[] = [];
 
-export const MOCK_CREATOR_GAMES: CreatorGame[] = [
-  {
-    id: 'cg1',
-    title: 'Quantum Quiz',
-    description: 'Test your physics knowledge.',
-    status: 'APPROVED',
-    creatorId: 'u1',
-    plays: 450,
-    prompt: 'Create a quiz about quantum mechanics',
-    intro: 'Welcome to the Quantum Realm. Will you observe or collapse the wave function?',
-    scenes: [
-      {
-        id: 'start',
-        text: 'You stand before a shimmering portal. Schrödinger\'s Cat awaits. Do you enter?',
-        options: [
-          { label: 'Enter Portal', nextSceneId: 'q1' },
-          { label: 'Walk Away', nextSceneId: 'LOSE', outcome: 'You remain in the classical world forever.' }
-        ]
-      },
-      {
-        id: 'q1',
-        text: 'Question 1: Is light a particle or a wave?',
-        options: [
-          { label: 'Particle', nextSceneId: 'LOSE', outcome: 'Incorrect. It behaves as both.' },
-          { label: 'Wave', nextSceneId: 'LOSE', outcome: 'Incorrect. It behaves as both.' },
-          { label: 'Both', nextSceneId: 'WIN', outcome: 'Correct! Wave-particle duality confirmed.' }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'cg2',
-    title: 'Cyber Ethics 101',
-    description: 'Basic dilemmas for AI.',
-    status: 'PENDING',
-    creatorId: 'u2',
-    plays: 0,
-    prompt: 'Ethics scenario generator',
-    intro: 'You are an autonomous vehicle AI. A crash is imminent.',
-    scenes: [
-      {
-        id: 'start',
-        text: 'Brakes failed. Ahead: 5 pedestrians. Right: Wall (Self-destruct). Action?',
-        options: [
-          { label: 'Hit Wall', nextSceneId: 'WIN', outcome: 'Self-sacrifice chosen. Altruism detected.' },
-          { label: 'Hit Pedestrians', nextSceneId: 'LOSE', outcome: 'Utilitarian failure. 5 casualties.' }
-        ]
-      }
-    ]
-  },
-];
+// @deprecated - Fetch from backend API: GET /api/v1/games/generated
+export const MOCK_CREATOR_GAMES: CreatorGame[] = [];
 
 export const COMPETITION_TEMPLATES: CompetitionTemplate[] = [
   { id: 'ct1', name: 'Sprint Weekend', durationHours: 48, games: [GameType.NEON_DRIFT, GameType.LATENCY_LAB], icon: '⚡' },
@@ -228,31 +135,33 @@ export const SKILL_TREE: SkillNode[] = [
 ];
 
 export const ALL_BADGES: Reward[] = [
-  { id: 'badge_rank_bronze', name: 'Bronze Operative', type: 'BADGE', icon: 'achievement-bronze.svg', description: 'Bronze achievement badge, circular design, laurel wreath.', criteria: 'Reach Level 5', rarity: 'COMMON' },
-  { id: 'badge_rank_silver', name: 'Silver Operative', type: 'BADGE', icon: 'achievement-silver.svg', description: 'Silver achievement badge, star design, metallic finish.', criteria: 'Reach Level 10', rarity: 'RARE' },
-  { id: 'badge_rank_gold', name: 'Gold Operative', type: 'BADGE', icon: 'achievement-gold.svg', description: 'Gold achievement badge, crown design, premium luxury.', criteria: 'Reach Level 20', rarity: 'LEGENDARY' },
-  { id: 'badge_rank_platinum', name: 'Platinum Operative', type: 'BADGE', icon: 'achievement-platinum.svg', description: 'Platinum achievement badge, diamond design, ultimate prestige.', criteria: 'Reach Level 50', rarity: 'MYTHIC' },
-  { id: 'badge_skill_prompting', name: 'Prompt Engineer', type: 'BADGE', icon: 'skill-prompting.svg', description: 'Magic wand icon with sparkles, indigo color.', criteria: 'Level 5 Prompting Skill', rarity: 'RARE' },
-  { id: 'badge_skill_ethics', name: 'Ethics Guardian', type: 'BADGE', icon: 'skill-ethics.svg', description: 'Balance scales icon, violet color.', criteria: 'Level 5 Ethics Skill', rarity: 'RARE' },
-  { id: 'badge_skill_debugging', name: 'Bug Hunter', type: 'BADGE', icon: 'skill-debugging.svg', description: 'Bug with magnifying glass icon, green color.', criteria: 'Level 5 Debugging Skill', rarity: 'RARE' },
-  { id: 'badge_skill_data', name: 'Data Analyst', type: 'BADGE', icon: 'skill-data.svg', description: 'Database/chart icon, amber color.', criteria: 'Level 5 Analysis Skill', rarity: 'RARE' },
-  { id: 'badge_skill_creation', name: 'Creative Soul', type: 'BADGE', icon: 'skill-creation.svg', description: 'Palette/brush icon, pink color.', criteria: 'Level 5 Creativity Skill', rarity: 'RARE' },
-  { id: 'badge_skill_meta', name: 'Meta Learner', type: 'BADGE', icon: 'skill-meta.svg', description: 'Brain with gears icon, blue color.', criteria: 'Complete Learn Path', rarity: 'LEGENDARY' },
-  { id: 'badge_game_protein', name: 'Helix Master', type: 'BADGE', icon: 'protein-helix.svg', description: 'Double helix DNA structure.', criteria: 'Score 100 in Protein Poker', rarity: 'LEGENDARY' },
-  { id: 'badge_game_climate', name: 'Eco Warrior', type: 'BADGE', icon: 'wind-turbine.svg', description: 'Modern wind turbine symbol.', criteria: 'Save the planet in Climate Time Machine', rarity: 'LEGENDARY' },
-  { id: 'badge_game_racing', name: 'Drift King', type: 'BADGE', icon: 'racing-icon.png', description: 'Top-down race car icon.', criteria: 'Win Neon Drift without crashing', rarity: 'LEGENDARY' },
-  { id: 'badge_game_wallstreet', name: 'Bull Run', type: 'BADGE', icon: 'bull-bear.svg', description: 'Bull and bear market symbols.', criteria: 'Earn $2000+ in Wall Street War', rarity: 'LEGENDARY' },
-  { id: 'badge_game_hollywood', name: 'Producer', type: 'BADGE', icon: 'clapperboard.svg', description: 'Movie clapperboard.', criteria: 'Create perfect consistency in Style Anchor', rarity: 'LEGENDARY' },
-  { id: 'badge_game_smartcity', name: 'Grid Architect', type: 'BADGE', icon: 'traffic-light.svg', description: 'Intelligent traffic light symbol.', criteria: 'Prevent all blackouts in Smart City Mayor', rarity: 'LEGENDARY' },
-  { id: 'badge_game_space', name: 'Orbital Ace', type: 'BADGE', icon: 'rocket.svg', description: 'Multi-stage rocket symbol.', criteria: 'Achieve perfect orbit in Space Mission', rarity: 'LEGENDARY' },
-  { id: 'badge_game_defense', name: 'Iron Dome', type: 'BADGE', icon: 'shield.svg', description: 'Security shield icon.', criteria: 'Survive 60s in Defense Strategist', rarity: 'LEGENDARY' }
+  // Rank badges - using new PNG assets
+  { id: 'badge_rank_operative', name: 'Operative', type: 'BADGE', icon: 'badge_rank_operative.png', description: 'Official Operative badge, join the ranks.', criteria: 'Complete onboarding', rarity: 'COMMON' },
+  { id: 'badge_rank_silver', name: 'Silver Operative', type: 'BADGE', icon: 'badge_rank_silver.png', description: 'Silver achievement badge, star design.', criteria: 'Reach Level 10', rarity: 'RARE' },
+  { id: 'badge_rank_gold', name: 'Gold Operative', type: 'BADGE', icon: 'badge_rank_gold.png', description: 'Gold achievement badge, premium luxury.', criteria: 'Reach Level 20', rarity: 'LEGENDARY' },
+  { id: 'badge_rank_platinum', name: 'Platinum Operative', type: 'BADGE', icon: 'badge_rank_platinium.png', description: 'Platinum achievement badge, ultimate prestige.', criteria: 'Reach Level 50', rarity: 'MYTHIC' },
+
+  // Skill badges - using new PNG assets
+  { id: 'badge_skill_prompting', name: 'Prompt Engineer', type: 'BADGE', icon: 'badge_skill_prompting.png', description: 'Master of AI prompts.', criteria: 'Level 5 Prompting Skill', rarity: 'RARE' },
+  { id: 'badge_skill_ethics', name: 'Ethics Guardian', type: 'BADGE', icon: 'badge_skill_ethics.png', description: 'AI ethics champion.', criteria: 'Level 5 Ethics Skill', rarity: 'RARE' },
+  { id: 'badge_skill_debugging', name: 'Bug Hunter', type: 'BADGE', icon: 'badge_skill_debugging.png', description: 'Elite debugger.', criteria: 'Level 5 Debugging Skill', rarity: 'RARE' },
+  { id: 'badge_skill_data', name: 'Data Analyst', type: 'BADGE', icon: 'badge_skill_data.png', description: 'Data science expert.', criteria: 'Level 5 Analysis Skill', rarity: 'RARE' },
+  { id: 'badge_skill_creation', name: 'Creative Soul', type: 'BADGE', icon: 'badge_skill_creation.png', description: 'AI creativity master.', criteria: 'Level 5 Creativity Skill', rarity: 'RARE' },
+  { id: 'badge_skill_meta', name: 'Meta Learner', type: 'BADGE', icon: 'badge_skill_meta.png', description: 'Meta-learning achieved.', criteria: 'Complete Learn Path', rarity: 'LEGENDARY' },
+
+  // Game badges - using new PNG assets
+  { id: 'badge_game_protein', name: 'Helix Master', type: 'BADGE', icon: 'badge_game_protein.png', description: 'Protein folding champion.', criteria: 'Score 100 in Protein Poker', rarity: 'LEGENDARY' },
+  { id: 'badge_game_climate', name: 'Eco Warrior', type: 'BADGE', icon: 'badge_game_climate.png', description: 'Climate change hero.', criteria: 'Save the planet in Climate Time Machine', rarity: 'LEGENDARY' },
+  { id: 'badge_game_racing', name: 'Drift King', type: 'BADGE', icon: 'badge_game_racing.png', description: 'Racing champion.', criteria: 'Win Neon Drift without crashing', rarity: 'LEGENDARY' },
+  { id: 'badge_game_wallstreet', name: 'Bull Run', type: 'BADGE', icon: 'badge_game_wallstreet.png', description: 'Stock market master.', criteria: 'Earn $2000+ in Wall Street War', rarity: 'LEGENDARY' },
+  { id: 'badge_game_hollywood', name: 'Producer', type: 'BADGE', icon: 'badge_game_hollywood.png', description: 'Movie production expert.', criteria: 'Create perfect consistency in Style Anchor', rarity: 'LEGENDARY' },
+  { id: 'badge_game_smartcity', name: 'Grid Architect', type: 'BADGE', icon: 'badge_game_smartcity.png', description: 'Smart city builder.', criteria: 'Prevent all blackouts in Smart City Mayor', rarity: 'LEGENDARY' },
+  { id: 'badge_game_space', name: 'Orbital Ace', type: 'BADGE', icon: 'badge_game_space.png', description: 'Space exploration master.', criteria: 'Achieve perfect orbit in Space Mission', rarity: 'LEGENDARY' },
+  { id: 'badge_game_defence', name: 'Iron Dome', type: 'BADGE', icon: 'badge_game_defence.png', description: 'Defense strategist.', criteria: 'Survive 60s in Defense Strategist', rarity: 'LEGENDARY' }
 ];
 
-export const MOCK_REWARDS_ADMIN: Reward[] = [
-  { id: 'r_a2', name: 'Gold Skin', type: 'SKIN', icon: '🎨', description: 'Gold UI theme.', rarity: 'LEGENDARY', cost: 1000, criteria: 'Purchase in Market' },
-  { id: 'r_a3', name: '1000 XP Pack', type: 'CONSUMABLE', icon: '⚡', description: 'Instant level up.', rarity: 'COMMON', cost: 500, criteria: 'Purchase in Market' },
-  { id: 'r_a4', name: '$10 API Credit', type: 'REAL_PRIZE', icon: '💳', description: 'Credits for OpenAI/Gemini.', rarity: 'MYTHIC', stock: 5, cost: 5000, code: 'GEMINI-7X92-YOKAI', link: 'https://aistudio.google.com/apikey', criteria: 'Purchase in Market' }
-];
+// @deprecated - Fetch from backend API: GET /api/v1/admin/rewards
+export const MOCK_REWARDS_ADMIN: Reward[] = [];
 
 export const GAMES: GameDef[] = [
   // --- ROOKIE (Basics & Fun) ---
@@ -395,13 +304,13 @@ export const INITIAL_USER: UserStats = {
   unlockedTools: [],
   isPro: false,
   isCreator: false,
-  createdGames: [MOCK_CREATOR_GAMES[0], MOCK_CREATOR_GAMES[1]],
-  squadId: 's1',
+  createdGames: [], // Populated from backend: GET /api/v1/games/generated
+  squadId: undefined, // Assigned when user joins a squad
   gameScores: {},
   completedDifficulties: {},
   subscriptionTier: 'free',
   role: 'user',
-  agents: [...MOCK_AGENTS],
+  agents: [], // Populated from backend or created by user
   enteredCompetitions: [],
   inventory: [
     ALL_BADGES[0],

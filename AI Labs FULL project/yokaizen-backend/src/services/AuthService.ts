@@ -38,7 +38,7 @@ export class AuthService {
     // Check if user exists
     let user = await this.userRepository.findOne({
       where: { firebaseUid },
-      relations: ['squad'],
+      // relations: ['squad'], // Squad relation removed, using squadId
     });
 
     const isNewUser = !user;
@@ -53,14 +53,16 @@ export class AuthService {
         role: UserRole.USER,
         credits: 100, // Welcome bonus
         xp: 0,
-        energy: 100,
+        currentEnergy: 100, // Fixed: energy -> currentEnergy
         maxEnergy: 100,
         streak: 0,
         language: 'EN',
-        settings: {
+        preferences: { // Fixed: settings -> preferences
           notifications: true,
-          soundEnabled: true,
-          theme: 'dark',
+          soundEffects: true, // Fixed: soundEnabled -> soundEffects
+          darkMode: true, // Fixed: theme -> darkMode
+          language: 'EN',
+          timezone: 'UTC',
         },
       });
 
@@ -76,18 +78,18 @@ export class AuthService {
     } else {
       // Update last login
       user.lastLogin = new Date();
-      
+
       // Check and update streak
       const streakResult = this.checkAndUpdateStreak(user);
       user.streak = streakResult.newStreak;
-      user.lastStreakDate = streakResult.lastStreakDate;
-      
+      user.lastDailyReward = streakResult.lastStreakDate; // Fixed: lastStreakDate -> lastDailyReward
+
       if (streakResult.streakBonus > 0) {
         user.credits += streakResult.streakBonus;
-        logger.info('Streak bonus awarded', { 
-          userId: user.id, 
-          streak: user.streak, 
-          bonus: streakResult.streakBonus 
+        logger.info('Streak bonus awarded', {
+          userId: user.id,
+          streak: user.streak,
+          bonus: streakResult.streakBonus
         });
       }
 
@@ -113,7 +115,7 @@ export class AuthService {
   }> {
     try {
       const payload = jwt.verify(refreshToken, config.jwt.refreshSecret) as JWTPayload;
-      
+
       // Verify session exists
       const session = await getSession(payload.userId);
       if (!session || session.refreshToken !== refreshToken) {
@@ -123,7 +125,6 @@ export class AuthService {
       // Get user
       const user = await this.userRepository.findOne({
         where: { id: payload.userId },
-        relations: ['squad'],
       });
 
       if (!user || user.isBanned) {
@@ -163,7 +164,7 @@ export class AuthService {
   async validateToken(token: string): Promise<AuthUser> {
     try {
       const payload = jwt.verify(token, config.jwt.secret) as JWTPayload;
-      
+
       // Verify session exists
       const session = await getSession(payload.userId);
       if (!session) {
@@ -173,14 +174,14 @@ export class AuthService {
       // Get user from cache or database
       const cacheKey = `cache:user:${payload.userId}`;
       let userData = await redisClient.get(cacheKey);
-      
+
       let user: User | null;
       if (userData) {
         user = JSON.parse(userData);
       } else {
         user = await this.userRepository.findOne({
           where: { id: payload.userId },
-          relations: ['squad'],
+          // relations: ['squad'], // Removed implicit relation
         });
 
         if (user) {
@@ -197,7 +198,7 @@ export class AuthService {
         firebaseUid: user.firebaseUid,
         tier: user.tier,
         role: user.role,
-        squadId: user.squad?.id,
+        squadId: user.squadId, // Fixed: user.squad?.id -> user.squadId
       };
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
@@ -216,7 +217,7 @@ export class AuthService {
   async getUserById(userId: string): Promise<User | null> {
     return this.userRepository.findOne({
       where: { id: userId },
-      relations: ['squad', 'inventory', 'skills'],
+      // relations: ['inventory', 'skills'], // Removed relations that might miss entities
     });
   }
 
@@ -255,20 +256,22 @@ export class AuthService {
 
   private generateAccessToken(user: User): string {
     const payload: JWTPayload = {
+      sub: user.id, // Mandatory JWT field
       userId: user.id,
       firebaseUid: user.firebaseUid,
       tier: user.tier,
       role: user.role,
-      squadId: user.squad?.id,
+      squadId: user.squadId, // Fixed: user.squad?.id -> user.squadId
     };
 
-    return jwt.sign(payload, config.jwt.secret, {
+    return jwt.sign(payload, config.jwt.secret as string, {
       expiresIn: config.jwt.expiresIn,
     });
   }
 
   private generateRefreshToken(user: User): string {
     const payload = {
+      sub: user.id,
       userId: user.id,
       type: 'refresh',
     };
@@ -297,8 +300,8 @@ export class AuthService {
   } {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const lastStreakDate = user.lastStreakDate 
-      ? new Date(user.lastStreakDate.getFullYear(), user.lastStreakDate.getMonth(), user.lastStreakDate.getDate())
+    const lastStreakDate = user.lastDailyReward // Fixed: lastStreakDate -> lastDailyReward
+      ? new Date(user.lastDailyReward.getFullYear(), user.lastDailyReward.getMonth(), user.lastDailyReward.getDate())
       : null;
 
     if (!lastStreakDate) {
@@ -310,7 +313,7 @@ export class AuthService {
 
     if (daysDiff === 0) {
       // Same day - no change
-      return { newStreak: user.streak, lastStreakDate: user.lastStreakDate!, streakBonus: 0 };
+      return { newStreak: user.streak, lastStreakDate: user.lastDailyReward!, streakBonus: 0 };
     } else if (daysDiff === 1) {
       // Consecutive day - increment streak
       const newStreak = user.streak + 1;

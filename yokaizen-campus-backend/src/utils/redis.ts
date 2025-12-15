@@ -4,7 +4,13 @@
 import Redis from 'ioredis';
 import { config } from '../config/index.js';
 
-let redis: Redis | null = null;
+export let redis: Redis | null = null;
+
+export const REDIS_KEYS = {
+  CLASSROOM_STATE: 'classroom:state:',
+  STUDENT_STATUS: 'student:status:',
+  RAISED_HANDS: 'classroom:hands:'
+};
 
 export function getRedisClient(): Redis {
   if (!redis) {
@@ -58,7 +64,7 @@ export const classroomCache = {
     const client = getRedisClient();
     const key = `classroom:${classroomId}:students`;
     const data = await client.hgetall(key);
-    
+
     const parsed: Record<string, unknown> = {};
     for (const [studentId, value] of Object.entries(data)) {
       try {
@@ -110,7 +116,7 @@ export const classroomCache = {
     const client = getRedisClient();
     const key = `classroom:${classroomId}:hands`;
     const data = await client.hgetall(key);
-    
+
     const parsed: Record<string, unknown> = {};
     for (const [studentId, value] of Object.entries(data)) {
       try {
@@ -157,15 +163,15 @@ export const rateLimiter = {
   ): Promise<{ allowed: boolean; remaining: number; resetAt: number }> {
     const client = getRedisClient();
     const key = `ratelimit:${identifier}`;
-    
+
     const current = await client.incr(key);
-    
+
     if (current === 1) {
       await client.expire(key, windowSeconds);
     }
-    
+
     const ttl = await client.ttl(key);
-    
+
     return {
       allowed: current <= limit,
       remaining: Math.max(0, limit - current),

@@ -43,32 +43,32 @@ export const RedisKeys = {
   // Session keys
   session: (userId: string) => `session:${userId}`,
   sessionToken: (token: string) => `session_token:${token}`,
-  
+
   // Rate limiting
   rateLimit: (userId: string, endpoint: string) => `rate_limit:${userId}:${endpoint}`,
   rateLimitAI: (userId: string) => `rate_limit:ai:${userId}`,
-  
+
   // Leaderboard keys
   globalLeaderboard: 'leaderboard:global',
   squadLeaderboard: 'leaderboard:squads',
   regionalLeaderboard: (region: string) => `leaderboard:regional:${region}`,
   weeklyLeaderboard: 'leaderboard:weekly',
-  
+
   // Game session anti-cheat
   gameSession: (userId: string, sessionToken: string) => `game_session:${userId}:${sessionToken}`,
-  
+
   // Cache keys
   userCache: (userId: string) => `cache:user:${userId}`,
   squadCache: (squadId: string) => `cache:squad:${squadId}`,
   agentCache: (agentId: string) => `cache:agent:${agentId}`,
-  
+
   // Pub/Sub channels
   squadRoom: (squadId: string) => `squad_room:${squadId}`,
   globalTicker: 'global_ticker',
-  
+
   // Lock keys for distributed operations
   lock: (resource: string) => `lock:${resource}`,
-  
+
   // User online status
   userOnline: (userId: string) => `user_online:${userId}`,
   squadOnlineMembers: (squadId: string) => `squad_online:${squadId}`,
@@ -159,6 +159,80 @@ export const RedisHelpers = {
       await redis.del(...keys);
     }
   },
+};
+
+// ============================================
+// BACKWARDS COMPATIBLE EXPORTS FOR SERVICES
+// ============================================
+
+// Alias for services expecting redisClient
+export const redisClient = redis;
+
+// Session management
+export const setSession = async (userId: string, data: object, ttl = 86400): Promise<void> => {
+  await RedisHelpers.setJson(RedisKeys.session(userId), data, ttl);
+};
+
+export const getSession = async <T>(userId: string): Promise<T | null> => {
+  return RedisHelpers.getJson<T>(RedisKeys.session(userId));
+};
+
+export const deleteSession = async (userId: string): Promise<void> => {
+  await redis.del(RedisKeys.session(userId));
+};
+
+// Game session management
+export const setGameSession = async (userId: string, sessionToken: string, data: object, ttl = 3600): Promise<void> => {
+  await RedisHelpers.setJson(RedisKeys.gameSession(userId, sessionToken), data, ttl);
+};
+
+export const getGameSession = async <T>(userId: string, sessionToken: string): Promise<T | null> => {
+  return RedisHelpers.getJson<T>(RedisKeys.gameSession(userId, sessionToken));
+};
+
+export const deleteGameSession = async (userId: string, sessionToken: string): Promise<void> => {
+  await redis.del(RedisKeys.gameSession(userId, sessionToken));
+};
+
+// Rate limiting
+export const checkAIRateLimit = async (userId: string): Promise<boolean> => {
+  const count = await redis.get(RedisKeys.rateLimitAI(userId));
+  return count !== null && parseInt(count) > 0;
+};
+
+export const incrementAIRateLimit = async (userId: string, windowSeconds = 60): Promise<number> => {
+  return RedisHelpers.incrementRateLimit(RedisKeys.rateLimitAI(userId), windowSeconds);
+};
+
+// Leaderboard functions
+export const addToLeaderboard = async (key: string, score: number, member: string): Promise<void> => {
+  await RedisHelpers.updateLeaderboard(key, score, member);
+};
+
+export const getLeaderboard = async (key: string, start: number, end: number) => {
+  return RedisHelpers.getLeaderboard(key, start, end);
+};
+
+export const getUserRank = async (key: string, member: string): Promise<number | null> => {
+  return RedisHelpers.getUserRank(key, member);
+};
+
+// Cache functions
+export const cacheGet = async <T>(key: string): Promise<T | null> => {
+  return RedisHelpers.getJson<T>(key);
+};
+
+export const cacheSet = async <T>(key: string, value: T, ttl?: number): Promise<void> => {
+  await RedisHelpers.setJson(key, value, ttl);
+};
+
+export const invalidateCache = async (pattern: string): Promise<void> => {
+  await RedisHelpers.deletePattern(pattern);
+};
+
+// Pub/Sub
+export const publishToChannel = async (channel: string, message: object): Promise<void> => {
+  await RedisHelpers.publish(channel, message);
 };
 
 export default redis;

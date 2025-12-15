@@ -429,7 +429,7 @@ export class AIEngine {
         provider,
         inputTokens,
         outputTokens,
-        estimatedCost,
+        cost: estimatedCost,
         creditsDeducted,
         requestType,
       },
@@ -777,7 +777,7 @@ export const aiEngine = {
     since.setDate(since.getDate() - periodDays);
 
     const logs = await prisma.aIUsageLog.findMany({
-      where: { userId, createdAt: { gte: since } }
+      where: { userId, timestamp: { gte: since } }
     });
 
     return {

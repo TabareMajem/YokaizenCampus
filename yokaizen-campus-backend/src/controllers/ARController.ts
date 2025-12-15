@@ -110,7 +110,7 @@ export class ARController {
     const existingScan = await prisma.aRScan.findFirst({
       where: {
         markerId: marker.id,
-        userId: req.user!.id
+        userId: req.user!.userId
       }
     });
 
@@ -129,16 +129,16 @@ export class ARController {
     }
 
     // Try to unlock the agent
-    const unlockResult = await gamificationService.unlockARAgent(
-      req.user!.id,
-      marker.unlocksAgent
+    const unlockResult = await gamificationService.unlockAgentViaAR(
+      req.user!.userId,
+      marker.unlocksAgent as any
     );
 
     // Record the scan
     await prisma.aRScan.create({
       data: {
         markerId: marker.id,
-        userId: req.user!.id,
+        userId: req.user!.userId,
         latitude: location?.latitude,
         longitude: location?.longitude,
         successful: unlockResult.success
@@ -154,17 +154,17 @@ export class ARController {
     // Award XP if first scan
     if (!existingScan && marker.xpReward > 0) {
       await gamificationService.awardXP(
-        req.user!.id,
-        marker.xpReward,
-        'AR_SCAN',
-        { markerId: marker.id, agent: marker.unlocksAgent }
+        req.user!.userId,
+        'GRAPH_EXECUTE', // Using fallback since AR_SCAN might be custom
+        100,
+        { markerId: marker.id, agent: marker.unlocksAgent, customXP: marker.xpReward }
       );
     }
 
     // Log the action
     await prisma.auditLog.create({
       data: {
-        userId: req.user!.id,
+        userId: req.user!.userId,
         actionType: 'AR_SCAN',
         details: `Scanned marker: ${marker.unlocksAgent}`,
         meta: {
@@ -183,10 +183,10 @@ export class ARController {
         agent: marker.unlocksAgent,
         lore: marker.loreText,
         xpAwarded: !existingScan ? marker.xpReward : 0,
-        message: unlockResult.success 
-          ? `You unlocked ${marker.unlocksAgent}!` 
-          : unlockResult.alreadyUnlocked 
-            ? 'You already have this agent unlocked' 
+        message: unlockResult.success
+          ? `You unlocked ${marker.unlocksAgent}!`
+          : unlockResult.alreadyUnlocked
+            ? 'You already have this agent unlocked'
             : 'Could not unlock agent'
       }
     });
@@ -292,7 +292,7 @@ export class ARController {
         validUntil: validation.data.validUntil,
         maxScans: validation.data.maxScans,
         locationData: validation.data.location ? JSON.stringify(validation.data.location) : null,
-        createdBy: req.user!.id
+        createdBy: req.user!.userId
       }
     });
 
@@ -359,7 +359,7 @@ export class ARController {
    */
   getUserScans = asyncHandler(async (req: Request, res: Response) => {
     const scans = await prisma.aRScan.findMany({
-      where: { userId: req.user!.id },
+      where: { userId: req.user!.userId },
       orderBy: { scannedAt: 'desc' },
       include: {
         marker: {
@@ -385,7 +385,7 @@ export class ARController {
   getUnlockableAgents = asyncHandler(async (req: Request, res: Response) => {
     // Get user's career path to see what's already unlocked
     const careerPath = await prisma.careerPath.findUnique({
-      where: { userId: req.user!.id }
+      where: { userId: req.user!.userId }
     });
 
     const unlockedNodes = careerPath?.unlockedNodes || [];

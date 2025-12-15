@@ -96,6 +96,19 @@ export class ApiError extends Error {
   static internal(message = 'Internal server error'): ApiError {
     return new ApiError(message, StatusCodes.INTERNAL_SERVER_ERROR, ErrorCodes.INTERNAL_ERROR);
   }
+
+  // Additional factory methods for backwards compatibility
+  static rateLimitExceeded(message = 'Rate limit exceeded'): ApiError {
+    return new ApiError(message, StatusCodes.TOO_MANY_REQUESTS, ErrorCodes.RATE_LIMITED);
+  }
+
+  static serviceUnavailable(message = 'Service temporarily unavailable'): ApiError {
+    return new ApiError(message, StatusCodes.SERVICE_UNAVAILABLE, ErrorCodes.AI_SERVICE_ERROR);
+  }
+
+  static notImplemented(message = 'Feature not implemented'): ApiError {
+    return new ApiError(message, StatusCodes.NOT_IMPLEMENTED, ErrorCodes.INTERNAL_ERROR);
+  }
 }
 
 // Send error response

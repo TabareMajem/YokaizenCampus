@@ -109,6 +109,11 @@ export const config = {
     isProduction: env.NODE_ENV === 'production',
     isDevelopment: env.NODE_ENV === 'development',
   },
+  // App URLs for payment redirects
+  app: {
+    frontendUrl: env.CORS_ORIGIN.split(',')[0],
+    backendUrl: `http://localhost:${env.PORT}`,
+  },
   database: {
     url: env.DATABASE_URL,
     host: env.DATABASE_HOST,
@@ -142,6 +147,9 @@ export const config = {
     geminiModel: env.GEMINI_MODEL,
     geminiFlashModel: env.GEMINI_FLASH_MODEL,
     imagenModel: env.IMAGEN_MODEL,
+    // Aliases for backwards compatibility
+    modelPro: env.GEMINI_MODEL,
+    modelFlash: env.GEMINI_FLASH_MODEL,
   },
   openai: {
     apiKey: env.OPENAI_API_KEY,

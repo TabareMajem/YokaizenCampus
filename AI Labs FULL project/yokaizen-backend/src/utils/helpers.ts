@@ -72,11 +72,11 @@ export const calculateStreak = (
 
   const now = new Date();
   const lastLoginDate = new Date(lastLogin);
-  
+
   // Reset to midnight
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const lastDate = new Date(lastLoginDate.getFullYear(), lastLoginDate.getMonth(), lastLoginDate.getDate());
-  
+
   const daysDiff = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
 
   if (daysDiff === 0) {
@@ -210,7 +210,7 @@ export const generateUsername = (identifier: string): string => {
   const base = identifier.includes('@')
     ? identifier.split('@')[0]
     : identifier.replace(/[^a-zA-Z0-9]/g, '').slice(-6);
-  
+
   const randomSuffix = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
   return `${base}_${randomSuffix}`;
 };
@@ -289,3 +289,34 @@ export default {
   parseCommaSeparated,
   getDateRange,
 };
+
+// ============================================
+// BACKWARDS COMPATIBLE ALIASES FOR SERVICES
+// ============================================
+
+// Alias for AI service
+export const sanitizeForPrompt = (text: string): string => {
+  return sanitizeInput(text).substring(0, 10000); // Limit prompt length
+};
+
+// XP and credit reward calculations
+export const calculateXPReward = (
+  baseXP: number,
+  difficulty: 'EASY' | 'MEDIUM' | 'HARD' | 'EXTREME' = 'MEDIUM',
+  scoreMultiplier: number = 1
+): number => {
+  const difficultyMultipliers = { EASY: 1, MEDIUM: 1.5, HARD: 2, EXTREME: 3 };
+  return Math.floor(baseXP * difficultyMultipliers[difficulty] * scoreMultiplier);
+};
+
+export const calculateCreditReward = (
+  baseCredits: number,
+  difficulty: 'EASY' | 'MEDIUM' | 'HARD' | 'EXTREME' = 'MEDIUM',
+  scoreMultiplier: number = 1
+): number => {
+  const difficultyMultipliers = { EASY: 0.5, MEDIUM: 1, HARD: 1.5, EXTREME: 2 };
+  return Math.floor(baseCredits * difficultyMultipliers[difficulty] * scoreMultiplier);
+};
+
+// Energy regeneration alias
+export const calculateEnergyRegen = calculateEnergy;

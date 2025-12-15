@@ -179,4 +179,7 @@ export const getTierFromPriceId = (priceId: string): 'FREE' | 'OPERATIVE' | 'PRO
   return 'FREE';
 };
 
+// Backwards compatible alias
+export const PLAN_CONFIG = PlanConfig;
+
 export default stripe;

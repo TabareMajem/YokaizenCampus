@@ -52,6 +52,8 @@ enum ChaosEventType {
   DDOS          // Increases latency
   MEMORY_LEAK   // Slow performance
   QUANTUM_NOISE // Random glitches
+  BLACKOUT      // Disables all nodes
+  PARADOX       // Corrupts Critic
 }
 
 // ==================== CORE MODELS ====================

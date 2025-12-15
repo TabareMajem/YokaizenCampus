@@ -3,7 +3,7 @@ import { Server, Socket } from 'socket.io';
 import { authService } from '../services/AuthService';
 import { classroomService } from '../services/ClassroomService';
 import { gamificationService } from '../services/GamificationService';
-import { redis, REDIS_KEYS } from '../utils/redis';
+import { getRedisClient, REDIS_KEYS } from '../utils/redis';
 import { prisma } from '../utils/prisma';
 import { config } from '../config';
 
@@ -54,7 +54,7 @@ export class SocketGateway {
     this.io.use(async (socket: AuthenticatedSocket, next) => {
       try {
         const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.split(' ')[1];
-        
+
         if (!token) {
           return next(new Error('Authentication required'));
         }
@@ -62,7 +62,7 @@ export class SocketGateway {
         const payload = await authService.verifyToken(token);
         socket.userId = payload.userId;
         socket.userRole = payload.role;
-        
+
         next();
       } catch (error) {
         next(new Error('Invalid token'));
@@ -78,26 +78,26 @@ export class SocketGateway {
       socket.join(`user:${socket.userId}`);
 
       // Classroom events
-      socket.on('join_classroom', (data) => this.handleJoinClassroom(socket, data));
-      socket.on('leave_classroom', () => this.handleLeaveClassroom(socket));
-      
+      (socket as any).on('join_classroom', (data: any) => this.handleJoinClassroom(socket, data));
+      (socket as any).on('leave_classroom', () => this.handleLeaveClassroom(socket));
+
       // Student events
-      socket.on('student_update', (data) => this.handleStudentUpdate(socket, data));
-      socket.on('raise_hand', (data) => this.handleRaiseHand(socket, data));
-      socket.on('lower_hand', () => this.handleLowerHand(socket));
-      
+      (socket as any).on('student_update', (data: any) => this.handleStudentUpdate(socket, data));
+      (socket as any).on('raise_hand', (data: any) => this.handleRaiseHand(socket, data));
+      (socket as any).on('lower_hand', () => this.handleLowerHand(socket));
+
       // Teacher events
-      socket.on('teacher_broadcast', (data) => this.handleTeacherBroadcast(socket, data));
-      socket.on('chaos_event', (data) => this.handleChaosEvent(socket, data));
-      socket.on('philosophy_change', (data) => this.handlePhilosophyChange(socket, data));
-      socket.on('grant_credits', (data) => this.handleGrantCredits(socket, data));
-      socket.on('dismiss_hand', (data) => this.handleDismissHand(socket, data));
-      
+      (socket as any).on('teacher_broadcast', (data: any) => this.handleTeacherBroadcast(socket, data));
+      (socket as any).on('chaos_event', (data: any) => this.handleChaosEvent(socket, data));
+      (socket as any).on('philosophy_change', (data: any) => this.handlePhilosophyChange(socket, data));
+      (socket as any).on('grant_credits', (data: any) => this.handleGrantCredits(socket, data));
+      (socket as any).on('dismiss_hand', (data: any) => this.handleDismissHand(socket, data));
+
       // Graph sync events
-      socket.on('graph_update', (data) => this.handleGraphUpdate(socket, data));
-      
+      (socket as any).on('graph_update', (data: any) => this.handleGraphUpdate(socket, data));
+
       // Disconnect
-      socket.on('disconnect', () => this.handleDisconnect(socket));
+      (socket as any).on('disconnect', () => this.handleDisconnect(socket));
     });
   }
 
@@ -107,7 +107,7 @@ export class SocketGateway {
   private async handleJoinClassroom(socket: AuthenticatedSocket, data: { classroomId: string; accessCode?: string }) {
     try {
       const { classroomId, accessCode } = data;
-      
+
       // Verify access to classroom
       const classroom = await prisma.classroom.findUnique({
         where: { id: classroomId },
@@ -137,7 +137,7 @@ export class SocketGateway {
       socket.join(`class:${classroomId}`);
 
       // Update Redis presence
-      await redis.hSet(
+      await getRedisClient().hSet(
         REDIS_KEYS.classroomState(classroomId),
         `presence:${socket.userId}`,
         JSON.stringify({
@@ -155,7 +155,7 @@ export class SocketGateway {
       });
 
       // Send current classroom state to joining user
-      const state = await classroomService.getLiveState(classroomId);
+      const state = await classroomService.getClassroomLiveData(classroomId, socket.userId!);
       socket.emit('classroom_state', state);
 
       console.log(`User ${socket.userId} joined classroom ${classroomId}`);
@@ -172,9 +172,9 @@ export class SocketGateway {
     if (!socket.classroomId) return;
 
     const classroomId = socket.classroomId;
-    
+
     // Remove from Redis presence
-    await redis.hDel(
+    await getRedisClient().hDel(
       REDIS_KEYS.classroomState(classroomId),
       `presence:${socket.userId}`
     );
@@ -444,7 +444,7 @@ export class SocketGateway {
 
     if (socket.classroomId) {
       // Remove from Redis presence
-      await redis.hDel(
+      await getRedisClient().hDel(
         REDIS_KEYS.classroomState(socket.classroomId),
         `presence:${socket.userId}`
       );
