@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { UserRole, UserTier } from '../entities/User';
 import { GameType, GameDifficulty } from '../entities/GameHistory';
 import { AgentModel, AgentCategory } from '../entities/Agent';
 import { GeneratedGameType } from '../entities/GeneratedGame';
@@ -27,6 +26,10 @@ export const authVerifySchema = z.object({
   idToken: z.string().min(1, 'ID token is required'),
 });
 
+export const authVerifyMockSchema = z.object({
+  phoneNumber: z.string().min(1, 'Phone number is required'),
+});
+
 export const authRefreshSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required'),
 });
@@ -50,6 +53,13 @@ export const updateUserSchema = z.object({
 
 export const unlockSkillSchema = z.object({
   nodeId: z.string().min(1, 'Skill node ID is required'),
+});
+
+export const updateApiKeysSchema = z.object({
+  google: z.string().optional(),
+  openai: z.string().optional(),
+  anthropic: z.string().optional(),
+  deepseek: z.string().optional(),
 });
 
 // Game schemas
@@ -217,7 +227,95 @@ export const leaderboardQuerySchema = z.object({
 export const searchQuerySchema = z.object({
   q: z.string().min(1).max(200),
   ...paginationSchema.shape,
+  ...paginationSchema.shape,
 });
+
+// Missing schemas implemented
+export const purchaseCreditsSchema = z.object({
+  amount: z.number().int().positive('Amount must be positive'),
+});
+
+export const rateGameSchema = z.object({
+  rating: z.number().int().min(1).max(5),
+  review: z.string().max(500).optional(),
+});
+
+export const updateGeneratedGameSchema = generateGameSchema.partial();
+export const completeGeneratedGameSchema = z.object({
+  score: z.number().int().min(0),
+  sessionToken: z.string().min(1),
+});
+
+export const updateGameProgressSchema = z.object({
+  sessionToken: z.string().min(1),
+  data: z.record(z.unknown()),
+});
+
+export const transferSquadOwnershipSchema = z.object({
+  newOwnerId: uuidSchema,
+});
+
+export const addKnowledgeTextSchema = z.object({
+  title: z.string().min(1).max(200),
+  content: z.string().min(1).max(10000),
+});
+
+export const rateAgentSchema = z.object({
+  rating: z.number().int().min(1).max(5),
+  review: z.string().max(500).optional(),
+});
+
+// --- COMPATIBILITY EXPORTS FOR ROUTES ---
+const missing = z.object({}).passthrough();
+
+export const authSchemas = {
+  verify: authVerifySchema,
+  verifyMock: authVerifyMockSchema,
+  refresh: authRefreshSchema
+};
+
+export const userSchemas = {
+  updateProfile: updateUserSchema,
+  unlockSkill: unlockSkillSchema,
+  updateApiKeys: updateApiKeysSchema
+};
+
+export const gameSchemas = {
+  startGame: startGameSchema,
+  submitGame: submitGameSchema,
+  createGeneratedGame: generateGameSchema,
+  updateGeneratedGame: updateGeneratedGameSchema,
+  updateGameProgress: updateGameProgressSchema,
+  completeGeneratedGame: completeGeneratedGameSchema,
+  rateGame: rateGameSchema
+};
+
+export const squadSchemas = {
+  createSquad: createSquadSchema,
+  updateSquad: updateSquadSchema,
+  contribute: contributeToSquadSchema,
+  transferOwnership: transferSquadOwnershipSchema,
+  deploy: missing,
+  missionContribute: missing
+};
+
+export const aiSchemas = {
+  chat: aiChatSchema,
+  generateImage: generateImageSchema,
+  generateGame: generateGameSchema,
+  voiceSynth: voiceSynthSchema,
+  visionAnalyze: visionAnalyzeSchema,
+  createAgent: createAgentSchema,
+  updateAgent: updateAgentSchema,
+  rateAgent: rateAgentSchema,
+  addKnowledgeText: addKnowledgeTextSchema
+};
+
+export const paymentSchemas = {
+  createCheckout: createCheckoutSchema,
+  purchaseCredits: purchaseCreditsSchema,
+  createPortal: createPortalSchema
+};
 
 // Export all schemas
 export const schemas = {
@@ -233,6 +331,7 @@ export const schemas = {
   user: {
     update: updateUserSchema,
     unlockSkill: unlockSkillSchema,
+    updateApiKeys: updateApiKeysSchema,
   },
   game: {
     start: startGameSchema,

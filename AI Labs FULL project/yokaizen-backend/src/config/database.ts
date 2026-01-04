@@ -39,7 +39,7 @@ export const dataSourceOptions: DataSourceOptions = {
   synchronize: config.server.isDevelopment, // Auto-sync in dev only
   logging: config.server.isDevelopment ? ['error', 'warn', 'query'] : ['error'],
   entities,
-  migrations: ['src/migrations/*.ts'],
+  migrations: [process.env.NODE_ENV === 'production' ? 'dist/migrations/*.js' : 'src/migrations/*.ts'],
   subscribers: [],
   poolSize: 20,
   extra: {
@@ -75,4 +75,4 @@ export const closeDatabase = async (): Promise<void> => {
   }
 };
 
-export default AppDataSource;
+// export default AppDataSource;

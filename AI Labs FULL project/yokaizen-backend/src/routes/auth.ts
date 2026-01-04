@@ -16,6 +16,13 @@ router.post(
 );
 
 router.post(
+  '/verify-mock',
+  ipRateLimit(10, 60000),
+  validate(authSchemas.verifyMock),
+  authController.verifyMock
+);
+
+router.post(
   '/refresh',
   ipRateLimit(20, 60000),
   validate(authSchemas.refresh),

@@ -1,0 +1,1190 @@
+
+> yokaizen-backend@1.0.0 build
+> tsc
+
+src/config/index.ts(4,48): error TS2614: Module '"./firebase"' has no exported member 'firebaseAdmin'. Did you mean to use 'import firebaseAdmin from "./firebase"' instead?
+src/config/index.ts(6,85): error TS2724: '"./logger"' has no exported member named 'dbLogger'. Did you mean 'logger'?
+src/config/index.ts(6,95): error TS2614: Module '"./logger"' has no exported member 'perfLogger'. Did you mean to use 'import perfLogger from "./logger"' instead?
+src/config/index.ts(7,19): error TS2614: Module '"./storage"' has no exported member 'StorageProvider'. Did you mean to use 'import StorageProvider from "./storage"' instead?
+src/config/logger.ts(19,30): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(o: {}): string[]', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type '{}'.
+  Overload 2 of 2, '(o: object): string[]', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'object'.
+src/controllers/AIController.ts(17,13): error TS2339: Property 'agentId' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AIController.ts(17,22): error TS2339: Property 'history' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AIController.ts(17,31): error TS2339: Property 'message' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AIController.ts(17,40): error TS2339: Property 'stream' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AIController.ts(26,9): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/AIController.ts(41,9): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/AIController.ts(57,13): error TS2339: Property 'prompt' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AIController.ts(57,21): error TS2339: Property 'style' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AIController.ts(57,21): error TS6133: 'style' is declared but its value is never read.
+src/controllers/AIController.ts(57,28): error TS2339: Property 'size' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AIController.ts(57,28): error TS6133: 'size' is declared but its value is never read.
+src/controllers/AIController.ts(60,7): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/AIController.ts(72,13): error TS2339: Property 'topic' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AIController.ts(72,20): error TS2339: Property 'difficulty' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AIController.ts(75,7): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/AIController.ts(88,13): error TS2339: Property 'imageBase64' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AIController.ts(88,26): error TS2339: Property 'prompt' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AIController.ts(91,7): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/AIController.ts(104,13): error TS2339: Property 'text' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AIController.ts(104,19): error TS2339: Property 'voiceId' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AIController.ts(107,7): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/AIController.ts(121,54): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/AIController.ts(138,13): error TS2339: Property 'query' does not exist on type 'AuthenticatedRequest'.
+src/controllers/AIController.ts(203,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/AIController.ts(230,7): error TS2339: Property 'name' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AIController.ts(231,7): error TS2339: Property 'persona' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AIController.ts(232,7): error TS2339: Property 'systemInstruction' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AIController.ts(233,7): error TS2339: Property 'modelPreference' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AIController.ts(234,7): error TS2339: Property 'avatarUrl' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AIController.ts(235,7): error TS2339: Property 'isPublic' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AIController.ts(236,7): error TS2339: Property 'category' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AIController.ts(239,40): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(entityLikeArray: DeepPartial<Agent>[]): Agent[]', gave the following error.
+    Object literal may only specify known properties, and 'name' does not exist in type 'DeepPartial<Agent>[]'.
+  Overload 2 of 3, '(entityLike: DeepPartial<Agent>): Agent', gave the following error.
+    Object literal may only specify known properties, and 'modelPreference' does not exist in type 'DeepPartial<Agent>'.
+src/controllers/AIController.ts(260,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/AIController.ts(283,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/AIController.ts(308,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/AIController.ts(309,22): error TS2339: Property 'file' does not exist on type 'AuthenticatedRequest'.
+src/controllers/AIController.ts(341,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/AIController.ts(342,13): error TS2339: Property 'text' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AIController.ts(342,19): error TS2339: Property 'source' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AIController.ts(363,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/AIController.ts(374,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/AIController.ts(395,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/AIController.ts(396,13): error TS2339: Property 'rating' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AdminController.ts(1,20): error TS6133: 'Request' is declared but its value is never read.
+src/controllers/AdminController.ts(41,36): error TS2339: Property 'query' does not exist on type 'AuthenticatedRequest'.
+src/controllers/AdminController.ts(62,17): error TS2339: Property 'name' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AdminController.ts(62,23): error TS2339: Property 'description' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AdminController.ts(62,36): error TS2339: Property 'type' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AdminController.ts(62,42): error TS2339: Property 'rarity' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AdminController.ts(62,50): error TS2339: Property 'icon' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AdminController.ts(62,56): error TS2339: Property 'cost' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AdminController.ts(62,62): error TS2339: Property 'stock' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AdminController.ts(62,69): error TS2339: Property 'code' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AdminController.ts(62,75): error TS2339: Property 'link' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AdminController.ts(62,81): error TS2339: Property 'criteria' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AdminController.ts(90,28): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/AdminController.ts(91,60): error TS2345: Argument of type 'ReadableStream<any> | null' is not assignable to parameter of type 'Partial<Reward>'.
+  Type 'null' is not assignable to type 'Partial<Reward>'.
+src/controllers/AdminController.ts(101,28): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/AdminController.ts(112,57): error TS2339: Property 'query' does not exist on type 'AuthenticatedRequest'.
+src/controllers/AdminController.ts(137,28): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/AdminController.ts(138,17): error TS2339: Property 'role' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AdminController.ts(154,28): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/AdminController.ts(155,17): error TS2339: Property 'reason' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AdminController.ts(171,28): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/AuthController.ts(12,13): error TS2339: Property 'idToken' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AuthController.ts(28,13): error TS2339: Property 'refreshToken' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/AuthController.ts(43,30): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/CompetitionController.ts(14,43): error TS6133: 'req' is declared but its value is never read.
+src/controllers/CompetitionController.ts(39,28): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/CompetitionController.ts(57,28): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/CompetitionController.ts(77,28): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/CompetitionController.ts(78,17): error TS2339: Property 'score' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/CompetitionController.ts(107,28): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/CompetitionController.ts(126,17): error TS2339: Property 'title' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/CompetitionController.ts(126,24): error TS2339: Property 'description' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/CompetitionController.ts(126,37): error TS2339: Property 'startDate' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/CompetitionController.ts(126,48): error TS2339: Property 'endDate' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/CompetitionController.ts(126,57): error TS2339: Property 'prize' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/CompetitionController.ts(126,64): error TS2339: Property 'minLevel' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/CompetitionController.ts(126,74): error TS2339: Property 'imageUrl' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/CompetitionController.ts(126,84): error TS2339: Property 'tasks' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/CompetitionController.ts(126,91): error TS2339: Property 'gameTypes' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/CompetitionController.ts(152,28): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/GameController.ts(12,13): error TS2339: Property 'gameType' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/GameController.ts(12,23): error TS2339: Property 'difficulty' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/GameController.ts(15,7): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/GameController.ts(32,13): error TS2339: Property 'sessionToken' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/GameController.ts(32,27): error TS2339: Property 'score' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/GameController.ts(32,34): error TS2339: Property 'metadata' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/GameController.ts(35,7): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/GameController.ts(55,13): error TS2339: Property 'query' does not exist on type 'AuthenticatedRequest'.
+src/controllers/GameController.ts(57,50): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/GameController.ts(73,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/GameController.ts(75,52): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/GameController.ts(84,30): error TS2339: Property 'query' does not exist on type 'AuthenticatedRequest'.
+src/controllers/GameController.ts(87,7): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/GameController.ts(98,34): error TS6133: 'req' is declared but its value is never read.
+src/controllers/GameController.ts(108,59): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/GameController.ts(117,13): error TS2339: Property 'sessionToken' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/GameController.ts(117,27): error TS2339: Property 'score' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/GameController.ts(117,34): error TS2339: Property 'metadata' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/GameController.ts(120,7): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/GameController.ts(141,13): error TS2339: Property 'query' does not exist on type 'AuthenticatedRequest'.
+src/controllers/GameController.ts(159,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/GameController.ts(170,13): error TS2339: Property 'title' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/GameController.ts(170,20): error TS2339: Property 'introText' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/GameController.ts(170,31): error TS2339: Property 'scenes' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/GameController.ts(170,39): error TS2339: Property 'isPublic' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/GameController.ts(173,7): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/GameController.ts(185,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/GameController.ts(190,7): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/GameController.ts(202,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/GameController.ts(204,47): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/GameController.ts(213,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/GameController.ts(215,62): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/GameController.ts(224,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/GameController.ts(225,13): error TS2339: Property 'sessionToken' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/GameController.ts(225,27): error TS2339: Property 'currentSceneId' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/GameController.ts(225,43): error TS2339: Property 'choices' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/GameController.ts(229,7): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/GameController.ts(242,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/GameController.ts(243,13): error TS2339: Property 'sessionToken' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/GameController.ts(243,27): error TS2339: Property 'outcome' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/GameController.ts(243,36): error TS2339: Property 'metadata' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/GameController.ts(247,7): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/GameController.ts(260,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/GameController.ts(261,13): error TS2339: Property 'rating' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/GameController.ts(261,21): error TS2339: Property 'review' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/GameController.ts(263,45): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/LeaderboardController.ts(16,13): error TS2339: Property 'query' does not exist on type 'AuthenticatedRequest'.
+src/controllers/LeaderboardController.ts(32,48): error TS2339: Property 'query' does not exist on type 'AuthenticatedRequest'.
+src/controllers/LeaderboardController.ts(47,57): error TS2339: Property 'query' does not exist on type 'AuthenticatedRequest'.
+src/controllers/LeaderboardController.ts(73,30): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/LeaderboardController.ts(74,60): error TS2339: Property 'query' does not exist on type 'AuthenticatedRequest'.
+src/controllers/LeaderboardController.ts(105,61): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/LeaderboardController.ts(114,50): error TS2339: Property 'query' does not exist on type 'AuthenticatedRequest'.
+src/controllers/LeaderboardController.ts(125,7): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/PaymentController.ts(12,13): error TS2339: Property 'planId' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/PaymentController.ts(15,7): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/PaymentController.ts(27,61): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/PaymentController.ts(57,13): error TS2339: Property 'amount' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/PaymentController.ts(59,57): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/PaymentController.ts(68,46): error TS2339: Property 'query' does not exist on type 'AuthenticatedRequest'.
+src/controllers/PaymentController.ts(71,7): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/PaymentController.ts(104,61): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/SquadController.ts(18,13): error TS2339: Property 'query' does not exist on type 'AuthenticatedRequest'.
+src/controllers/SquadController.ts(20,39): error TS2339: Property 'listSquads' does not exist on type 'SquadService'.
+src/controllers/SquadController.ts(37,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/SquadController.ts(39,38): error TS2551: Property 'getSquadById' does not exist on type 'SquadService'. Did you mean 'getSquad'?
+src/controllers/SquadController.ts(48,13): error TS2339: Property 'name' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/SquadController.ts(48,19): error TS2339: Property 'icon' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/SquadController.ts(48,25): error TS2339: Property 'description' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/SquadController.ts(50,50): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/SquadController.ts(64,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/SquadController.ts(67,38): error TS2339: Property 'updateSquad' does not exist on type 'SquadService'.
+src/controllers/SquadController.ts(76,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/SquadController.ts(78,24): error TS2339: Property 'deleteSquad' does not exist on type 'SquadService'.
+src/controllers/SquadController.ts(87,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/SquadController.ts(89,53): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/SquadController.ts(98,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/SquadController.ts(100,39): error TS2554: Expected 1 arguments, but got 2.
+src/controllers/SquadController.ts(109,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/SquadController.ts(110,13): error TS2339: Property 'amount' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/SquadController.ts(112,39): error TS2339: Property 'contributeToSquad' does not exist on type 'SquadService'.
+src/controllers/SquadController.ts(126,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/SquadController.ts(128,40): error TS2339: Property 'getSquadMembers' does not exist on type 'SquadService'.
+src/controllers/SquadController.ts(137,34): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/SquadController.ts(139,60): error TS2554: Expected 2 arguments, but got 3.
+src/controllers/SquadController.ts(148,34): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/SquadController.ts(150,59): error TS2554: Expected 2 arguments, but got 3.
+src/controllers/SquadController.ts(159,34): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/SquadController.ts(161,57): error TS2554: Expected 2 arguments, but got 3.
+src/controllers/SquadController.ts(170,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/SquadController.ts(171,13): error TS2339: Property 'newOwnerId' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/SquadController.ts(173,64): error TS2554: Expected 2 arguments, but got 3.
+src/controllers/SquadController.ts(184,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/SquadController.ts(185,28): error TS2339: Property 'query' does not exist on type 'AuthenticatedRequest'.
+src/controllers/SquadController.ts(187,41): error TS2339: Property 'getSquadMissions' does not exist on type 'SquadService'.
+src/controllers/SquadController.ts(196,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/SquadController.ts(197,13): error TS2339: Property 'missionType' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/SquadController.ts(197,26): error TS2339: Property 'targetScore' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/SquadController.ts(201,7): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'MissionType'.
+  Type 'undefined' is not assignable to type 'MissionType'.
+src/controllers/SquadController.ts(213,35): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/SquadController.ts(215,39): error TS2339: Property 'joinMission' does not exist on type 'SquadService'.
+src/controllers/SquadController.ts(224,35): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/SquadController.ts(225,13): error TS2339: Property 'contribution' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/SquadController.ts(225,27): error TS2339: Property 'metadata' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/SquadController.ts(227,39): error TS2339: Property 'contributeMission' does not exist on type 'SquadService'.
+src/controllers/SquadController.ts(243,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/SquadController.ts(244,42): error TS2339: Property 'query' does not exist on type 'AuthenticatedRequest'.
+src/controllers/SquadController.ts(246,41): error TS2339: Property 'getChatHistory' does not exist on type 'SquadService'.
+src/controllers/SquadController.ts(263,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/SquadController.ts(264,42): error TS2339: Property 'query' does not exist on type 'AuthenticatedRequest'.
+src/controllers/SquadController.ts(268,7): error TS2554: Expected 1 arguments, but got 2.
+src/controllers/SquadController.ts(279,24): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/SquadController.ts(281,38): error TS2339: Property 'getSquadStats' does not exist on type 'SquadService'.
+src/controllers/UserController.ts(12,36): error TS2339: Property 'getFullProfile' does not exist on type 'UserService'.
+src/controllers/UserController.ts(21,13): error TS2339: Property 'username' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/UserController.ts(21,23): error TS2339: Property 'avatarUrl' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/UserController.ts(21,34): error TS2339: Property 'language' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/UserController.ts(23,50): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/UserController.ts(37,13): error TS2339: Property 'google' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/UserController.ts(37,21): error TS2339: Property 'openai' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/UserController.ts(37,29): error TS2339: Property 'anthropic' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/UserController.ts(37,40): error TS2339: Property 'deepseek' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/UserController.ts(39,11): error TS6133: 'user' is declared but its value is never read.
+src/controllers/UserController.ts(39,50): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/UserController.ts(54,37): error TS2339: Property 'getStats' does not exist on type 'UserService'.
+src/controllers/UserController.ts(63,34): error TS2339: Property 'query' does not exist on type 'AuthenticatedRequest'.
+src/controllers/UserController.ts(65,54): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/UserController.ts(78,28): error TS2339: Property 'params' does not exist on type 'AuthenticatedRequest'.
+src/controllers/UserController.ts(80,23): error TS2339: Property 'equipItem' does not exist on type 'UserService'.
+src/controllers/UserController.ts(89,38): error TS2339: Property 'getSkills' does not exist on type 'UserService'.
+src/controllers/UserController.ts(98,13): error TS2339: Property 'nodeId' does not exist on type 'ReadableStream<any> | null'.
+src/controllers/UserController.ts(100,50): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/UserController.ts(109,38): error TS2339: Property 'getAgents' does not exist on type 'UserService'.
+src/controllers/UserController.ts(118,44): error TS2339: Property 'getAchievements' does not exist on type 'UserService'.
+src/controllers/UserController.ts(127,38): error TS2339: Property 'refreshEnergy' does not exist on type 'UserService'.
+src/controllers/UserController.ts(136,38): error TS2339: Property 'claimDailyStreak' does not exist on type 'UserService'.
+src/controllers/UserController.ts(145,32): error TS2339: Property 'query' does not exist on type 'AuthenticatedRequest'.
+src/controllers/UserController.ts(147,45): error TS2339: Property 'getNotifications' does not exist on type 'UserService'.
+src/controllers/UserController.ts(160,23): error TS2339: Property 'requestAccountDeletion' does not exist on type 'UserService'.
+src/index.ts(110,15): error TS6133: 'req' is declared but its value is never read.
+src/jobs/index.ts(49,21): error TS6133: 'prompt' is declared but its value is never read.
+src/jobs/index.ts(73,27): error TS6133: 'data' is declared but its value is never read.
+src/jobs/index.ts(203,7): error TS2353: Object literal may only specify known properties, and 'subscriptionEndsAt' does not exist in type 'FindOptionsWhere<User> | FindOptionsWhere<User>[]'.
+src/middleware/auth.ts(12,3): error TS6133: 'res' is declared but its value is never read.
+src/middleware/auth.ts(16,36): error TS2339: Property 'authorization' does not exist on type 'Headers'.
+src/middleware/auth.ts(48,3): error TS6133: 'res' is declared but its value is never read.
+src/middleware/auth.ts(52,36): error TS2339: Property 'authorization' does not exist on type 'Headers'.
+src/middleware/auth.ts(84,38): error TS6133: 'res' is declared but its value is never read.
+src/middleware/auth.ts(104,3): error TS6133: 'res' is declared but its value is never read.
+src/middleware/auth.ts(125,38): error TS6133: 'res' is declared but its value is never read.
+src/middleware/auth.ts(148,5): error TS6133: 'res' is declared but its value is never read.
+src/middleware/errorHandler.ts(12,3): error TS6133: 'res' is declared but its value is never read.
+src/middleware/errorHandler.ts(41,19): error TS2339: Property 'code' does not exist on type 'ApiError'.
+src/middleware/errorHandler.ts(50,19): error TS2339: Property 'code' does not exist on type 'ApiError'.
+src/middleware/errorHandler.ts(62,7): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type '{ code: string; message: string; details?: unknown; } & { success: false; }'.
+src/middleware/errorHandler.ts(78,7): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type '{ code: string; message: string; details?: unknown; } & { success: false; }'.
+src/middleware/errorHandler.ts(87,7): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type '{ code: string; message: string; details?: unknown; } & { success: false; }'.
+src/middleware/errorHandler.ts(106,7): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type '{ code: string; message: string; details?: unknown; } & { success: false; }'.
+src/middleware/errorHandler.ts(119,14): error TS2339: Property 'error' does not exist on type '{ code: string; message: string; details?: unknown; } & { success: false; }'.
+src/middleware/errorHandler.ts(120,21): error TS2339: Property 'error' does not exist on type '{ code: string; message: string; details?: unknown; } & { success: false; }'.
+src/middleware/errorHandler.ts(162,3): error TS6133: 'res' is declared but its value is never read.
+src/middleware/errorHandler.ts(170,11): error TS2339: Property 'code' does not exist on type 'ApiError'.
+src/middleware/errorHandler.ts(171,11): error TS2339: Property 'code' does not exist on type 'ApiError'.
+src/middleware/errorHandler.ts(174,19): error TS2339: Property 'code' does not exist on type 'ApiError'.
+src/middleware/errorHandler.ts(228,3): error TS6133: 'req' is declared but its value is never read.
+src/middleware/errorHandler.ts(229,3): error TS6133: 'res' is declared but its value is never read.
+src/middleware/errorHandler.ts(233,19): error TS2339: Property 'validation' does not exist on type 'typeof ApiError'.
+src/middleware/errorHandler.ts(238,19): error TS2339: Property 'validation' does not exist on type 'typeof ApiError'.
+src/middleware/errorHandler.ts(243,19): error TS2339: Property 'validation' does not exist on type 'typeof ApiError'.
+src/middleware/errorHandler.ts(255,3): error TS6133: 'req' is declared but its value is never read.
+src/middleware/errorHandler.ts(256,3): error TS6133: 'res' is declared but its value is never read.
+src/middleware/errorHandler.ts(292,3): error TS6133: 'req' is declared but its value is never read.
+src/middleware/errorHandler.ts(293,3): error TS6133: 'res' is declared but its value is never read.
+src/middleware/rateLimit.ts(25,37): error TS2339: Property 'freeTier' does not exist on type '{ windowMs: number; maxFree: number; maxOperative: number; maxPro: number; }'.
+src/middleware/rateLimit.ts(26,42): error TS2339: Property 'operativeTier' does not exist on type '{ windowMs: number; maxFree: number; maxOperative: number; maxPro: number; }'.
+src/middleware/rateLimit.ts(27,44): error TS2339: Property 'proTier' does not exist on type '{ windowMs: number; maxFree: number; maxOperative: number; maxPro: number; }'.
+src/middleware/rateLimit.ts(47,46): error TS2339: Property 'ip' does not exist on type 'AuthenticatedRequest'.
+src/middleware/rateLimit.ts(84,5): error TS6133: 'skipAuth' is declared but its value is never read.
+src/middleware/rateLimit.ts(85,5): error TS6133: 'tierBased' is declared but its value is never read.
+src/middleware/rateLimit.ts(125,19): error TS2339: Property 'ip' does not exist on type 'AuthenticatedRequest'.
+src/middleware/rateLimit.ts(224,20): error TS2339: Property 'ip' does not exist on type 'AuthenticatedRequest'.
+src/middleware/rateLimit.ts(224,30): error TS2339: Property 'socket' does not exist on type 'AuthenticatedRequest'.
+src/middleware/rateLimit.ts(265,48): error TS2339: Property 'ip' does not exist on type 'AuthenticatedRequest'.
+src/middleware/validation.ts(4,1): error TS6133: 'logger' is declared but its value is never read.
+src/middleware/validation.ts(15,5): error TS6133: 'res' is declared but its value is never read.
+src/middleware/validation.ts(29,23): error TS2339: Property 'validation' does not exist on type 'typeof ApiError'.
+src/middleware/validation.ts(47,5): error TS6133: 'res' is declared but its value is never read.
+src/middleware/validation.ts(96,23): error TS2339: Property 'validation' does not exist on type 'typeof ApiError'.
+src/middleware/validation.ts(112,3): error TS6133: 'res' is declared but its value is never read.
+src/middleware/validation.ts(157,3): error TS6133: 'res' is declared but its value is never read.
+src/middleware/validation.ts(184,25): error TS6133: 'res' is declared but its value is never read.
+src/middleware/validation.ts(189,23): error TS2339: Property 'validation' does not exist on type 'typeof ApiError'.
+src/middleware/validation.ts(198,21): error TS2339: Property 'validation' does not exist on type 'typeof ApiError'.
+src/middleware/validation.ts(206,21): error TS2339: Property 'validation' does not exist on type 'typeof ApiError'.
+src/middleware/validation.ts(222,25): error TS6133: 'res' is declared but its value is never read.
+src/middleware/validation.ts(226,21): error TS2339: Property 'validation' does not exist on type 'typeof ApiError'.
+src/middleware/validation.ts(238,25): error TS6133: 'res' is declared but its value is never read.
+src/middleware/validation.ts(244,25): error TS2339: Property 'validation' does not exist on type 'typeof ApiError'.
+src/middleware/validation.ts(257,25): error TS6133: 'res' is declared but its value is never read.
+src/routes/admin.ts(9,12): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'PathParams'.
+src/routes/admin.ts(19,22): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/admin.ts(20,24): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/admin.ts(23,24): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/admin.ts(24,25): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/admin.ts(25,28): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/admin.ts(26,31): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/admin.ts(29,22): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/admin.ts(30,31): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/admin.ts(31,31): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/admin.ts(32,33): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/ai.ts(20,12): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'PathParams'.
+src/routes/ai.ts(27,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/ai.ts(35,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/ai.ts(45,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/ai.ts(55,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/ai.ts(63,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/ai.ts(72,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/ai.ts(80,43): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/ai.ts(86,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/ai.ts(90,47): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/ai.ts(97,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/ai.ts(101,50): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/ai.ts(108,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/ai.ts(122,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/ai.ts(130,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/ai.ts(134,63): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/ai.ts(137,60): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/auth.ts(13,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/auth.ts(20,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/auth.ts(26,24): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/auth.ts(27,19): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/competitions.ts(11,5): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/competitions.ts(18,5): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/competitions.ts(25,5): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/competitions.ts(30,12): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'PathParams'.
+src/routes/competitions.ts(34,5): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/competitions.ts(40,5): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/competitions.ts(47,5): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/competitions.ts(53,5): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/games.ts(11,22): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/games.ts(14,12): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'PathParams'.
+src/routes/games.ts(19,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/games.ts(26,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/games.ts(31,44): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/games.ts(32,22): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'Application<Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response<any, Record<string, any>>, next: (err?: Error | undefined) => void) => void' is missing the following properties from type 'Application<Record<string, any>>': init, defaultConfiguration, engine, set, and 63 more.
+src/routes/games.ts(35,32): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'Application<Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response<any, Record<string, any>>, next: (err?: Error | undefined) => void) => void' is missing the following properties from type 'Application<Record<string, any>>': init, defaultConfiguration, engine, set, and 63 more.
+src/routes/games.ts(39,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/games.ts(43,40): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/games.ts(48,46): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/games.ts(53,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/games.ts(59,50): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/games.ts(65,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/games.ts(68,53): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/games.ts(71,56): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/games.ts(77,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/games.ts(84,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/games.ts(91,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/index.ts(15,24): error TS6133: 'req' is declared but its value is never read.
+src/routes/leaderboard.ts(11,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/leaderboard.ts(18,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/leaderboard.ts(24,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/leaderboard.ts(30,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/leaderboard.ts(36,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/leaderboard.ts(42,19): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/leaderboard.ts(43,26): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/payments.ts(19,12): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'PathParams'.
+src/routes/payments.ts(24,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/payments.ts(32,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/payments.ts(39,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/payments.ts(45,49): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/payments.ts(48,29): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'Application<Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response<any, Record<string, any>>, next: (err?: Error | undefined) => void) => void' is missing the following properties from type 'Application<Record<string, any>>': init, defaultConfiguration, engine, set, and 63 more.
+src/routes/payments.ts(51,37): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'Application<Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response<any, Record<string, any>>, next: (err?: Error | undefined) => void) => void' is missing the following properties from type 'Application<Record<string, any>>': init, defaultConfiguration, engine, set, and 63 more.
+src/routes/squads.ts(11,17): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/squads.ts(14,12): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'PathParams'.
+src/routes/squads.ts(19,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/squads.ts(24,40): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/squads.ts(30,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/squads.ts(33,43): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/squads.ts(39,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/squads.ts(43,47): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/squads.ts(49,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/squads.ts(53,48): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/squads.ts(59,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/squads.ts(66,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/squads.ts(73,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/squads.ts(80,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/squads.ts(84,49): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/squads.ts(90,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/squads.ts(97,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/squads.ts(105,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/squads.ts(109,45): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/squads.ts(110,52): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/squads.ts(111,46): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/user.ts(11,12): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'PathParams'.
+src/routes/user.ts(14,19): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'Application<Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response<any, Record<string, any>>, next: (err?: Error | undefined) => void) => void' is missing the following properties from type 'Application<Record<string, any>>': init, defaultConfiguration, engine, set, and 63 more.
+src/routes/user.ts(15,58): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/user.ts(16,60): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/user.ts(17,22): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'Application<Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response<any, Record<string, any>>, next: (err?: Error | undefined) => void) => void' is missing the following properties from type 'Application<Record<string, any>>': init, defaultConfiguration, engine, set, and 63 more.
+src/routes/user.ts(20,46): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/user.ts(21,41): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'Application<Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response<any, Record<string, any>>, next: (err?: Error | undefined) => void) => void' is missing the following properties from type 'Application<Record<string, any>>': init, defaultConfiguration, engine, set, and 63 more.
+src/routes/user.ts(24,23): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'Application<Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response<any, Record<string, any>>, next: (err?: Error | undefined) => void) => void' is missing the following properties from type 'Application<Record<string, any>>': init, defaultConfiguration, engine, set, and 63 more.
+src/routes/user.ts(27,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/user.ts(33,43): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is missing the following properties from type 'AuthenticatedRequest': cache, credentials, destination, integrity, and 14 more.
+src/routes/user.ts(36,29): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'Application<Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response<any, Record<string, any>>, next: (err?: Error | undefined) => void) => void' is missing the following properties from type 'Application<Record<string, any>>': init, defaultConfiguration, engine, set, and 63 more.
+src/routes/user.ts(39,32): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'Application<Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response<any, Record<string, any>>, next: (err?: Error | undefined) => void) => void' is missing the following properties from type 'Application<Record<string, any>>': init, defaultConfiguration, engine, set, and 63 more.
+src/routes/user.ts(40,30): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'Application<Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response<any, Record<string, any>>, next: (err?: Error | undefined) => void) => void' is missing the following properties from type 'Application<Record<string, any>>': init, defaultConfiguration, engine, set, and 63 more.
+src/routes/user.ts(43,30): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'Application<Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response<any, Record<string, any>>, next: (err?: Error | undefined) => void) => void' is missing the following properties from type 'Application<Record<string, any>>': init, defaultConfiguration, engine, set, and 63 more.
+src/routes/user.ts(46,27): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: (err?: Error) => void) => void' is not assignable to parameter of type 'Application<Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response<any, Record<string, any>>, next: (err?: Error | undefined) => void) => void' is missing the following properties from type 'Application<Record<string, any>>': init, defaultConfiguration, engine, set, and 63 more.
+src/services/AIService.ts(1,47): error TS6133: 'ChatSession' is declared but its value is never read.
+src/services/AIService.ts(6,10): error TS6133: 'redis' is declared but its value is never read.
+src/services/AIService.ts(7,10): error TS6133: 'logger' is declared but its value is never read.
+src/services/AIService.ts(9,17): error TS2614: Module '"@entities/Agent"' has no exported member 'AIModel'. Did you mean to use 'import AIModel from "@entities/Agent"' instead?
+src/services/AIService.ts(105,55): error TS2554: Expected 1 arguments, but got 2.
+src/services/AIService.ts(127,31): error TS2339: Property 'modelPreference' does not exist on type 'Agent'.
+src/services/AIService.ts(135,13): error TS2339: Property 'totalChats' does not exist on type 'Agent'.
+src/services/AIService.ts(289,55): error TS2554: Expected 1 arguments, but got 2.
+src/services/AIService.ts(309,26): error TS18048: 'response.data' is possibly 'undefined'.
+src/services/AIService.ts(317,40): error TS2339: Property 'uploadFile' does not exist on type '{ upload(buffer: Buffer<ArrayBufferLike>, originalName: string, options?: UploadOptions): Promise<UploadResult>; ... 5 more ...; getProvider(): "S3" | ... 1 more ... | null; }'.
+src/services/AIService.ts(337,22): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Error'.
+src/services/AIService.ts(355,55): error TS2554: Expected 1 arguments, but got 2.
+src/services/AIService.ts(389,22): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Error'.
+src/services/AIService.ts(402,55): error TS2554: Expected 1 arguments, but got 2.
+src/services/AIService.ts(428,22): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Error'.
+src/services/AIService.ts(435,5): error TS6133: 'text' is declared but its value is never read.
+src/services/AIService.ts(436,5): error TS6133: 'voiceId' is declared but its value is never read.
+src/services/AIService.ts(445,55): error TS2554: Expected 1 arguments, but got 2.
+src/services/AuthService.ts(7,31): error TS6133: 'getFirebaseUser' is declared but its value is never read.
+src/services/AuthService.ts(11,38): error TS2307: Cannot find module '@types' or its corresponding type declarations.
+src/services/AuthService.ts(48,34): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(entityLikeArray: DeepPartial<User>[]): User[]', gave the following error.
+    Object literal may only specify known properties, and 'firebaseUid' does not exist in type 'DeepPartial<User>[]'.
+  Overload 2 of 3, '(entityLike: DeepPartial<User>): User', gave the following error.
+    Object literal may only specify known properties, and 'currentEnergy' does not exist in type 'DeepPartial<User>'.
+src/services/AuthService.ts(121,31): error TS2339: Property 'refreshToken' does not exist on type '{}'.
+src/services/AuthService.ts(242,5): error TS2322: Type 'string | null' is not assignable to type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/services/AuthService.ts(267,16): error TS2769: No overload matches this call.
+  Overload 1 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: null, options?: (SignOptions & { algorithm: "none"; }) | undefined): string', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type 'null'.
+  Overload 2 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: Buffer<ArrayBufferLike> | Secret | JsonWebKeyInput | PrivateKeyInput, options?: SignOptions | undefined): string', gave the following error.
+    Type 'string' is not assignable to type 'number | StringValue | undefined'.
+  Overload 3 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: Buffer<ArrayBufferLike> | Secret | JsonWebKeyInput | PrivateKeyInput, callback: SignCallback): void', gave the following error.
+    Object literal may only specify known properties, and 'expiresIn' does not exist in type 'SignCallback'.
+src/services/AuthService.ts(279,16): error TS2769: No overload matches this call.
+  Overload 1 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: null, options?: (SignOptions & { algorithm: "none"; }) | undefined): string', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type 'null'.
+  Overload 2 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: Buffer<ArrayBufferLike> | Secret | JsonWebKeyInput | PrivateKeyInput, options?: SignOptions | undefined): string', gave the following error.
+    Type 'string' is not assignable to type 'number | StringValue | undefined'.
+  Overload 3 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: Buffer<ArrayBufferLike> | Secret | JsonWebKeyInput | PrivateKeyInput, callback: SignCallback): void', gave the following error.
+    Object literal may only specify known properties, and 'expiresIn' does not exist in type 'SignCallback'.
+src/services/CompetitionService.ts(3,30): error TS6133: 'Between' is declared but its value is never read.
+src/services/CompetitionService.ts(44,50): error TS6133: 'userId' is declared but its value is never read.
+src/services/GameService.ts(10,52): error TS6133: 'calculateLevel' is declared but its value is never read.
+src/services/GameService.ts(11,29): error TS2307: Cannot find module '@types' or its corresponding type declarations.
+src/services/GameService.ts(235,45): error TS2345: Argument of type 'GameDifficulty' is not assignable to parameter of type '"EASY" | "MEDIUM" | "HARD" | "EXTREME" | undefined'.
+src/services/GameService.ts(236,54): error TS2345: Argument of type 'GameDifficulty' is not assignable to parameter of type '"EASY" | "MEDIUM" | "HARD" | "EXTREME" | undefined'.
+src/services/GameService.ts(428,24): error TS2304: Cannot find name 'redisClient'.
+src/services/GameService.ts(651,27): error TS6133: 'userId' is declared but its value is never read.
+src/services/GameService.ts(656,84): error TS2554: Expected 3-4 arguments, but got 5.
+src/services/GameService.ts(660,27): error TS6133: 'options' is declared but its value is never read.
+src/services/GameService.ts(664,30): error TS6133: 'id' is declared but its value is never read.
+src/services/GameService.ts(664,42): error TS6133: 'userId' is declared but its value is never read.
+src/services/GameService.ts(668,29): error TS6133: 'userId' is declared but its value is never read.
+src/services/GameService.ts(668,45): error TS6133: 'data' is declared but its value is never read.
+src/services/GameService.ts(672,29): error TS6133: 'id' is declared but its value is never read.
+src/services/GameService.ts(672,41): error TS6133: 'userId' is declared but its value is never read.
+src/services/GameService.ts(672,57): error TS6133: 'updates' is declared but its value is never read.
+src/services/GameService.ts(676,29): error TS6133: 'id' is declared but its value is never read.
+src/services/GameService.ts(676,41): error TS6133: 'userId' is declared but its value is never read.
+src/services/GameService.ts(680,28): error TS6133: 'id' is declared but its value is never read.
+src/services/GameService.ts(680,40): error TS6133: 'userId' is declared but its value is never read.
+src/services/GameService.ts(684,37): error TS6133: 'id' is declared but its value is never read.
+src/services/GameService.ts(684,49): error TS6133: 'userId' is declared but its value is never read.
+src/services/GameService.ts(684,65): error TS6133: 'sessionToken' is declared but its value is never read.
+src/services/GameService.ts(684,87): error TS6133: 'data' is declared but its value is never read.
+src/services/GameService.ts(688,31): error TS6133: 'id' is declared but its value is never read.
+src/services/GameService.ts(688,43): error TS6133: 'userId' is declared but its value is never read.
+src/services/GameService.ts(688,59): error TS6133: 'sessionToken' is declared but its value is never read.
+src/services/GameService.ts(688,81): error TS6133: 'data' is declared but its value is never read.
+src/services/GameService.ts(692,27): error TS6133: 'id' is declared but its value is never read.
+src/services/GameService.ts(692,39): error TS6133: 'userId' is declared but its value is never read.
+src/services/GameService.ts(692,55): error TS6133: 'rating' is declared but its value is never read.
+src/services/GameService.ts(692,71): error TS6133: 'review' is declared but its value is never read.
+src/services/LeaderboardService.ts(23,11): error TS2430: Interface 'DetailedLeaderboardEntry' incorrectly extends interface 'LeaderboardEntry'.
+  Types of property 'tier' are incompatible.
+    Type 'string | undefined' is not assignable to type 'UserTier | undefined'.
+      Type 'string' is not assignable to type 'UserTier | undefined'.
+src/services/LeaderboardService.ts(49,11): error TS6133: 'gameHistoryRepository' is declared but its value is never read.
+src/services/LeaderboardService.ts(135,26): error TS2339: Property 'iconUrl' does not exist on type 'Squad'.
+src/services/LeaderboardService.ts(182,34): error TS6133: 'userId' is declared but its value is never read.
+src/services/LeaderboardService.ts(190,7): error TS2322: Type 'DetailedLeaderboardEntry[]' is not assignable to type 'LeaderboardEntry[]'.
+  Type 'DetailedLeaderboardEntry' is not assignable to type 'LeaderboardEntry'.
+    Types of property 'tier' are incompatible.
+      Type 'string | undefined' is not assignable to type 'UserTier | undefined'.
+        Type 'string' is not assignable to type 'UserTier | undefined'.
+src/services/LeaderboardService.ts(191,7): error TS2322: Type 'DetailedLeaderboardEntry[]' is not assignable to type 'LeaderboardEntry[]'.
+  Type 'DetailedLeaderboardEntry' is not assignable to type 'LeaderboardEntry'.
+    Types of property 'tier' are incompatible.
+      Type 'string | undefined' is not assignable to type 'UserTier | undefined'.
+        Type 'string' is not assignable to type 'UserTier | undefined'.
+src/services/LeaderboardService.ts(192,7): error TS2322: Type 'DetailedLeaderboardEntry[]' is not assignable to type 'LeaderboardEntry[]'.
+  Type 'DetailedLeaderboardEntry' is not assignable to type 'LeaderboardEntry'.
+    Types of property 'tier' are incompatible.
+      Type 'string | undefined' is not assignable to type 'UserTier | undefined'.
+        Type 'string' is not assignable to type 'UserTier | undefined'.
+src/services/LeaderboardService.ts(204,41): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+src/services/LeaderboardService.ts(205,40): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+src/services/LeaderboardService.ts(206,41): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+src/services/LeaderboardService.ts(213,9): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+src/services/LeaderboardService.ts(225,45): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+src/services/LeaderboardService.ts(242,35): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+src/services/LeaderboardService.ts(245,65): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+src/services/PaymentService.ts(6,10): error TS6133: 'logger' is declared but its value is never read.
+src/services/PaymentService.ts(64,52): error TS2345: Argument of type '{ userId: string; planId: "OPERATIVE" | "PRO_CREATOR"; sessionId: string; }' is not assignable to parameter of type 'string'.
+src/services/PaymentService.ts(72,7): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(entityLikeArray: DeepPartial<Transaction>[]): Transaction[]', gave the following error.
+    Object literal may only specify known properties, and 'user' does not exist in type 'DeepPartial<Transaction>[]'.
+src/services/PaymentService.ts(73,29): error TS2339: Property 'SUBSCRIPTION' does not exist on type 'typeof TransactionType'.
+src/services/PaymentService.ts(74,35): error TS2551: Property 'price' does not exist on type '{ name: string; tier: "OPERATIVE"; priceId: string; credits: number; aiRequestsPerMinute: number; features: string[]; } | { name: string; tier: "PRO_CREATOR"; priceId: string; credits: number; aiRequestsPerMinute: number; features: string[]; }'. Did you mean 'priceId'?
+  Property 'price' does not exist on type '{ name: string; tier: "OPERATIVE"; priceId: string; credits: number; aiRequestsPerMinute: number; features: string[]; }'.
+src/services/PaymentService.ts(101,50): error TS2345: Argument of type '{ userId: string; }' is not assignable to parameter of type 'string'.
+src/services/PaymentService.ts(116,27): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Error'.
+src/services/PaymentService.ts(120,44): error TS2345: Argument of type '{ type: "account.application.authorized" | "account.application.deauthorized" | "account.external_account.created" | "account.external_account.deleted" | "account.external_account.updated" | ... 228 more ... | "sku.updated"; id: string; }' is not assignable to parameter of type 'string'.
+src/services/PaymentService.ts(144,55): error TS2345: Argument of type '{ type: "account.application.authorized" | "account.application.deauthorized" | "account.external_account.created" | "account.external_account.deleted" | "account.external_account.updated" | ... 223 more ... | "sku.updated"; }' is not assignable to parameter of type 'string'.
+src/services/PaymentService.ts(157,27): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Error'.
+src/services/PaymentService.ts(163,16): error TS2353: Object literal may only specify known properties, and 'stripeSessionId' does not exist in type 'FindOptionsWhere<Transaction> | FindOptionsWhere<Transaction>[]'.
+src/services/PaymentService.ts(168,19): error TS2339: Property 'stripePaymentId' does not exist on type 'Transaction'.
+src/services/PaymentService.ts(197,7): error TS2322: Type 'null' is not assignable to type 'string'.
+src/services/PaymentService.ts(214,76): error TS2345: Argument of type '{ userId: string; tier: UserTier; subscriptionId: string; campusAccess: boolean; aiLabsAccess: boolean; subscriptionProduct: string; }' is not assignable to parameter of type 'string'.
+src/services/PaymentService.ts(236,7): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(entityLikeArray: DeepPartial<Transaction>[]): Transaction[]', gave the following error.
+    Object literal may only specify known properties, and 'user' does not exist in type 'DeepPartial<Transaction>[]'.
+src/services/PaymentService.ts(237,29): error TS2339: Property 'SUBSCRIPTION' does not exist on type 'typeof TransactionType'.
+src/services/PaymentService.ts(253,40): error TS2345: Argument of type '{ userId: string; amount: number; }' is not assignable to parameter of type 'string'.
+src/services/PaymentService.ts(270,7): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(entityLikeArray: DeepPartial<Transaction>[]): Transaction[]', gave the following error.
+    Object literal may only specify known properties, and 'user' does not exist in type 'DeepPartial<Transaction>[]'.
+src/services/PaymentService.ts(271,29): error TS2339: Property 'SUBSCRIPTION' does not exist on type 'typeof TransactionType'.
+src/services/PaymentService.ts(314,48): error TS2345: Argument of type '{ userId: string; tier: UserTier; }' is not assignable to parameter of type 'string'.
+src/services/PaymentService.ts(332,5): error TS2322: Type 'null' is not assignable to type 'string'.
+src/services/PaymentService.ts(333,5): error TS2322: Type 'null' is not assignable to type 'Date'.
+src/services/PaymentService.ts(336,50): error TS2345: Argument of type '{ userId: string; }' is not assignable to parameter of type 'string'.
+src/services/PaymentService.ts(389,7): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(entityLikeArray: DeepPartial<Transaction>[]): Transaction[]', gave the following error.
+    Object literal may only specify known properties, and 'user' does not exist in type 'DeepPartial<Transaction>[]'.
+src/services/PaymentService.ts(411,16): error TS2353: Object literal may only specify known properties, and 'user' does not exist in type 'FindOptionsWhere<Transaction> | FindOptionsWhere<Transaction>[]'.
+src/services/RAGService.ts(10,17): error TS7016: Could not find a declaration file for module 'pdf-parse'. '/root/YokaizenCampus/AI Labs FULL project/yokaizen-backend/node_modules/pdf-parse/index.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/pdf-parse` if it exists or add a new declaration (.d.ts) file containing `declare module 'pdf-parse';`
+src/services/RAGService.ts(26,7): error TS6133: 'EMBEDDING_DIMENSIONS' is declared but its value is never read.
+src/services/RAGService.ts(75,35): error TS2339: Property 'uploadFile' does not exist on type '{ upload(buffer: Buffer<ArrayBufferLike>, originalName: string, options?: UploadOptions): Promise<UploadResult>; ... 5 more ...; getProvider(): "S3" | ... 1 more ... | null; }'.
+src/services/RAGService.ts(90,9): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(entityLikeArray: DeepPartial<KnowledgeChunk>[]): KnowledgeChunk[]', gave the following error.
+    Object literal may only specify known properties, and 'agent' does not exist in type 'DeepPartial<KnowledgeChunk>[]'.
+src/services/RAGService.ts(163,42): error TS2551: Property 'sourceUrl' does not exist on type 'KnowledgeChunk'. Did you mean 'source'?
+src/services/RAGService.ts(195,41): error TS2353: Object literal may only specify known properties, and 'agent' does not exist in type 'Date | string[] | number[] | ObjectId | Date[] | ObjectId[] | FindOptionsWhere<KnowledgeChunk> | FindOptionsWhere<KnowledgeChunk>[]'.
+src/services/RAGService.ts(200,23): error TS2339: Property 'deleteFile' does not exist on type '{ upload(buffer: Buffer<ArrayBufferLike>, originalName: string, options?: UploadOptions): Promise<UploadResult>; ... 5 more ...; getProvider(): "S3" | ... 1 more ... | null; }'.
+src/services/RAGService.ts(208,5): error TS2322: Type 'null' is not assignable to type 'string'.
+src/services/RAGService.ts(220,16): error TS2353: Object literal may only specify known properties, and 'agent' does not exist in type 'FindOptionsWhere<KnowledgeChunk> | FindOptionsWhere<KnowledgeChunk>[]'.
+src/services/RAGService.ts(221,27): error TS2820: Type '"sourceUrl"' is not assignable to type 'keyof KnowledgeChunk'. Did you mean '"source"'?
+src/services/RAGService.ts(224,51): error TS2551: Property 'sourceUrl' does not exist on type 'KnowledgeChunk'. Did you mean 'source'?
+src/services/RAGService.ts(254,9): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(entityLikeArray: DeepPartial<KnowledgeChunk>[]): KnowledgeChunk[]', gave the following error.
+    Object literal may only specify known properties, and 'agent' does not exist in type 'DeepPartial<KnowledgeChunk>[]'.
+src/services/RAGService.ts(334,22): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Error'.
+src/services/SquadService.ts(1,22): error TS6133: 'Like' is declared but its value is never read.
+src/services/SquadService.ts(1,28): error TS6133: 'In' is declared but its value is never read.
+src/services/SquadService.ts(1,32): error TS6133: 'Not' is declared but its value is never read.
+src/services/SquadService.ts(1,37): error TS6133: 'IsNull' is declared but its value is never read.
+src/services/SquadService.ts(3,10): error TS6133: 'redisClient' is declared but its value is never read.
+src/services/SquadService.ts(109,7): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(entityLikeArray: DeepPartial<Squad>[]): Squad[]', gave the following error.
+    Object literal may only specify known properties, and 'name' does not exist in type 'DeepPartial<Squad>[]'.
+src/services/SquadService.ts(233,26): error TS2339: Property 'isPublic' does not exist on type '{ autoAcceptMembers: boolean; requireApproval: boolean; chatEnabled: boolean; missionNotifications: boolean; }'.
+src/services/SquadService.ts(239,25): error TS2339: Property 'minLevel' does not exist on type '{ autoAcceptMembers: boolean; requireApproval: boolean; chatEnabled: boolean; missionNotifications: boolean; }'.
+src/services/SquadService.ts(239,64): error TS2339: Property 'minLevel' does not exist on type '{ autoAcceptMembers: boolean; requireApproval: boolean; chatEnabled: boolean; missionNotifications: boolean; }'.
+src/services/SquadService.ts(240,71): error TS2339: Property 'minLevel' does not exist on type '{ autoAcceptMembers: boolean; requireApproval: boolean; chatEnabled: boolean; missionNotifications: boolean; }'.
+src/services/SquadService.ts(284,5): error TS2322: Type 'null' is not assignable to type 'SquadRole'.
+src/services/SquadService.ts(285,5): error TS2322: Type 'null' is not assignable to type 'Date'.
+src/services/SquadService.ts(331,7): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(entityLikeArray: DeepPartial<Transaction>[]): Transaction[]', gave the following error.
+    Object literal may only specify known properties, and 'user' does not exist in type 'DeepPartial<Transaction>[]'.
+  Overload 2 of 3, '(entityLike: DeepPartial<Transaction>): Transaction', gave the following error.
+    Object literal may only specify known properties, and 'user' does not exist in type 'DeepPartial<Transaction>'.
+src/services/SquadService.ts(459,5): error TS2322: Type 'null' is not assignable to type 'SquadRole'.
+src/services/SquadService.ts(460,5): error TS2322: Type 'null' is not assignable to type 'Date'.
+src/services/SquadService.ts(541,29): error TS2322: Type 'null' is not assignable to type '(() => string) | _QueryDeepPartialEntity<SquadRole> | undefined'.
+src/services/SquadService.ts(541,46): error TS2322: Type 'null' is not assignable to type '(() => string) | _QueryDeepPartialEntity<Date> | undefined'.
+src/services/SquadService.ts(599,9): error TS2353: Object literal may only specify known properties, and 'isPublic' does not exist in type '{ autoAcceptMembers: boolean; requireApproval: boolean; chatEnabled: boolean; missionNotifications: boolean; }'.
+src/services/SquadService.ts(599,56): error TS2339: Property 'isPublic' does not exist on type '{ autoAcceptMembers: boolean; requireApproval: boolean; chatEnabled: boolean; missionNotifications: boolean; }'.
+src/services/SquadService.ts(600,60): error TS2339: Property 'autoAccept' does not exist on type '{ autoAcceptMembers: boolean; requireApproval: boolean; chatEnabled: boolean; missionNotifications: boolean; }'.
+src/services/SquadService.ts(601,56): error TS2339: Property 'minLevel' does not exist on type '{ autoAcceptMembers: boolean; requireApproval: boolean; chatEnabled: boolean; missionNotifications: boolean; }'.
+src/services/SquadService.ts(658,24): error TS7053: Element implicitly has an 'any' type because expression of type 'MissionType' can't be used to index type '{ DAILY: number; WEEKLY: number; WAR: number; SPECIAL: number; RAID: number; }'.
+  Property '[MissionType.CHALLENGE]' does not exist on type '{ DAILY: number; WEEKLY: number; WAR: number; SPECIAL: number; RAID: number; }'.
+src/services/SquadService.ts(659,27): error TS7053: Element implicitly has an 'any' type because expression of type 'MissionType' can't be used to index type '{ DAILY: number; WEEKLY: number; WAR: number; SPECIAL: number; RAID: number; }'.
+  Property '[MissionType.CHALLENGE]' does not exist on type '{ DAILY: number; WEEKLY: number; WAR: number; SPECIAL: number; RAID: number; }'.
+src/services/SquadService.ts(765,12): error TS7053: Element implicitly has an 'any' type because expression of type 'MissionType' can't be used to index type '{ DAILY: number; WEEKLY: number; WAR: number; SPECIAL: number; RAID: number; }'.
+  Property '[MissionType.CHALLENGE]' does not exist on type '{ DAILY: number; WEEKLY: number; WAR: number; SPECIAL: number; RAID: number; }'.
+src/services/SquadService.ts(775,9): error TS2322: Type 'bigint' is not assignable to type 'number'.
+src/services/UserService.ts(1,22): error TS6133: 'In' is declared but its value is never read.
+src/services/UserService.ts(3,10): error TS6133: 'redisClient' is declared but its value is never read.
+src/services/UserService.ts(5,16): error TS6133: 'UserTier' is declared but its value is never read.
+src/services/UserService.ts(10,35): error TS2307: Cannot find module '@types' or its corresponding type declarations.
+src/services/UserService.ts(37,13): error TS2339: Property 'currentEnergy' does not exist on type '{ energy: number; shouldUpdate: boolean; }'.
+src/services/UserService.ts(37,28): error TS2339: Property 'lastEnergyUpdate' does not exist on type '{ energy: number; shouldUpdate: boolean; }'.
+src/services/UserService.ts(95,23): error TS2339: Property 'nodeId' does not exist on type 'Skill'.
+src/services/UserService.ts(211,52): error TS2339: Property 'nodeId' does not exist on type 'Skill'.
+src/services/UserService.ts(218,55): error TS2339: Property 'nodeId' does not exist on type 'Skill'.
+src/services/UserService.ts(220,9): error TS7006: Parameter 'prereq' implicitly has an 'any' type.
+src/services/UserService.ts(238,40): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(entityLikeArray: DeepPartial<Skill>[]): Skill[]', gave the following error.
+    Object literal may only specify known properties, and 'user' does not exist in type 'DeepPartial<Skill>[]'.
+  Overload 2 of 3, '(entityLike: DeepPartial<Skill>): Skill', gave the following error.
+    Object literal may only specify known properties, and 'nodeId' does not exist in type 'DeepPartial<Skill>'.
+src/services/UserService.ts(410,25): error TS2339: Property 'metadata' does not exist on type 'Inventory'.
+src/services/UserService.ts(419,7): error TS2322: Type 'bigint' is not assignable to type 'number'.
+src/services/UserService.ts(473,47): error TS6133: 'source' is declared but its value is never read.
+src/services/UserService.ts(484,5): error TS2322: Type 'bigint' is not assignable to type 'number'.
+src/services/UserService.ts(508,13): error TS2339: Property 'currentEnergy' does not exist on type '{ energy: number; shouldUpdate: boolean; }'.
+src/services/UserService.ts(508,28): error TS2339: Property 'lastEnergyUpdate' does not exist on type '{ energy: number; shouldUpdate: boolean; }'.
+src/services/UserService.ts(539,53): error TS2339: Property 'nodeId' does not exist on type 'Skill'.
+src/services/UserService.ts(545,38): error TS2339: Property 'map' does not exist on type '{ COGNITIVE: ({ nodeId: string; name: string; description: string; category: SkillCategory; cost: number; bonuses: { xpBoost: number; specialAbility?: undefined; }; prerequisites: string[]; } | { ...; })[]; CREATIVE: { ...; }[]; SOCIAL: ({ ...; } | { ...; })[]; WELLNESS: ({ ...; } | { ...; })[]; }'.
+src/services/UserService.ts(545,42): error TS7006: Parameter 'category' implicitly has an 'any' type.
+src/services/UserService.ts(547,35): error TS7006: Parameter 'skill' implicitly has an 'any' type.
+src/services/UserService.ts(551,45): error TS2339: Property 'nodeId' does not exist on type 'Skill'.
+src/services/UserService.ts(576,28): error TS2488: Type '{ COGNITIVE: ({ nodeId: string; name: string; description: string; category: SkillCategory; cost: number; bonuses: { xpBoost: number; specialAbility?: undefined; }; prerequisites: string[]; } | { ...; })[]; CREATIVE: { ...; }[]; SOCIAL: ({ ...; } | { ...; })[]; WELLNESS: ({ ...; } | { ...; })[]; }' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/services/UserService.ts(577,42): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/socket/index.ts(6,10): error TS6133: 'logger' is declared but its value is never read.
+src/socket/index.ts(48,20): error TS2339: Property 'warn' does not exist on type '{ info: (event: string, userId: string, details?: object | undefined) => void; error: (error: Error, context?: object | undefined) => void; debug: (event: string, userId: string, details?: object | undefined) => void; }'.
+src/socket/index.ts(58,43): error TS2345: Argument of type '{ userId: string | undefined; socketId: string; }' is not assignable to parameter of type 'string'.
+src/socket/index.ts(79,50): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/socket/index.ts(82,51): error TS2769: No overload matches this call.
+  Argument of type '[string | undefined]' is not assignable to parameter of type '[...members: (string | number | Buffer<ArrayBufferLike>)[], callback: Callback<number>]'.
+    Type at position 0 in source is not compatible with type at position 1 in target.
+      Type 'string | undefined' is not assignable to type 'Callback<number>'.
+        Type 'undefined' is not assignable to type 'Callback<number>'.
+  Overload 2 of 4, '(key: RedisKey, ...members: (string | number | Buffer<ArrayBufferLike>)[]): Promise<number>', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | number | Buffer<ArrayBufferLike>'.
+      Type 'undefined' is not assignable to type 'string | number | Buffer<ArrayBufferLike>'.
+  Overload 3 of 4, '(key: RedisKey, members: (string | number | Buffer<ArrayBufferLike>)[]): Promise<number>', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type '(string | number | Buffer<ArrayBufferLike>)[]'.
+      Type 'undefined' is not assignable to type '(string | number | Buffer<ArrayBufferLike>)[]'.
+src/socket/index.ts(91,52): error TS2345: Argument of type '{ userId: string | undefined; squadId: string; }' is not assignable to parameter of type 'string'.
+src/socket/index.ts(159,53): error TS2345: Argument of type '{ userId: string | undefined; }' is not assignable to parameter of type 'string'.
+src/socket/index.ts(224,48): error TS2345: Argument of type '{ userId: string | undefined; reason: DisconnectReason; }' is not assignable to parameter of type 'string'.
+src/socket/index.ts(237,26): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Error'.
+src/socket/index.ts(286,16): error TS2554: Expected 2-3 arguments, but got 1.
+src/socket/index.ts(304,35): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/socket/index.ts(312,47): error TS2769: No overload matches this call.
+  Argument of type '[string | undefined]' is not assignable to parameter of type '[...members: (string | number | Buffer<ArrayBufferLike>)[], callback: Callback<number>]'.
+    Type at position 0 in source is not compatible with type at position 1 in target.
+      Type 'string | undefined' is not assignable to type 'Callback<number>'.
+        Type 'undefined' is not assignable to type 'Callback<number>'.
+  Overload 2 of 4, '(key: RedisKey, ...members: (string | number | Buffer<ArrayBufferLike>)[]): Promise<number>', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | number | Buffer<ArrayBufferLike>'.
+      Type 'undefined' is not assignable to type 'string | number | Buffer<ArrayBufferLike>'.
+  Overload 3 of 4, '(key: RedisKey, members: (string | number | Buffer<ArrayBufferLike>)[]): Promise<number>', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type '(string | number | Buffer<ArrayBufferLike>)[]'.
+      Type 'undefined' is not assignable to type '(string | number | Buffer<ArrayBufferLike>)[]'.

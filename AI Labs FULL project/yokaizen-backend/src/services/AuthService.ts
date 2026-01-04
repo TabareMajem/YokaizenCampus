@@ -30,15 +30,11 @@ export class AuthService {
     const decodedToken = await verifyFirebaseToken(idToken);
     const firebaseUid = decodedToken.uid;
     const phone = decodedToken.phone_number;
-
-    if (!phone) {
-      throw ApiError.badRequest('Phone number is required for authentication');
-    }
+    const email = decodedToken.email;
 
     // Check if user exists
     let user = await this.userRepository.findOne({
       where: { firebaseUid },
-      // relations: ['squad'], // Squad relation removed, using squadId
     });
 
     const isNewUser = !user;
@@ -48,6 +44,7 @@ export class AuthService {
       user = this.userRepository.create({
         firebaseUid,
         phone,
+        email,
         username: `user_${uuidv4().slice(0, 8)}`,
         tier: UserTier.FREE,
         role: UserRole.USER,
@@ -93,6 +90,63 @@ export class AuthService {
         });
       }
 
+      await this.userRepository.save(user);
+    }
+
+    // Generate tokens
+    const accessToken = this.generateAccessToken(user);
+    const refreshToken = this.generateRefreshToken(user);
+
+    // Store session in Redis
+    await this.storeSession(user.id, accessToken, refreshToken);
+
+    return { user, accessToken, refreshToken, isNewUser };
+  }
+
+  /**
+   * Verify mock phone login (unified auth approach)
+   */
+  async verifyAndAuthenticateMock(phone: string): Promise<{
+    user: User;
+    accessToken: string;
+    refreshToken: string;
+    isNewUser: boolean;
+  }> {
+    // Check if user exists by phone
+    let user = await this.userRepository.findOne({
+      where: { phone },
+    });
+
+    const isNewUser = !user;
+
+    if (!user) {
+      // Create new user
+      user = this.userRepository.create({
+        firebaseUid: `mock_${uuidv4().split('-')[0]}`,
+        phone,
+        username: `user_${uuidv4().slice(0, 8)}`,
+        tier: UserTier.FREE,
+        role: UserRole.USER,
+        credits: 100,
+        xp: 0,
+        currentEnergy: 100,
+        maxEnergy: 100,
+        streak: 0,
+        language: 'EN',
+        authProvider: 'phone',
+        preferences: {
+          notifications: true,
+          soundEffects: true,
+          darkMode: true,
+          language: 'EN',
+          timezone: 'UTC',
+        },
+      });
+
+      await this.userRepository.save(user);
+      logger.info('New mock user created', { userId: user.id, phone });
+    } else {
+      user.lastLogin = new Date();
       await this.userRepository.save(user);
     }
 
@@ -324,6 +378,10 @@ export class AuthService {
       return { newStreak: 1, lastStreakDate: today, streakBonus: 10 };
     }
   }
+
+  // Aliases for backwards compatibility
+  verifyAndCreateSession = this.verifyAndAuthenticate;
+  refreshAccessToken = this.refreshTokens;
 }
 
 export const authService = new AuthService();

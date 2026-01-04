@@ -5,8 +5,41 @@ import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 import { Camera, Mic, MicOff, Video, VideoOff, X, Zap, Activity, Share2, Scan, Crosshair, Cpu } from 'lucide-react';
 import { audio } from '../../services/audioService';
 import { useAuth } from '../../contexts/AuthContext';
+import { authService } from '../../services/authService';
 import { TRANSLATIONS } from '../../translations';
 import { Language } from '../../types';
+
+// API Base URL for backend
+const API_BASE = import.meta.env.PROD
+  ? 'https://ai.yokaizencampus.com/api/v1'
+  : 'http://localhost:7792/api/v1';
+
+// Helper: Fetch Gemini API key from backend (for PRO users only)
+const fetchLiveToken = async (): Promise<string | null> => {
+  const token = authService.getToken();
+  if (!token) return null;
+
+  try {
+    const response = await fetch(`${API_BASE}/ai/live-token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      console.warn('Failed to fetch live token - user may not have PRO access');
+      return null;
+    }
+
+    const data = await response.json();
+    return data.data?.apiKey || null;
+  } catch (e) {
+    console.error('Error fetching live token:', e);
+    return null;
+  }
+};
 
 // Helpers for Audio PCM conversion
 function base64ToFloat32Array(base64: string): Float32Array {
@@ -77,27 +110,24 @@ export const OmniSight: React.FC = () => {
   const [isCamOn, setIsCamOn] = useState(true);
   const [status, setStatus] = useState<'IDLE' | 'CONNECTING' | 'LIVE' | 'ERROR'>('IDLE');
   const [errorMsg, setErrorMsg] = useState('');
-  
+
   // Refs for media and processing
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null); // New AR Overlay
-  
+
   const inputAudioContextRef = useRef<AudioContext | null>(null);
   const outputAudioContextRef = useRef<AudioContext | null>(null);
   const nextStartTimeRef = useRef<number>(0);
   const sessionPromiseRef = useRef<Promise<any> | null>(null);
   const frameIntervalRef = useRef<number | null>(null);
   const activeSourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
-  
+  const aiClientRef = useRef<GoogleGenAI | null>(null);
+
   // AR State Refs
   const arObjectsRef = useRef<ARObject[]>([]);
   const frameRef = useRef<number>(0);
   const audioVisualizerRef = useRef<number[]>(new Array(30).fill(0));
-
-  // Init Gemini
-  const apiKey = process.env.API_KEY;
-  const ai = new GoogleGenAI({ apiKey });
 
   // Init AR Objects (Simulating detection of car parts for the tutorial)
   useEffect(() => {
@@ -107,8 +137,6 @@ export const OmniSight: React.FC = () => {
       { id: 3, x: 0.2, y: 0.7, w: 0.15, h: 0.15, label: 'COOLANT_RES', confidence: 0.72, vx: 0.0003, vy: -0.0001, color: '#ff0055', type: 'INFO' }
     ];
   }, []);
-
-  // AR Rendering Loop
   useEffect(() => {
     if (status !== 'LIVE' || !isCamOn) return;
 
@@ -135,8 +163,8 @@ export const OmniSight: React.FC = () => {
       ctx.lineWidth = 1;
       ctx.beginPath();
       const gridSize = 80;
-      for(let x = (time / 50) % gridSize; x < w; x += gridSize) { ctx.moveTo(x, 0); ctx.lineTo(x, h); }
-      for(let y = (time / 50) % gridSize; y < h; y += gridSize) { ctx.moveTo(0, y); ctx.lineTo(w, y); }
+      for (let x = (time / 50) % gridSize; x < w; x += gridSize) { ctx.moveTo(x, 0); ctx.lineTo(x, h); }
+      for (let y = (time / 50) % gridSize; y < h; y += gridSize) { ctx.moveTo(0, y); ctx.lineTo(w, y); }
       ctx.stroke();
 
       // Update and Draw AR Objects
@@ -144,7 +172,7 @@ export const OmniSight: React.FC = () => {
         // Physics update (drifting)
         obj.x += obj.vx;
         obj.y += obj.vy;
-        
+
         // Bounce off edges (keep within central area)
         if (obj.x < 0.1 || obj.x > 0.8) obj.vx *= -1;
         if (obj.y < 0.1 || obj.y > 0.8) obj.vy *= -1;
@@ -159,7 +187,7 @@ export const OmniSight: React.FC = () => {
         ctx.lineWidth = obj.type === 'TARGET' ? 2 : 1;
         ctx.shadowBlur = 10;
         ctx.shadowColor = obj.color;
-        
+
         const bSize = obj.type === 'TARGET' ? 20 : 10; // Bracket length
 
         // Top Left
@@ -178,16 +206,16 @@ export const OmniSight: React.FC = () => {
         ctx.font = '10px monospace';
         const labelText = `${obj.label} ${Math.floor(obj.confidence * 100)}%`;
         ctx.fillText(labelText, sx, sy - 5);
-        
+
         // Tracking Line to Center
         if (obj.type === 'TARGET') {
-            ctx.beginPath();
-            ctx.moveTo(w / 2, h / 2);
-            ctx.lineTo(sx + sw / 2, sy + sh / 2);
-            ctx.strokeStyle = `rgba(${obj.color === '#00ff9d' ? '0,255,157' : '255,0,85'}, 0.2)`;
-            ctx.setLineDash([2, 4]);
-            ctx.stroke();
-            ctx.setLineDash([]);
+          ctx.beginPath();
+          ctx.moveTo(w / 2, h / 2);
+          ctx.lineTo(sx + sw / 2, sy + sh / 2);
+          ctx.strokeStyle = `rgba(${obj.color === '#00ff9d' ? '0,255,157' : '255,0,85'}, 0.2)`;
+          ctx.setLineDash([2, 4]);
+          ctx.stroke();
+          ctx.setLineDash([]);
         }
       });
 
@@ -196,32 +224,32 @@ export const OmniSight: React.FC = () => {
       ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(w/2, h/2, 50, angle, angle + Math.PI/2);
+      ctx.arc(w / 2, h / 2, 50, angle, angle + Math.PI / 2);
       ctx.stroke();
-      
+
       // Draw Audio Waveform (Simulated)
       if (activeSourcesRef.current.size > 0) {
-          // Update visualizer data
-          audioVisualizerRef.current = audioVisualizerRef.current.map(() => Math.random());
-          
-          const barWidth = 4;
-          const gap = 2;
-          const totalWidth = (barWidth + gap) * audioVisualizerRef.current.length;
-          let startX = (w - totalWidth) / 2;
-          
-          ctx.fillStyle = '#00ff9d';
-          audioVisualizerRef.current.forEach(val => {
-              const height = val * 30;
-              ctx.fillRect(startX, h - 100 - height, barWidth, height);
-              startX += barWidth + gap;
-          });
-          
-          // Matrix Rain Effect when Audio is Active
-          ctx.fillStyle = 'rgba(0, 255, 0, 0.1)';
-          ctx.font = '14px monospace';
-          for(let i=0; i<10; i++) {
-              ctx.fillText(String.fromCharCode(0x30A0 + Math.random() * 96), Math.random() * w, Math.random() * h);
-          }
+        // Update visualizer data
+        audioVisualizerRef.current = audioVisualizerRef.current.map(() => Math.random());
+
+        const barWidth = 4;
+        const gap = 2;
+        const totalWidth = (barWidth + gap) * audioVisualizerRef.current.length;
+        let startX = (w - totalWidth) / 2;
+
+        ctx.fillStyle = '#00ff9d';
+        audioVisualizerRef.current.forEach(val => {
+          const height = val * 30;
+          ctx.fillRect(startX, h - 100 - height, barWidth, height);
+          startX += barWidth + gap;
+        });
+
+        // Matrix Rain Effect when Audio is Active
+        ctx.fillStyle = 'rgba(0, 255, 0, 0.1)';
+        ctx.font = '14px monospace';
+        for (let i = 0; i < 10; i++) {
+          ctx.fillText(String.fromCharCode(0x30A0 + Math.random() * 96), Math.random() * w, Math.random() * h);
+        }
       }
 
       frameRef.current = requestAnimationFrame(renderAR);
@@ -241,22 +269,33 @@ export const OmniSight: React.FC = () => {
   const connect = async () => {
     setStatus('CONNECTING');
     setErrorMsg('');
-    
+
     try {
-      // 1. Setup Audio Contexts
+      // 1. Fetch API key securely from backend
+      const apiKey = await fetchLiveToken();
+      if (!apiKey) {
+        setErrorMsg('PRO subscription required for Omni-Sight');
+        setStatus('ERROR');
+        return;
+      }
+
+      // 2. Create AI client with the fetched key
+      aiClientRef.current = new GoogleGenAI({ apiKey });
+
+      // 3. Setup Audio Contexts
       inputAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
       outputAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       nextStartTimeRef.current = 0;
 
-      // 2. Get User Media
+      // 4. Get User Media
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
 
-      // 3. Connect to Gemini Live
-      const sessionPromise = ai.live.connect({
+      // 5. Connect to Gemini Live
+      const sessionPromise = aiClientRef.current.live.connect({
         model: 'gemini-2.5-flash-native-audio-preview-09-2025',
         callbacks: {
           onopen: () => {
@@ -285,7 +324,7 @@ export const OmniSight: React.FC = () => {
           systemInstruction: "You are T.O.P. (The Omniscient Projector), a futuristic AI HUD assistant. Your voice is calm, robotic but helpful. Provide concise, tactical analysis of what you see and hear. Keep responses short and actionable.",
         }
       });
-      
+
       sessionPromiseRef.current = sessionPromise;
 
     } catch (e: any) {
@@ -301,12 +340,12 @@ export const OmniSight: React.FC = () => {
     // --- Audio Input ---
     const source = inputAudioContextRef.current.createMediaStreamSource(stream);
     const processor = inputAudioContextRef.current.createScriptProcessor(4096, 1, 1);
-    
+
     processor.onaudioprocess = (e) => {
       if (!isMicOn) return; // Mute logic
       const inputData = e.inputBuffer.getChannelData(0);
       const base64 = float32ArrayToBase64(inputData);
-      
+
       sessionPromiseRef.current?.then(session => {
         session.sendRealtimeInput({
           mimeType: 'audio/pcm;rate=16000',
@@ -324,13 +363,13 @@ export const OmniSight: React.FC = () => {
 
     frameIntervalRef.current = window.setInterval(() => {
       if (!isCamOn || !videoRef.current || !canvasRef.current) return;
-      
+
       const canvas = canvasRef.current;
       const video = videoRef.current;
-      
+
       canvas.width = video.videoWidth * 0.5; // Downscale
       canvas.height = video.videoHeight * 0.5;
-      
+
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -352,7 +391,7 @@ export const OmniSight: React.FC = () => {
     const audioData = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
     if (audioData && outputAudioContextRef.current) {
       const ctx = outputAudioContextRef.current;
-      
+
       // Decode raw PCM 24kHz
       const float32 = base64ToFloat32Array(audioData);
       const buffer = ctx.createBuffer(1, float32.length, 24000);
@@ -361,13 +400,13 @@ export const OmniSight: React.FC = () => {
       const source = ctx.createBufferSource();
       source.buffer = buffer;
       source.connect(ctx.destination);
-      
+
       // Schedule playback
       const currentTime = ctx.currentTime;
       const startTime = Math.max(currentTime, nextStartTimeRef.current);
       source.start(startTime);
       nextStartTimeRef.current = startTime + buffer.duration;
-      
+
       source.onended = () => activeSourcesRef.current.delete(source);
       activeSourcesRef.current.add(source);
     }
@@ -375,22 +414,22 @@ export const OmniSight: React.FC = () => {
 
   const disconnect = () => {
     // Stop Session
-    sessionPromiseRef.current?.then(s => s.close()).catch(() => {});
+    sessionPromiseRef.current?.then(s => s.close()).catch(() => { });
     sessionPromiseRef.current = null;
 
     // Stop Media
     if (videoRef.current && videoRef.current.srcObject) {
       (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
     }
-    
+
     // Stop Audio Contexts
     inputAudioContextRef.current?.close();
     outputAudioContextRef.current?.close();
-    
+
     // Clear Intervals
     if (frameIntervalRef.current) clearInterval(frameIntervalRef.current);
     if (frameRef.current) cancelAnimationFrame(frameRef.current);
-    
+
     setStatus('IDLE');
     setIsConnected(false);
   };
@@ -406,10 +445,10 @@ export const OmniSight: React.FC = () => {
   };
 
   const handleShare = () => {
-      const url = window.location.href;
-      navigator.clipboard.writeText(url);
-      alert("Comms link copied to clipboard.");
-      audio.playSuccess();
+    const url = window.location.href;
+    navigator.clipboard.writeText(url);
+    alert("Comms link copied to clipboard.");
+    audio.playSuccess();
   };
 
   return (
@@ -420,7 +459,7 @@ export const OmniSight: React.FC = () => {
         <div className="flex justify-between items-start bg-black/50 backdrop-blur-sm p-2 rounded border border-cyan-500/30">
           <div>
             <div className="text-xl font-black italic tracking-widest flex items-center">
-              <Scan className={`mr-2 ${status === 'LIVE' ? 'animate-spin-slow' : ''}`} /> 
+              <Scan className={`mr-2 ${status === 'LIVE' ? 'animate-spin-slow' : ''}`} />
               OMNI-SIGHT
             </div>
             <div className="text-[10px] uppercase font-bold flex items-center mt-1">
@@ -429,7 +468,7 @@ export const OmniSight: React.FC = () => {
             </div>
           </div>
           <div className="text-right text-[10px] space-y-1">
-            <div className="flex items-center justify-end"><Cpu size={10} className="mr-1"/> {t('omni.core')}</div>
+            <div className="flex items-center justify-end"><Cpu size={10} className="mr-1" /> {t('omni.core')}</div>
             <div>CAM: {isCamOn ? 'ON' : 'OFF'}</div>
             <div>MIC: {isMicOn ? 'ON' : 'OFF'}</div>
             <div className="text-xs font-bold text-white">{new Date().toLocaleTimeString()}</div>
@@ -439,84 +478,84 @@ export const OmniSight: React.FC = () => {
         {/* Center Reticle (Standard) */}
         {status === 'LIVE' && (
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 pointer-events-none">
-             <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-white/50"></div>
-             <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-white/50"></div>
-             <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-white/50"></div>
-             <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-white/50"></div>
-             <div className="absolute top-1/2 left-1/2 w-1 h-1 bg-cyan-500 rounded-full -translate-x-1/2 -translate-y-1/2"></div>
+            <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-white/50"></div>
+            <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-white/50"></div>
+            <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-white/50"></div>
+            <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-white/50"></div>
+            <div className="absolute top-1/2 left-1/2 w-1 h-1 bg-cyan-500 rounded-full -translate-x-1/2 -translate-y-1/2"></div>
           </div>
         )}
 
         {/* Bottom Bar */}
         <div className="pointer-events-auto flex justify-center space-x-4 mb-4">
-           {status === 'IDLE' || status === 'ERROR' ? (
-             <Button size="lg" variant="primary" onClick={connect} className="shadow-[0_0_30px_#06b6d4]">
-               <Zap className="mr-2" size={18}/> {t('omni.init')}
-             </Button>
-           ) : (
-             <>
-               <button onClick={toggleMic} className={`p-4 rounded-full border-2 ${isMicOn ? 'bg-cyan-500/20 border-cyan-500 text-cyan-100' : 'bg-red-900/50 border-red-500 text-red-500'}`}>
-                 {isMicOn ? <Mic /> : <MicOff />}
-               </button>
-               <button onClick={disconnect} className="p-4 rounded-full border-2 border-red-500 bg-red-600 text-white shadow-lg active:scale-95 transition-transform">
-                 <X size={24} />
-               </button>
-               <button onClick={toggleCam} className={`p-4 rounded-full border-2 ${isCamOn ? 'bg-cyan-500/20 border-cyan-500 text-cyan-100' : 'bg-red-900/50 border-red-500 text-red-500'}`}>
-                 {isCamOn ? <Video /> : <VideoOff />}
-               </button>
-             </>
-           )}
+          {status === 'IDLE' || status === 'ERROR' ? (
+            <Button size="lg" variant="primary" onClick={connect} className="shadow-[0_0_30px_#06b6d4]">
+              <Zap className="mr-2" size={18} /> {t('omni.init')}
+            </Button>
+          ) : (
+            <>
+              <button onClick={toggleMic} className={`p-4 rounded-full border-2 ${isMicOn ? 'bg-cyan-500/20 border-cyan-500 text-cyan-100' : 'bg-red-900/50 border-red-500 text-red-500'}`}>
+                {isMicOn ? <Mic /> : <MicOff />}
+              </button>
+              <button onClick={disconnect} className="p-4 rounded-full border-2 border-red-500 bg-red-600 text-white shadow-lg active:scale-95 transition-transform">
+                <X size={24} />
+              </button>
+              <button onClick={toggleCam} className={`p-4 rounded-full border-2 ${isCamOn ? 'bg-cyan-500/20 border-cyan-500 text-cyan-100' : 'bg-red-900/50 border-red-500 text-red-500'}`}>
+                {isCamOn ? <Video /> : <VideoOff />}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       {/* --- VIDEO FEED & AR CANVAS --- */}
       <div className="flex-1 relative bg-[#0a0a0a] flex items-center justify-center overflow-hidden">
-        <video 
-          ref={videoRef} 
-          autoPlay 
-          playsInline 
-          muted 
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
           className={`w-full h-full object-cover transition-opacity duration-500 ${isCamOn && status === 'LIVE' ? 'opacity-100' : 'opacity-20'}`}
         />
-        
+
         {/* AR Overlay Layer */}
         <canvas ref={overlayRef} className="absolute inset-0 w-full h-full pointer-events-none z-20" />
 
         {/* Fallback Visuals */}
         {(!isCamOn || status !== 'LIVE') && (
-           <div className="absolute inset-0 flex items-center justify-center z-10">
-              {status === 'CONNECTING' ? (
-                 <div className="text-cyan-500 animate-pulse font-black text-2xl">{t('omni.connecting')}</div>
-              ) : status === 'ERROR' ? (
-                 <div className="text-red-500 font-bold text-xl bg-black/80 p-4 rounded border border-red-500">{errorMsg}</div>
-              ) : (
-                 <div className="text-gray-600 font-mono text-xs">{t('omni.offline')}</div>
-              )}
-           </div>
+          <div className="absolute inset-0 flex items-center justify-center z-10">
+            {status === 'CONNECTING' ? (
+              <div className="text-cyan-500 animate-pulse font-black text-2xl">{t('omni.connecting')}</div>
+            ) : status === 'ERROR' ? (
+              <div className="text-red-500 font-bold text-xl bg-black/80 p-4 rounded border border-red-500">{errorMsg}</div>
+            ) : (
+              <div className="text-gray-600 font-mono text-xs">{t('omni.offline')}</div>
+            )}
+          </div>
         )}
-        
+
         {/* Hidden Canvas for processing frame extraction */}
         <canvas ref={canvasRef} className="hidden" />
       </div>
 
       {/* --- WAVEFORM FOOTER --- */}
       <div className="h-16 bg-black border-t border-cyan-900/50 flex items-center justify-center space-x-1 px-4 relative z-40">
-          <div className="absolute left-4">
-             <Button size="sm" variant="ghost" onClick={handleShare} className="text-cyan-600 hover:text-cyan-400"><Share2 size={16} className="mr-2"/> {t('omni.share')}</Button>
-          </div>
-          {/* Audio Visualizer */}
-          {status === 'LIVE' && Array.from({length: 30}).map((_, i) => (
-              <div 
-                key={i} 
-                className="w-1 bg-cyan-500 rounded-full animate-pulse" 
-                style={{ 
-                    height: `${Math.random() * 100}%`, 
-                    opacity: Math.random() * 0.5 + 0.5,
-                    animationDuration: `${Math.random() * 0.5 + 0.2}s`
-                }}
-              ></div>
-          ))}
-          {status !== 'LIVE' && <div className="text-xs text-gray-700 font-mono">SYSTEM STANDBY</div>}
+        <div className="absolute left-4">
+          <Button size="sm" variant="ghost" onClick={handleShare} className="text-cyan-600 hover:text-cyan-400"><Share2 size={16} className="mr-2" /> {t('omni.share')}</Button>
+        </div>
+        {/* Audio Visualizer */}
+        {status === 'LIVE' && Array.from({ length: 30 }).map((_, i) => (
+          <div
+            key={i}
+            className="w-1 bg-cyan-500 rounded-full animate-pulse"
+            style={{
+              height: `${Math.random() * 100}%`,
+              opacity: Math.random() * 0.5 + 0.5,
+              animationDuration: `${Math.random() * 0.5 + 0.2}s`
+            }}
+          ></div>
+        ))}
+        {status !== 'LIVE' && <div className="text-xs text-gray-700 font-mono">SYSTEM STANDBY</div>}
       </div>
     </div>
   );

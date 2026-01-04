@@ -96,6 +96,15 @@ export const config = {
     proPriceId: process.env.STRIPE_PRO_PRICE_ID,
   },
 
+  smtp: {
+    host: process.env.SMTP_HOST || 'smtp.hostinger.com',
+    port: parseInt(process.env.SMTP_PORT || '465', 10),
+    secure: process.env.SMTP_SECURE !== 'false', // true for 465, false for 587
+    user: process.env.SMTP_USER || 'info@yokaizencampus.com',
+    pass: process.env.SMTP_PASS || '',
+    from: process.env.SMTP_FROM || 'Yokaizen Campus <info@yokaizencampus.com>',
+  },
+
   corsOrigins: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3001', 'http://localhost:7787'],
 
   features: {

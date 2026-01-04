@@ -1,7 +1,7 @@
-import { Repository, Between, MoreThan } from 'typeorm';
+import { Repository, Between } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { AppDataSource } from '@config/database';
-import { redisClient, setGameSession, getGameSession, deleteGameSession } from '@config/redis';
+import { setGameSession, getGameSession, deleteGameSession } from '@config/redis';
 import { logger } from '@config/logger';
 import { User, UserTier } from '@entities/User';
 import { GameHistory, GameType, GameDifficulty } from '@entities/GameHistory';
@@ -28,6 +28,7 @@ const GAME_CONFIG: Record<GameType, {
       [GameDifficulty.MEDIUM]: 1000,
       [GameDifficulty.HARD]: 2000,
       [GameDifficulty.EXTREME]: 5000,
+      [GameDifficulty.ADAPTIVE]: 1000,
     },
   },
   [GameType.DEEP_DIVE]: {
@@ -39,6 +40,7 @@ const GAME_CONFIG: Record<GameType, {
       [GameDifficulty.MEDIUM]: 2500,
       [GameDifficulty.HARD]: 5000,
       [GameDifficulty.EXTREME]: 10000,
+      [GameDifficulty.ADAPTIVE]: 3000,
     },
   },
   [GameType.CHALLENGE]: {
@@ -50,6 +52,7 @@ const GAME_CONFIG: Record<GameType, {
       [GameDifficulty.MEDIUM]: 1500,
       [GameDifficulty.HARD]: 3500,
       [GameDifficulty.EXTREME]: 7500,
+      [GameDifficulty.ADAPTIVE]: 2000,
     },
   },
   [GameType.CREATIVE]: {
@@ -61,6 +64,7 @@ const GAME_CONFIG: Record<GameType, {
       [GameDifficulty.MEDIUM]: 4000,
       [GameDifficulty.HARD]: 8000,
       [GameDifficulty.EXTREME]: 15000,
+      [GameDifficulty.ADAPTIVE]: 5000,
     },
   },
   [GameType.SQUAD_MISSION]: {
@@ -72,6 +76,7 @@ const GAME_CONFIG: Record<GameType, {
       [GameDifficulty.MEDIUM]: 6000,
       [GameDifficulty.HARD]: 12000,
       [GameDifficulty.EXTREME]: 25000,
+      [GameDifficulty.ADAPTIVE]: 8000,
     },
   },
   [GameType.AI_GENERATED]: {
@@ -83,8 +88,22 @@ const GAME_CONFIG: Record<GameType, {
       [GameDifficulty.MEDIUM]: 2000,
       [GameDifficulty.HARD]: 4000,
       [GameDifficulty.EXTREME]: 8000,
+      [GameDifficulty.ADAPTIVE]: 2000,
     },
   },
+  [GameType.BRAIN_BOOST]: { energyCost: 10, minDuration: 30, maxDuration: 300, maxPossibleScore: { [GameDifficulty.EASY]: 500, [GameDifficulty.MEDIUM]: 1000, [GameDifficulty.HARD]: 2000, [GameDifficulty.EXTREME]: 5000, [GameDifficulty.ADAPTIVE]: 1000 } },
+  [GameType.MEMORY_MATRIX]: { energyCost: 10, minDuration: 30, maxDuration: 300, maxPossibleScore: { [GameDifficulty.EASY]: 500, [GameDifficulty.MEDIUM]: 1000, [GameDifficulty.HARD]: 2000, [GameDifficulty.EXTREME]: 5000, [GameDifficulty.ADAPTIVE]: 1000 } },
+  [GameType.WORD_WEAVER]: { energyCost: 10, minDuration: 30, maxDuration: 300, maxPossibleScore: { [GameDifficulty.EASY]: 500, [GameDifficulty.MEDIUM]: 1000, [GameDifficulty.HARD]: 2000, [GameDifficulty.EXTREME]: 5000, [GameDifficulty.ADAPTIVE]: 1000 } },
+  [GameType.PATTERN_PULSE]: { energyCost: 10, minDuration: 30, maxDuration: 300, maxPossibleScore: { [GameDifficulty.EASY]: 500, [GameDifficulty.MEDIUM]: 1000, [GameDifficulty.HARD]: 2000, [GameDifficulty.EXTREME]: 5000, [GameDifficulty.ADAPTIVE]: 1000 } },
+  [GameType.EMOTION_QUEST]: { energyCost: 10, minDuration: 30, maxDuration: 300, maxPossibleScore: { [GameDifficulty.EASY]: 500, [GameDifficulty.MEDIUM]: 1000, [GameDifficulty.HARD]: 2000, [GameDifficulty.EXTREME]: 5000, [GameDifficulty.ADAPTIVE]: 1000 } },
+  [GameType.ANXIETY_ARENA]: { energyCost: 10, minDuration: 30, maxDuration: 300, maxPossibleScore: { [GameDifficulty.EASY]: 500, [GameDifficulty.MEDIUM]: 1000, [GameDifficulty.HARD]: 2000, [GameDifficulty.EXTREME]: 5000, [GameDifficulty.ADAPTIVE]: 1000 } },
+  [GameType.CONFIDENCE_CLIMB]: { energyCost: 10, minDuration: 30, maxDuration: 300, maxPossibleScore: { [GameDifficulty.EASY]: 500, [GameDifficulty.MEDIUM]: 1000, [GameDifficulty.HARD]: 2000, [GameDifficulty.EXTREME]: 5000, [GameDifficulty.ADAPTIVE]: 1000 } },
+  [GameType.SOCIAL_SIM]: { energyCost: 10, minDuration: 30, maxDuration: 300, maxPossibleScore: { [GameDifficulty.EASY]: 500, [GameDifficulty.MEDIUM]: 1000, [GameDifficulty.HARD]: 2000, [GameDifficulty.EXTREME]: 5000, [GameDifficulty.ADAPTIVE]: 1000 } },
+  [GameType.CUSTOM_QUEST]: { energyCost: 10, minDuration: 30, maxDuration: 300, maxPossibleScore: { [GameDifficulty.EASY]: 500, [GameDifficulty.MEDIUM]: 1000, [GameDifficulty.HARD]: 2000, [GameDifficulty.EXTREME]: 5000, [GameDifficulty.ADAPTIVE]: 1000 } },
+  [GameType.AI_CHALLENGE]: { energyCost: 10, minDuration: 30, maxDuration: 300, maxPossibleScore: { [GameDifficulty.EASY]: 500, [GameDifficulty.MEDIUM]: 1000, [GameDifficulty.HARD]: 2000, [GameDifficulty.EXTREME]: 5000, [GameDifficulty.ADAPTIVE]: 1000 } },
+  [GameType.SQUAD_WAR]: { energyCost: 10, minDuration: 30, maxDuration: 300, maxPossibleScore: { [GameDifficulty.EASY]: 500, [GameDifficulty.MEDIUM]: 1000, [GameDifficulty.HARD]: 2000, [GameDifficulty.EXTREME]: 5000, [GameDifficulty.ADAPTIVE]: 1000 } },
+  [GameType.DAILY_CHALLENGE]: { energyCost: 10, minDuration: 30, maxDuration: 300, maxPossibleScore: { [GameDifficulty.EASY]: 500, [GameDifficulty.MEDIUM]: 1000, [GameDifficulty.HARD]: 2000, [GameDifficulty.EXTREME]: 5000, [GameDifficulty.ADAPTIVE]: 1000 } },
+  [GameType.WEEKLY_TOURNAMENT]: { energyCost: 10, minDuration: 30, maxDuration: 300, maxPossibleScore: { [GameDifficulty.EASY]: 500, [GameDifficulty.MEDIUM]: 1000, [GameDifficulty.HARD]: 2000, [GameDifficulty.EXTREME]: 5000, [GameDifficulty.ADAPTIVE]: 1000 } },
 };
 
 export class GameService {
@@ -169,14 +188,14 @@ export class GameService {
     achievements: string[];
   }> {
     // Get session
-    const session = await getGameSession(userId, sessionToken);
+    const session = await getGameSession<GameSession>(userId, sessionToken);
     if (!session || !session.isActive) {
-      throw ApiError.badRequest('Invalid or expired game session');
+      throw ApiError.badRequest('Invalid or inactive game session');
     }
 
-    const config = GAME_CONFIG[session.gameType as GameType];
-    const endTime = Date.now();
-    const durationSeconds = Math.floor((endTime - session.startTime) / 1000);
+    const durationSeconds = Math.floor((Date.now() - session.startTime) / 1000);
+
+    const config = GAME_CONFIG[session.gameType as GameType]; // Moved config declaration here
 
     // Anti-cheat validations
     const antiCheatResult = await this.validateScore(
@@ -195,7 +214,7 @@ export class GameService {
         score,
         duration: durationSeconds,
       });
-      
+
       // Mark session as completed but flag the score
       await deleteGameSession(userId, sessionToken);
       throw ApiError.badRequest(`Score validation failed: ${antiCheatResult.reason}`);
@@ -230,7 +249,7 @@ export class GameService {
       gameType: session.gameType as GameType,
       difficulty,
       score,
-      duration: durationSeconds,
+      durationSeconds: durationSeconds,
       xpEarned: xpGained,
       creditsEarned: creditsGained,
       metadata: {
@@ -240,7 +259,7 @@ export class GameService {
         antiCheat: antiCheatResult.checks,
       },
       isValid: true,
-    });
+    }) as any;
 
     await this.gameHistoryRepository.save(gameHistory);
 
@@ -254,10 +273,8 @@ export class GameService {
     }
 
     // Update leaderboards
-    await leaderboardService.updateScore(userId, score, {
-      gameType: session.gameType,
-      difficulty,
-    });
+    await leaderboardService.updateGameScore(userId, session.gameType as GameType, difficulty, score);
+    await leaderboardService.updateUserScore(userId, xpGained);
 
     // Check achievements
     const achievements = await this.checkAchievements(userId, gameHistory);
@@ -319,7 +336,7 @@ export class GameService {
   /**
    * Get game statistics for user
    */
-  async getGameStats(userId: string): Promise<{
+  async getGameStats(userId: string, gameType?: string): Promise<{
     totalGames: number;
     totalScore: number;
     totalXP: number;
@@ -328,8 +345,13 @@ export class GameService {
     byGameType: Record<string, { games: number; avgScore: number; bestScore: number }>;
     recentPerformance: { date: string; score: number }[];
   }> {
+    const where: any = { user: { id: userId }, isValid: true };
+    if (gameType) {
+      where.gameType = gameType;
+    }
+
     const games = await this.gameHistoryRepository.find({
-      where: { user: { id: userId }, isValid: true },
+      where,
       order: { playedAt: 'DESC' },
     });
 
@@ -370,10 +392,10 @@ export class GameService {
     // Recent performance (last 7 days)
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
+
     const recentGames = games.filter(g => g.playedAt >= sevenDaysAgo);
     const dailyScores: Record<string, number[]> = {};
-    
+
     for (const game of recentGames) {
       const dateKey = game.playedAt.toISOString().split('T')[0];
       if (!dailyScores[dateKey]) {
@@ -483,7 +505,7 @@ export class GameService {
       // Flag if > 3 standard deviations above mean
       const zScore = stdDev > 0 ? (score - mean) / stdDev : 0;
       checks.notStatisticalOutlier = zScore <= 3;
-      
+
       if (!checks.notStatisticalOutlier) {
         logger.warn('Statistical outlier detected', {
           userId,
@@ -557,8 +579,8 @@ export class GameService {
   private async addSquadXP(squadId: string, xp: number): Promise<void> {
     const squad = await this.squadRepository.findOne({ where: { id: squadId } });
     if (squad) {
-      squad.totalXP = BigInt(Number(squad.totalXP) + xp);
-      squad.weeklyXP += xp;
+      squad.totalXp = Number(squad.totalXp) + xp;
+      squad.weeklyXp = Number(squad.weeklyXp) + xp;
       await this.squadRepository.save(squad);
     }
   }
@@ -585,18 +607,90 @@ export class GameService {
     if (totalGames === 100) achievements.push('games_100');
 
     // Speed achievements
-    if (game.duration <= 60 && game.score >= 500) {
+    if (game.durationSeconds <= 60 && game.score >= 500) {
       achievements.push('speed_demon');
     }
 
     // Perfect accuracy
-    if (game.metadata?.accuracy === 100) {
+    const metadata = game.metadata as any;
+    if (metadata?.accuracy === 100) {
       achievements.push('perfectionist');
     }
 
     // TODO: Award achievement items to inventory
 
     return achievements;
+  }
+
+  /**
+   * Get available game types and their info
+   */
+  async getGameTypes(): Promise<{ type: GameType; config: typeof GAME_CONFIG[GameType] }[]> {
+    return Object.entries(GAME_CONFIG).map(([type, config]) => ({
+      type: type as GameType,
+      config,
+    }));
+  }
+
+  // Aliases for backwards compatibility
+  submitGame = this.submitScore;
+  getHistory = this.getGameHistory;
+
+  /**
+   * Get specific game history entry by ID
+   */
+  async getGameById(id: string, userId: string): Promise<GameHistory> {
+    const game = await this.gameHistoryRepository.findOne({
+      where: { id, user: { id: userId } }
+    });
+    if (!game) throw ApiError.notFound('Game record not found');
+    return game;
+  }
+
+  // Daily Challenge Stubs
+  async getDailyChallenge(userId: string) {
+    return { id: 'daily-1', type: GameType.QUICK_FIRE, difficulty: GameDifficulty.MEDIUM };
+  }
+
+  async completeDailyChallenge(userId: string, sessionToken: string, score: number, metadata?: any) {
+    return this.submitScore(userId, sessionToken, GameType.DAILY_CHALLENGE, score, metadata);
+  }
+
+  // Generated Games Stubs
+  async getGeneratedGames(options: any) {
+    return { items: [], total: 0 };
+  }
+
+  async getGeneratedGameById(id: string, userId?: string) {
+    throw ApiError.notFound('Generated game not found');
+  }
+
+  async createGeneratedGame(userId: string, data: any) {
+    throw ApiError.notImplemented('AI Game Generation temporarily unavailable');
+  }
+
+  async updateGeneratedGame(id: string, userId: string, updates: any) {
+    throw ApiError.notFound('Game not found');
+  }
+
+  async deleteGeneratedGame(id: string, userId: string) {
+    throw ApiError.notFound('Game not found');
+  }
+
+  async startGeneratedGame(id: string, userId: string) {
+    throw ApiError.notFound('Game not found');
+  }
+
+  async updateGeneratedGameProgress(id: string, userId: string, sessionToken: string, data: any) {
+    throw ApiError.notFound('Session not found');
+  }
+
+  async completeGeneratedGame(id: string, userId: string, sessionToken: string, data: any) {
+    throw ApiError.notFound('Session not found');
+  }
+
+  async rateGeneratedGame(id: string, userId: string, rating: number, review?: string) {
+    throw ApiError.notFound('Game not found');
   }
 }
 

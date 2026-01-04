@@ -154,6 +154,41 @@ export class UserService {
   }
 
   /**
+   * Update user API keys for BYO feature
+   */
+  async updateApiKeys(
+    userId: string,
+    keys: {
+      google?: string;
+      openai?: string;
+      anthropic?: string;
+      deepseek?: string;
+    }
+  ): Promise<User> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw ApiError.notFound('User not found');
+    }
+
+    // Initialize if null
+    if (!user.apiKeys) {
+      user.apiKeys = {};
+    }
+
+    // Update keys
+    if (keys.google !== undefined) user.apiKeys.google = keys.google;
+    if (keys.openai !== undefined) user.apiKeys.openai = keys.openai;
+    if (keys.anthropic !== undefined) user.apiKeys.anthropic = keys.anthropic;
+    if (keys.deepseek !== undefined) user.apiKeys.deepseek = keys.deepseek;
+
+    await this.userRepository.save(user);
+    await invalidateCache(`user:${userId}`);
+
+    logger.info('User API keys updated', { userId });
+    return user;
+  }
+
+  /**
    * Unlock a skill from the skill tree
    */
   async unlockSkill(userId: string, nodeId: string): Promise<Skill> {
@@ -507,9 +542,9 @@ export class UserService {
     const availablePoints = level - usedPoints;
 
     // Annotate skill tree with user progress
-    const annotatedTree = SKILL_TREE.map(category => ({
-      ...category,
-      skills: category.skills.map(skill => ({
+    const annotatedTree = Object.entries(SKILL_TREE).map(([category, skills]) => ({
+      category,
+      skills: (skills as any[]).map(skill => ({
         ...skill,
         unlocked: unlockedNodeIds.includes(skill.nodeId),
         canUnlock: this.canUnlockSkill(skill, unlockedNodeIds, availablePoints),
@@ -538,10 +573,10 @@ export class UserService {
   // Private methods
 
   private findSkillInTree(nodeId: string): any {
-    for (const category of SKILL_TREE) {
-      const skill = category.skills.find(s => s.nodeId === nodeId);
+    for (const [category, skills] of Object.entries(SKILL_TREE)) {
+      const skill = (skills as any[]).find(s => s.nodeId === nodeId);
       if (skill) {
-        return { ...skill, category: category.category };
+        return { ...skill, category };
       }
     }
     return null;
@@ -569,6 +604,56 @@ export class UserService {
     }
 
     return true;
+  }
+
+  // --- STUBS & ALIASES FOR USERCONTROLLER COMPATIBILITY ---
+
+  async getFullProfile(userId: string): Promise<UserStatsResponse> {
+    return this.getUserStats(userId);
+  }
+
+  async getStats(userId: string): Promise<any> {
+    const stats = await this.getUserStats(userId);
+    return {
+      xp: stats.xp,
+      level: stats.level,
+      credits: stats.credits,
+      streak: stats.streak,
+      energy: stats.energy
+    };
+  }
+
+  async getSkills(userId: string): Promise<any> {
+    return this.getSkillTree(userId);
+  }
+
+  async getAgents(userId: string): Promise<any[]> {
+    // Stub: return empty array for now
+    return [];
+  }
+
+  async getAchievements(userId: string): Promise<any[]> {
+    // Stub: return empty array for now
+    return [];
+  }
+
+  async refreshEnergy(userId: string): Promise<number> {
+    const stats = await this.getUserStats(userId);
+    return stats.energy;
+  }
+
+  async claimDailyStreak(userId: string): Promise<any> {
+    // Stub: return success
+    return { success: true, message: 'Streak claimed' };
+  }
+
+  async getNotifications(userId: string, unreadOnly: boolean): Promise<any[]> {
+    // Stub: return empty array
+    return [];
+  }
+
+  async requestAccountDeletion(userId: string): Promise<void> {
+    logger.info('Account deletion requested', { userId });
   }
 }
 

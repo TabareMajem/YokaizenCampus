@@ -1,286 +1,345 @@
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Text, Float, Stars, PerspectiveCamera, Environment, Trail, Sparkles } from '@react-three/drei';
+import { Bloom, EffectComposer, ChromaticAberration, Vignette as PostVignette } from '@react-three/postprocessing';
+import * as THREE from 'three';
 import { Button } from '../ui/Button';
-import { Mountain, Zap, AlertTriangle, Play, FastForward, TrendingDown, Database, ChevronLeft, ChevronRight, Hexagon, Skull } from 'lucide-react';
-import { Scanlines, Vignette } from '../ui/Visuals';
+import { Scanlines, Vignette } from '../ui/Visuals'; // Overlay visuals
 import { audio } from '../../services/audioService';
 import { Language } from '../../types';
+import { TrendingDown, AlertTriangle, Zap, Database, Skull } from 'lucide-react';
+
+// --- TYPES ---
 
 interface GradientSkiProps {
-  onComplete: (score: number) => void;
-  t: (key: string) => string;
-  language?: Language;
+    onComplete: (score: number) => void;
+    t: (key: string) => string;
+    language?: Language;
 }
 
-interface Obstacle {
-  id: number;
-  lane: number; // -1, 0, 1
-  z: number; // 0 (far) to 1000 (near)
-  type: 'SPIKE' | 'DATA' | 'GATE';
-  hit: boolean;
+interface GameState {
+    score: number;
+    speed: number;
+    gameOver: boolean;
+    lane: number;
 }
+
+// --- 3D COMPONENTS ---
+
+const Player = ({ lane, gameOver }: { lane: number, gameOver: boolean }) => {
+    const ref = useRef<THREE.Group>(null);
+    const targetX = lane * 2.5; // Lane spacing
+
+    useFrame((state, delta) => {
+        if (!ref.current) return;
+        // Smooth lerp to target lane
+        ref.current.position.x = THREE.MathUtils.lerp(ref.current.position.x, targetX, 10 * delta);
+        // Banking effect
+        const tilt = (ref.current.position.x - targetX) * -0.2;
+        ref.current.rotation.z = THREE.MathUtils.lerp(ref.current.rotation.z, tilt, 10 * delta);
+
+        // Float effect
+        if (!gameOver) {
+            ref.current.position.y = 0.5 + Math.sin(state.clock.elapsedTime * 5) * 0.1;
+        } else {
+            ref.current.position.y = 0.2;
+            ref.current.rotation.x = 0.5;
+        }
+    });
+
+    return (
+        <group ref={ref} position={[0, 0.5, 0]}>
+            <Trail width={1} length={4} color="#06b6d4" attenuation={(t) => t * t}>
+                <mesh castShadow receiveShadow>
+                    <coneGeometry args={[0.3, 1, 8]} />
+                    <meshStandardMaterial color="#06b6d4" emissive="#06b6d4" emissiveIntensity={2} toneMapped={false} />
+                </mesh>
+            </Trail>
+            <pointLight distance={5} intensity={5} color="#06b6d4" />
+            {/* Engine glow */}
+            <mesh position={[0, -0.4, 0.2]}>
+                <sphereGeometry args={[0.2]} />
+                <meshBasicMaterial color="#ffffff" />
+            </mesh>
+        </group>
+    );
+};
+
+const Terrain = ({ speed }: { speed: number }) => {
+    const mesh = useRef<THREE.Mesh>(null);
+    // Infinite scrolling shader or simple movement
+    // We'll move the texture offset
+
+    useFrame((state, delta) => {
+        if (mesh.current) {
+            // @ts-ignore
+            mesh.current.material.map.offset.y -= speed * 0.005 * delta;
+        }
+    });
+
+    const texture = useMemo(() => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 64;
+        canvas.height = 64;
+        const ctx = canvas.getContext('2d')!;
+        ctx.fillStyle = '#2e0249'; // Base
+        ctx.fillRect(0, 0, 64, 64);
+        ctx.strokeStyle = '#ec4899'; // Grid color
+        ctx.lineWidth = 2;
+        ctx.strokeRect(0, 0, 64, 64);
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(20, 20);
+        return tex;
+    }, []);
+
+    return (
+        <mesh ref={mesh} rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, -20]} receiveShadow>
+            <planeGeometry args={[100, 100]} />
+            <meshStandardMaterial map={texture} color="#ff00ff" roughness={0.5} metalness={0.8} />
+        </mesh>
+    );
+};
+
+const Obstacle = ({ type, position, hit }: { type: 'SPIKE' | 'DATA' | 'GATE', position: [number, number, number], hit: boolean }) => {
+    const ref = useRef<THREE.Group>(null);
+    useFrame((state) => {
+        if (!ref.current) return;
+        if (type === 'DATA') {
+            ref.current.rotation.y += 0.05;
+            ref.current.rotation.z += 0.02;
+        } else if (type === 'SPIKE') {
+            ref.current.rotation.y = Math.sin(state.clock.elapsedTime * 2) * 0.2;
+        }
+    });
+
+    if (hit) return null;
+
+    return (
+        <group ref={ref} position={position}>
+            {type === 'SPIKE' && (
+                <mesh castShadow>
+                    <coneGeometry args={[0.4, 1.5, 4]} />
+                    <meshStandardMaterial color="#ef4444" emissive="#ef4444" emissiveIntensity={2} />
+                </mesh>
+            )}
+            {type === 'DATA' && (
+                <Float speed={5} rotationIntensity={1} floatIntensity={1}>
+                    <mesh castShadow>
+                        <octahedronGeometry args={[0.4]} />
+                        <meshStandardMaterial color="#22d3ee" emissive="#22d3ee" emissiveIntensity={3} wireframe />
+                    </mesh>
+                </Float>
+            )}
+            {/* Simple visual hit box check */}
+        </group>
+    );
+};
+
+// --- GAME LOGIC ---
+
+const GameScene = ({ gameState, setGameState }: { gameState: GameState, setGameState: React.Dispatch<React.SetStateAction<GameState>> }) => {
+    const { lane, speed, gameOver } = gameState;
+    const [obstacles, setObstacles] = useState<{ id: number, type: 'SPIKE' | 'DATA' | 'GATE', position: [number, number, number], hit: boolean }[]>([]);
+
+    // Spawning logic
+    useFrame((state, delta) => {
+        if (gameOver) return;
+
+        // Move obstacles towards player (Player is at z=0, obstacles spawn at -50)
+        // Wait, standard infinite runner: Player static, world moves +z
+        // Let's spawn at -50, move to +10
+
+        const moveDist = speed * delta; // speed is like 10-50 units/sec?
+
+        setObstacles(prev => {
+            const next = prev.map(o => ({
+                ...o,
+                position: [o.position[0], o.position[1], o.position[2] + moveDist] as [number, number, number]
+            }));
+
+            // Collision check
+            // Player is at x = lane * 2.5, z = 0
+            // Hitbox: z roughly 0 (+/- 0.5), x roughly match
+            const playerX = lane * 2.5;
+
+            next.forEach(o => {
+                if (!o.hit && Math.abs(o.position[2] - 0) < 0.8) {
+                    // Check X
+                    // Lane width is about 2.5, object width ~0.5
+                    if (Math.abs(o.position[0] - playerX) < 1.0) {
+                        o.hit = true;
+                        if (o.type === 'SPIKE') {
+                            handleCrash();
+                        } else {
+                            audio.playSuccess();
+                            setGameState(s => ({ ...s, score: s.score + 100 }));
+                        }
+                    }
+                }
+            });
+
+            // Cleanup
+            return next.filter(o => o.position[2] < 10);
+        });
+
+        // Spawn new
+        if (Math.random() < 0.05 * (speed / 10) * delta * 60) { // Normalized spawn rate
+            const spawnLane = Math.floor(Math.random() * 3) - 1; // -1, 0, 1
+            const type = Math.random() > 0.3 ? 'SPIKE' : 'DATA';
+            setObstacles(prev => [
+                ...prev,
+                {
+                    id: Math.random(),
+                    type,
+                    position: [spawnLane * 2.5, 0.5, -60],
+                    hit: false
+                }
+            ]);
+        }
+
+        // Update score purely by distance
+        setGameState(s => ({ ...s, score: s.score + 1, speed: Math.min(50, s.speed + 0.005) }));
+    });
+
+    const handleCrash = () => {
+        if (gameOver) return;
+        audio.playError();
+        setGameState(s => ({ ...s, gameOver: true }));
+    };
+
+    return (
+        <group>
+            {obstacles.map(o => (
+                <Obstacle key={o.id} {...o} />
+            ))}
+        </group>
+    );
+};
+
+
+// --- MAIN COMPONENT ---
 
 export const GradientSki: React.FC<GradientSkiProps> = ({ onComplete, t }) => {
-  const [gameState, setGameState] = useState<'MENU' | 'PLAYING' | 'OVER'>('MENU');
-  const [lane, setLane] = useState(0); // -1, 0, 1
-  const [score, setScore] = useState(0);
-  const [speed, setSpeed] = useState(20);
-  const [gridOffset, setGridOffset] = useState(0);
-  
-  // Visuals
-  const [tilt, setTilt] = useState(0); // Visual banking angle
-  const [fov, setFov] = useState(500); // Dynamic FOV
-  
-  const obstacles = useRef<Obstacle[]>([]);
-  const requestRef = useRef<number>(0);
-  const lastTimeRef = useRef(0);
+    const [gameState, setGameState] = useState<GameState>({
+        score: 0,
+        speed: 15,
+        gameOver: false,
+        lane: 0,
+    });
 
-  // --- GAME LOOP ---
-  useEffect(() => {
-      if (gameState !== 'PLAYING') return;
+    const [menu, setMenu] = useState<'START' | 'PLAYING' | 'GAMEOVER'>('START');
 
-      const loop = (time: number) => {
-          const dt = Math.min((time - lastTimeRef.current) / 16, 2);
-          lastTimeRef.current = time;
+    useEffect(() => {
+        if (menu === 'PLAYING') {
+            const handleKeyDown = (e: KeyboardEvent) => {
+                if (e.key === 'ArrowLeft' || e.key === 'a') setGameState(s => ({ ...s, lane: Math.max(-1, s.lane - 1) }));
+                if (e.key === 'ArrowRight' || e.key === 'd') setGameState(s => ({ ...s, lane: Math.min(1, s.lane + 1) }));
+            };
+            window.addEventListener('keydown', handleKeyDown);
+            return () => window.removeEventListener('keydown', handleKeyDown);
+        }
+    }, [menu]);
 
-          // 1. Move Grid & Speed Logic
-          setGridOffset(prev => (prev + speed * dt) % 100);
-          setSpeed(s => Math.min(60, s + 0.01)); // Accelerate over time
-          
-          // Dynamic FOV based on speed (Warp effect)
-          setFov(500 + (speed * 5));
+    const startGame = () => {
+        setGameState({ score: 0, speed: 15, gameOver: false, lane: 0 });
+        setMenu('PLAYING');
+        audio.playStart();
+    };
 
-          // 2. Move Obstacles
-          const nextObstacles: Obstacle[] = [];
-          obstacles.current.forEach(obs => {
-              obs.z += speed * dt;
-              
-              // Collision
-              if (!obs.hit && obs.z > 850 && obs.z < 950) {
-                  if (obs.lane === lane) {
-                      obs.hit = true;
-                      if (obs.type === 'SPIKE') {
-                          handleCrash();
-                      } else if (obs.type === 'DATA') {
-                          audio.playSuccess();
-                          setScore(s => s + 100);
-                          setSpeed(s => Math.min(60, s + 2)); // Boost
-                      } else { // GATE
-                          audio.playScan();
-                          setScore(s => s + 50);
-                      }
-                  }
-              }
-              
-              if (obs.z < 1200) nextObstacles.push(obs); // Keep until behind camera
-          });
-          
-          obstacles.current = nextObstacles;
+    // Watch for game over from game logic
+    useEffect(() => {
+        if (gameState.gameOver && menu === 'PLAYING') {
+            setTimeout(() => setMenu('GAMEOVER'), 1000); // Delay for crash effect
+        }
+    }, [gameState.gameOver, menu]);
 
-          // 3. Spawn
-          if (Math.random() < 0.03 * (speed / 20)) {
-              const types: Obstacle['type'][] = ['SPIKE', 'SPIKE', 'DATA', 'GATE'];
-              obstacles.current.push({
-                  id: Math.random(),
-                  lane: Math.floor(Math.random() * 3) - 1,
-                  z: 0,
-                  type: types[Math.floor(Math.random() * types.length)],
-                  hit: false
-              });
-          }
+    return (
+        <div className="h-full w-full bg-black relative overflow-hidden">
+            {/* DOM OVERLAYS */}
+            <Scanlines />
+            <Vignette color="#000000" />
 
-          setScore(s => s + 1);
-          requestRef.current = requestAnimationFrame(loop);
-      };
-      
-      lastTimeRef.current = performance.now();
-      requestRef.current = requestAnimationFrame(loop);
-      return () => cancelAnimationFrame(requestRef.current);
-  }, [gameState, lane]); 
-
-  const handleCrash = () => {
-      audio.playError();
-      audio.vibrate([100, 50, 100]);
-      setGameState('OVER');
-  };
-
-  const move = (dir: -1 | 1) => {
-      setLane(prev => {
-          const next = Math.max(-1, Math.min(1, prev + dir));
-          if (next !== prev) {
-              setTilt(dir * 20); // Bank into turn
-              setTimeout(() => setTilt(0), 200); // Reset
-              audio.playHover();
-          }
-          return next;
-      });
-  };
-
-  return (
-    <div className="h-full flex flex-col bg-[#1a0b2e] relative overflow-hidden font-mono select-none touch-none">
-        <Scanlines />
-        <Vignette color="#1a0b2e" />
-        
-        {/* Speed Lines Effect */}
-        {gameState === 'PLAYING' && speed > 40 && (
-            <div className="absolute inset-0 z-20 pointer-events-none opacity-30 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay animate-pulse-slow"></div>
-        )}
-
-        {/* --- SUN / HORIZON --- */}
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full bg-gradient-to-t from-pink-500 via-purple-600 to-indigo-900 blur-3xl opacity-60 pointer-events-none"></div>
-        
-        {/* Retro Grid Horizon Lines */}
-        <div className="absolute top-[40%] left-0 right-0 h-px bg-pink-500/50 blur-[1px]"></div>
-        <div className="absolute top-[42%] left-0 right-0 h-px bg-pink-500/40 blur-[1px]"></div>
-        <div className="absolute top-[45%] left-0 right-0 h-px bg-pink-500/30 blur-[1px]"></div>
-
-        {/* --- 3D WORLD --- */}
-        <div className="flex-1 relative overflow-hidden" style={{ perspective: `${fov}px` }}>
-            <div className="absolute inset-0 transform-style-3d bg-gradient-to-b from-transparent to-[#2e0249] opacity-80"></div>
-            
-            {/* Moving Floor */}
-            <div 
-                className="absolute inset-0 origin-bottom transform rotate-x-60"
-                style={{
-                    background: `linear-gradient(transparent 0%, rgba(236,72,153,0.3) 100%), linear-gradient(90deg, #2e0249 0%, rgba(236,72,153,0.1) 50%, #2e0249 100%)`,
-                    backgroundSize: `100% 100px, 100% 100%`,
-                    backgroundPosition: `0 ${gridOffset}px`
-                }}
-            >
-                {/* Vertical Lane Dividers */}
-                <div className="absolute inset-0 flex justify-center w-full h-full opacity-50">
-                    <div className="w-[2px] h-full bg-pink-500 mx-24 transform -skew-x-[30deg] origin-bottom"></div>
-                    <div className="w-[2px] h-full bg-pink-500 mx-24 transform skew-x-[30deg] origin-bottom"></div>
+            {/* --- HUD --- */}
+            <div className="absolute top-0 left-0 w-full p-6 flex justify-between z-30 pointer-events-none">
+                <div>
+                    <div className="text-[10px] text-pink-500 font-bold uppercase italic tracking-widest mb-1">{t('ui.score')}</div>
+                    <div className="text-4xl font-black text-white italic drop-shadow-[2px_2px_0px_#ec4899]">{gameState.score.toLocaleString()}</div>
+                </div>
+                <div className="text-right">
+                    <div className="text-[10px] text-cyan-500 font-bold uppercase italic tracking-widest mb-1">{t('ski.velocity')}</div>
+                    <div className="text-4xl font-black text-white italic drop-shadow-[2px_2px_0px_#06b6d4]">
+                        {gameState.speed.toFixed(0)} <span className="text-sm not-italic text-gray-400">EPOCHS/S</span>
+                    </div>
                 </div>
             </div>
 
-            {/* Obstacles */}
-            {obstacles.current.map(obs => {
-                const scale = 0.5 + (obs.z / 1000) * 2;
-                const opacity = Math.min(1, obs.z / 800);
-                const xOffset = obs.lane * (150 + (obs.z * 0.8)); 
-                
-                return (
-                    <div 
-                        key={obs.id}
-                        className="absolute bottom-[10%] left-1/2 -translate-x-1/2 flex items-center justify-center transition-transform will-change-transform"
-                        style={{ 
-                            transform: `translateX(${xOffset}px) scale(${scale})`,
-                            zIndex: Math.floor(obs.z),
-                            opacity: obs.hit ? 0 : opacity,
-                            marginBottom: `${obs.z * 0.05}px` 
-                        }}
-                    >
-                        {obs.type === 'SPIKE' ? (
-                            <div className="w-16 h-32 relative group">
-                                <div className="absolute inset-0 bg-red-600 clip-path-spike transform skew-x-12 shadow-[0_0_20px_red]"></div>
-                                <div className="absolute inset-0 bg-red-400 clip-path-spike transform -skew-x-12 opacity-50"></div>
-                                <Skull className="absolute top-8 left-1/2 -translate-x-1/2 text-black opacity-50" size={16} />
-                            </div>
-                        ) : obs.type === 'DATA' ? (
-                            <div className="w-12 h-12 bg-cyan-400 rotate-45 border-4 border-white shadow-[0_0_30px_cyan] flex items-center justify-center animate-spin-slow">
-                                <Database size={24} className="text-black -rotate-45" />
-                            </div>
-                        ) : (
-                            <div className="w-40 h-24 border-x-4 border-t-4 border-green-400 rounded-t-xl flex justify-center shadow-[0_0_30px_lime]">
-                                <div className="h-full w-full bg-green-500/10 animate-pulse"></div>
-                            </div>
-                        )}
-                    </div>
-                );
-            })}
+            {/* --- 3D CANVAS --- */}
+            <Canvas shadows dpr={[1, 2]} camera={{ position: [0, 3, 6], fov: 60 }}>
+                <color attach="background" args={['#1a0b2e']} />
+                <fog attach="fog" args={['#1a0b2e', 10, 50]} />
 
-            {/* Player */}
-            {gameState === 'PLAYING' && (
-                <div 
-                    className="absolute bottom-[10%] left-1/2 -translate-x-1/2 w-24 h-12 z-50 transition-all duration-150 ease-out"
-                    style={{ 
-                        transform: `translateX(${lane * 180}px) rotateZ(${tilt}deg) scale(${1 + (speed/100)})` 
-                    }}
-                >
-                    {/* Hover Board */}
-                    <div className="w-full h-full bg-gray-200 rounded-full shadow-[0_10px_30px_cyan] border-b-8 border-cyan-500 relative overflow-hidden group">
-                        <div className="absolute inset-0 bg-gradient-to-r from-gray-300 via-white to-gray-300"></div>
-                        {/* Engine Glow */}
-                        <div className="absolute -bottom-4 left-2 w-4 h-16 bg-cyan-400 blur-md animate-pulse"></div>
-                        <div className="absolute -bottom-4 right-2 w-4 h-16 bg-cyan-400 blur-md animate-pulse"></div>
-                        
-                        {/* Speed Lines on Board */}
-                        <div className="absolute top-0 w-full h-full bg-[linear-gradient(90deg,transparent_50%,rgba(0,0,0,0.1)_50%)] bg-[length:4px_100%]"></div>
+                <ambientLight intensity={0.5} />
+                <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={10} castShadow />
+                <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
+                <Sparkles count={100} scale={12} size={2} speed={0.4} opacity={0.5} color="#ec4899" />
+
+                <group>
+                    <Player lane={gameState.lane} gameOver={gameState.gameOver} />
+                    <Terrain speed={menu === 'PLAYING' && !gameState.gameOver ? gameState.speed : 0} />
+                    {menu === 'PLAYING' && <GameScene gameState={gameState} setGameState={setGameState} />}
+                </group>
+
+                <EffectComposer>
+                    <Bloom luminanceThreshold={0.5} luminanceSmoothing={0.9} intensity={1.5} />
+                    <ChromaticAberration offset={new THREE.Vector2(0.002, 0.002)} />
+                    <PostVignette eskil={false} offset={0.1} darkness={1.1} />
+                </EffectComposer>
+
+                {/* Environment for reflections */}
+                <Environment preset="night" />
+            </Canvas>
+
+            {/* --- MENUS --- */}
+            {menu === 'START' && (
+                <div className="absolute inset-0 bg-black/80 z-50 flex flex-col items-center justify-center p-8 text-center animate-in fade-in backdrop-blur-sm">
+                    <TrendingDown size={80} className="text-pink-500 mb-6 animate-bounce" />
+                    <h1 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-cyan-400 to-pink-500 mb-2 italic tracking-tighter">
+                        {t('ski.title')}
+                    </h1>
+                    <p className="text-gray-300 mb-10 font-mono text-sm">3D GRADIENT DESCENT SIMULATOR</p>
+                    <Button size="lg" variant="primary" onClick={startGame} className="shadow-[0_0_40px_#06b6d4] h-16 w-64 text-xl border-cyan-400 text-cyan-100 font-bold tracking-widest">
+                        {t('ski.jack_in')}
+                    </Button>
+                </div>
+            )}
+
+            {menu === 'GAMEOVER' && (
+                <div className="absolute inset-0 bg-red-950/90 z-50 flex flex-col items-center justify-center p-8 text-center animate-in zoom-in border-y-[20px] border-red-900">
+                    <Skull size={80} className="text-white mb-6 animate-pulse" />
+                    <h2 className="text-5xl font-black text-white italic mb-4">{t('ski.crashed')}</h2>
+                    <div className="text-4xl font-mono text-white mb-8">{gameState.score}</div>
+                    <div className="space-y-4 w-full max-w-xs">
+                        <Button fullWidth variant="primary" onClick={startGame} className="bg-white text-red-900 hover:bg-gray-200">{t('ski.retry')}</Button>
+                        <Button fullWidth variant="ghost" onClick={() => onComplete(gameState.score > 1000 ? 100 : 50)} className="text-red-300 hover:text-white">{t('ski.lobby')}</Button>
                     </div>
                 </div>
             )}
+
+            {/* Mobile Controls Overlay */}
+            {menu === 'PLAYING' && (
+                <div className="absolute inset-0 z-40 flex pointer-events-none">
+                    <div
+                        className="flex-1 pointer-events-auto active:bg-cyan-500/10"
+                        onPointerDown={() => setGameState(s => ({ ...s, lane: Math.max(-1, s.lane - 1) }))}
+                    />
+                    <div
+                        className="flex-1 pointer-events-auto active:bg-cyan-500/10"
+                        onPointerDown={() => setGameState(s => ({ ...s, lane: Math.min(1, s.lane + 1) }))}
+                    />
+                </div>
+            )}
         </div>
-
-        {/* --- HUD --- */}
-        <div className="absolute top-0 left-0 w-full p-6 flex justify-between z-30 bg-gradient-to-b from-black/80 to-transparent">
-            <div>
-                <div className="text-[10px] text-pink-500 font-bold uppercase italic tracking-widest mb-1">{t('ui.score')}</div>
-                <div className="text-4xl font-black text-white italic drop-shadow-[2px_2px_0px_#ec4899]">{score.toLocaleString()}</div>
-            </div>
-            <div className="text-right">
-                <div className="text-[10px] text-cyan-500 font-bold uppercase italic tracking-widest mb-1">{t('ski.velocity')}</div>
-                <div className="text-4xl font-black text-white italic drop-shadow-[2px_2px_0px_#06b6d4]">
-                    {speed.toFixed(0)} <span className="text-sm not-italic text-gray-400">EPOCHS/S</span>
-                </div>
-                {speed > 50 && <div className="text-[10px] text-red-500 font-bold animate-pulse">MAX VELOCITY</div>}
-            </div>
-        </div>
-
-        {/* --- CONTROLS --- */}
-        {gameState === 'PLAYING' && (
-            <div className="absolute inset-0 z-40 flex">
-                <div 
-                    className="flex-1 active:bg-cyan-500/10 transition-colors flex items-center justify-start pl-8 opacity-50 hover:opacity-100 group" 
-                    onPointerDown={() => move(-1)}
-                >
-                    <ChevronLeft size={80} className="text-white/20 group-active:text-cyan-400 transition-colors" />
-                </div>
-                <div 
-                    className="flex-1 active:bg-cyan-500/10 transition-colors flex items-center justify-end pr-8 opacity-50 hover:opacity-100 group" 
-                    onPointerDown={() => move(1)}
-                >
-                    <ChevronRight size={80} className="text-white/20 group-active:text-cyan-400 transition-colors" />
-                </div>
-            </div>
-        )}
-
-        {/* --- MENUS --- */}
-        {gameState === 'MENU' && (
-            <div className="absolute inset-0 bg-black/90 z-50 flex flex-col items-center justify-center p-8 text-center animate-in fade-in backdrop-blur-sm">
-                <TrendingDown size={80} className="text-pink-500 mb-6 animate-bounce" />
-                <h1 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-cyan-400 to-pink-500 mb-2 italic tracking-tighter transform -skew-x-12 filter drop-shadow-[0_0_25px_rgba(236,72,153,0.5)]">
-                    {t('ski.title')}
-                </h1>
-                <p className="text-gray-300 mb-10 font-mono text-sm max-w-xs border-l-2 border-pink-500 pl-4 text-left">
-                    {t('ski.subtitle')}<br/>
-                    <span className="text-cyan-400">AVOID</span> Spikes (Loss Function)<br/>
-                    <span className="text-pink-400">COLLECT</span> Data (Gradients)
-                </p>
-                <Button size="lg" variant="primary" onClick={() => setGameState('PLAYING')} className="shadow-[0_0_40px_#06b6d4] h-16 w-64 text-xl border-cyan-400 text-cyan-100 font-bold tracking-widest">
-                    {t('ski.jack_in')}
-                </Button>
-            </div>
-        )}
-
-        {gameState === 'OVER' && (
-            <div className="absolute inset-0 bg-red-950/95 z-50 flex flex-col items-center justify-center p-8 text-center animate-in zoom-in border-y-[20px] border-red-900">
-                <AlertTriangle size={80} className="text-white mb-6 animate-shake" />
-                <h2 className="text-5xl font-black text-white italic mb-4">{t('ski.crashed')}</h2>
-                <div className="bg-black/50 p-6 rounded-xl border border-red-500 mb-8 w-full max-w-xs">
-                    <div className="text-xs text-red-400 uppercase font-bold mb-1">LOCAL MINIMUM REACHED</div>
-                    <div className="text-4xl font-mono text-white">{score}</div>
-                </div>
-                <div className="space-y-4 w-full max-w-xs">
-                    <Button fullWidth variant="primary" onClick={() => { setGameState('PLAYING'); setScore(0); setSpeed(20); obstacles.current=[]; }} className="bg-white text-red-900 hover:bg-gray-200">{t('ski.retry')}</Button>
-                    <Button fullWidth variant="ghost" onClick={() => onComplete(score > 1000 ? 100 : 50)} className="text-red-300 hover:text-white">{t('ski.lobby')}</Button>
-                </div>
-            </div>
-        )}
-
-        <style>{`
-            .clip-path-spike { clip-path: polygon(50% 0%, 0% 100%, 100% 100%); }
-        `}</style>
-    </div>
-  );
+    );
 };

@@ -1,11 +1,12 @@
 import { Queue, Worker, Job } from 'bullmq';
 import IORedis from 'ioredis';
+import { LessThan, Not } from 'typeorm';
 import { config } from '@config/env';
 import { logger } from '@config/logger';
 import { ragService } from '@services/RAGService';
 import { leaderboardService } from '@services/LeaderboardService';
 import { AppDataSource } from '@config/database';
-import { User } from '@entities/User';
+import { User, UserTier } from '@entities/User';
 
 // Redis connection for BullMQ
 const connection = new IORedis(config.redis.url, {
@@ -27,12 +28,12 @@ const ragWorker = new Worker(
   'rag-processing',
   async (job: Job) => {
     const { agentId, fileBuffer, fileName, mimeType } = job.data;
-    
+
     logger.info('Processing RAG document', { jobId: job.id, agentId, fileName });
-    
+
     const buffer = Buffer.from(fileBuffer, 'base64');
     const result = await ragService.processDocument(agentId, buffer, fileName, mimeType);
-    
+
     logger.info('RAG processing complete', { jobId: job.id, result });
     return result;
   },
@@ -47,17 +48,17 @@ const imageWorker = new Worker(
   'image-generation',
   async (job: Job) => {
     const { userId, prompt, callbackUrl } = job.data;
-    
+
     logger.info('Processing image generation', { jobId: job.id, userId });
-    
+
     // This would call the AI service
     // const result = await aiService.generateImage(userId, prompt);
-    
+
     // If callback URL provided, notify completion
     if (callbackUrl) {
       // await fetch(callbackUrl, { method: 'POST', body: JSON.stringify(result) });
     }
-    
+
     return { status: 'completed' };
   },
   {
@@ -71,29 +72,29 @@ const notificationWorker = new Worker(
   'notifications',
   async (job: Job) => {
     const { type, userId, data } = job.data;
-    
+
     logger.info('Processing notification', { jobId: job.id, type, userId });
-    
+
     switch (type) {
       case 'push':
         // Send push notification via Firebase
         // await sendPushNotification(userId, data);
         break;
-      
+
       case 'email':
         // Send email notification
         // await sendEmail(data.email, data.subject, data.body);
         break;
-      
+
       case 'in_app':
         // Store in-app notification
         // await storeInAppNotification(userId, data);
         break;
-      
+
       default:
         logger.warn('Unknown notification type', { type });
     }
-    
+
     return { sent: true };
   },
   {
@@ -107,11 +108,11 @@ const analyticsWorker = new Worker(
   'analytics',
   async (job: Job) => {
     const { event, userId, metadata } = job.data;
-    
+
     // Process analytics event
     // This could send to BigQuery, Mixpanel, etc.
     logger.debug('Analytics event', { event, userId, metadata });
-    
+
     return { processed: true };
   },
   {
@@ -125,38 +126,42 @@ const maintenanceWorker = new Worker(
   'maintenance',
   async (job: Job) => {
     const { task } = job.data;
-    
+
     logger.info('Running maintenance task', { jobId: job.id, task });
-    
+
     switch (task) {
       case 'reset_daily_leaderboard':
         await leaderboardService.resetDailyLeaderboard();
         break;
-      
+
       case 'reset_weekly_leaderboard':
         await leaderboardService.resetWeeklyLeaderboard();
         break;
-      
+
       case 'rebuild_leaderboards':
         await leaderboardService.rebuildLeaderboards();
         break;
-      
+
       case 'cleanup_expired_sessions':
         await cleanupExpiredSessions();
         break;
-      
+
       case 'calculate_streak_resets':
         await calculateStreakResets();
         break;
-      
+
       case 'process_subscription_expirations':
         await processSubscriptionExpirations();
         break;
-      
+
+      case 'reset_monthly_token_quotas':
+        await resetMonthlyTokenQuotas();
+        break;
+
       default:
         logger.warn('Unknown maintenance task', { task });
     }
-    
+
     return { completed: true };
   },
   {
@@ -175,12 +180,12 @@ async function cleanupExpiredSessions(): Promise<void> {
 
 async function calculateStreakResets(): Promise<void> {
   const userRepository = AppDataSource.getRepository(User);
-  
+
   // Find users who haven't logged in today and reset their streaks
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   yesterday.setHours(0, 0, 0, 0);
-  
+
   const result = await userRepository
     .createQueryBuilder()
     .update(User)
@@ -188,28 +193,28 @@ async function calculateStreakResets(): Promise<void> {
     .where('lastLogin < :yesterday', { yesterday })
     .andWhere('streak > 0')
     .execute();
-  
+
   logger.info('Streak resets processed', { affected: result.affected });
 }
 
 async function processSubscriptionExpirations(): Promise<void> {
   const userRepository = AppDataSource.getRepository(User);
-  
+
   // Find users with expired subscriptions
   const now = new Date();
-  
+
   const expiredUsers = await userRepository.find({
     where: {
-      subscriptionEndsAt: { $lt: now } as any,
-      tier: { $ne: 'FREE' } as any,
+      subscriptionExpiresAt: LessThan(now),
+      tier: Not(UserTier.FREE),
     },
   });
-  
+
   for (const user of expiredUsers) {
     user.tier = 'FREE' as any;
     user.maxEnergy = 100;
     await userRepository.save(user);
-    
+
     // Queue notification
     await notificationQueue.add('subscription-expired', {
       type: 'in_app',
@@ -220,8 +225,33 @@ async function processSubscriptionExpirations(): Promise<void> {
       },
     });
   }
-  
+
   logger.info('Subscription expirations processed', { count: expiredUsers.length });
+}
+
+async function resetMonthlyTokenQuotas(): Promise<void> {
+  const userRepository = AppDataSource.getRepository(User);
+  const now = new Date();
+
+  // Reset FREE tier
+  await userRepository.update(
+    { tier: UserTier.FREE },
+    { monthlyTokensUsed: 0, monthlyTokenQuota: 100000, lastQuotaReset: now }
+  );
+
+  // Reset OPERATIVE tier
+  await userRepository.update(
+    { tier: UserTier.OPERATIVE },
+    { monthlyTokensUsed: 0, monthlyTokenQuota: 1000000, lastQuotaReset: now }
+  );
+
+  // Reset PRO_CREATOR tier
+  await userRepository.update(
+    { tier: UserTier.PRO_CREATOR },
+    { monthlyTokensUsed: 0, monthlyTokenQuota: 10000000, lastQuotaReset: now }
+  );
+
+  logger.info('Monthly token quotas reset');
 }
 
 // =========== Job Schedulers ===========
@@ -245,6 +275,17 @@ export async function scheduleRecurringJobs(): Promise<void> {
     {
       repeat: {
         pattern: '0 0 * * 1', // Every Monday at midnight
+      },
+    }
+  );
+
+  // Monthly token quota reset on 1st of every month
+  await maintenanceQueue.add(
+    'reset_monthly_token_quotas',
+    { task: 'reset_monthly_token_quotas' },
+    {
+      repeat: {
+        pattern: '0 0 1 * *', // 1st of every month
       },
     }
   );
@@ -307,7 +348,7 @@ workers.forEach((worker) => {
 
 export async function closeWorkers(): Promise<void> {
   logger.info('Closing job workers...');
-  
+
   await Promise.all([
     ragWorker.close(),
     imageWorker.close(),
@@ -315,9 +356,9 @@ export async function closeWorkers(): Promise<void> {
     analyticsWorker.close(),
     maintenanceWorker.close(),
   ]);
-  
+
   await connection.quit();
-  
+
   logger.info('Job workers closed');
 }
 

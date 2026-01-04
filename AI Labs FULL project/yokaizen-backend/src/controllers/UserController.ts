@@ -19,7 +19,7 @@ export class UserController {
    */
   updateProfile = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { username, avatarUrl, language } = req.body;
-    
+
     const user = await userService.updateProfile(req.user!.userId, {
       username,
       avatarUrl,
@@ -27,6 +27,23 @@ export class UserController {
     });
 
     res.json(successResponse(user));
+  });
+
+  /**
+   * PATCH /user/keys
+   * Update user API keys
+   */
+  updateApiKeys = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const { google, openai, anthropic, deepseek } = req.body;
+
+    const user = await userService.updateApiKeys(req.user!.userId, {
+      google,
+      openai,
+      anthropic,
+      deepseek,
+    });
+
+    res.json(successResponse({ message: 'API keys updated' }));
   });
 
   /**
@@ -44,7 +61,7 @@ export class UserController {
    */
   getInventory = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { type, rarity } = req.query;
-    
+
     const inventory = await userService.getInventory(req.user!.userId, {
       type: type as string,
       rarity: rarity as string,
@@ -59,7 +76,7 @@ export class UserController {
    */
   equipItem = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { itemId } = req.params;
-    
+
     await userService.equipItem(req.user!.userId, itemId);
     res.json(successResponse({ message: 'Item equipped' }));
   });
@@ -79,7 +96,7 @@ export class UserController {
    */
   unlockSkill = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { nodeId } = req.body;
-    
+
     const result = await userService.unlockSkill(req.user!.userId, nodeId);
     res.json(successResponse(result));
   });
@@ -126,7 +143,7 @@ export class UserController {
    */
   getNotifications = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { unreadOnly } = req.query;
-    
+
     const notifications = await userService.getNotifications(
       req.user!.userId,
       unreadOnly === 'true'

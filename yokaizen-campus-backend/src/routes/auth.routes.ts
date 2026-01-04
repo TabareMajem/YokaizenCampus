@@ -10,6 +10,8 @@ router.post('/register', rateLimiter.auth, authController.register);
 router.post('/login', rateLimiter.auth, authController.login);
 router.post('/refresh', rateLimiter.auth, authController.refresh);
 router.post('/verify-token', rateLimiter.auth, authController.verifyToken);
+router.post('/firebase', rateLimiter.auth, authController.loginWithFirebase);
+
 
 // Protected routes
 router.post('/logout', authenticate, authController.logout);

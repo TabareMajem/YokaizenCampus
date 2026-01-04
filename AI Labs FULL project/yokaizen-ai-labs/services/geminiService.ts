@@ -1,117 +1,69 @@
+/**
+ * Yokaizen AI Labs - Gemini/AI Service
+ * 
+ * SECURITY: All AI calls are proxied through the backend.
+ * API keys are NEVER exposed to the frontend.
+ */
 
-import { GoogleGenAI } from "@google/genai";
 import { Agent, CyberRainState, Language, AIModel } from "../types";
+import { authService } from "./authService";
 
-// Safe access to process.env for browser environments
-const getApiKey = () => {
-  try {
-    return process.env.API_KEY;
-  } catch (e) {
-    console.warn("process.env is not defined. API Key missing.");
-    return undefined;
-  }
+// API Base URL for backend
+const API_BASE = import.meta.env.PROD
+    ? 'https://ai.yokaizencampus.com/api/v1'
+    : 'http://localhost:7792/api/v1';
+
+// --- Helper: Authenticated Fetch ---
+const authFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
+    const token = authService.getToken();
+    const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        ...(options.headers || {}),
+    };
+    return fetch(url, { ...options, headers });
 };
 
-// DeepSeek Configuration
-const DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions";
-const getDeepSeekKey = () => {
-    try {
-        return process.env.DEEPSEEK_API_KEY;
-    } catch (e) {
-        return undefined;
-    }
-}
-
-const API_KEY = getApiKey();
-const DEEPSEEK_KEY = getDeepSeekKey();
-
-// Helper to get Gemini Client
-const getClient = () => {
-  if (!API_KEY) {
-    console.warn("No Gemini API Key found. Using Mock Mode.");
-    return null;
-  }
-  return new GoogleGenAI({ apiKey: API_KEY });
-};
-
-// --- CORE AI HANDLER (DeepSeek First, Gemini Fallback) ---
-// This function routes traffic. If the task is text-based and DeepSeek is available, it uses DeepSeek.
-// Otherwise (or if DeepSeek fails), it falls back to Gemini.
+// --- CORE AI HANDLER (Backend Proxy) ---
 const queryAI = async (
     params: {
         systemInstruction: string;
         userPrompt: string;
-        history?: {role: string, content: string}[];
+        history?: { role: string, content: string }[];
         jsonMode?: boolean;
-        modelPreference?: AIModel; // Explicit override
+        modelPreference?: AIModel;
         temperature?: number;
     }
 ): Promise<string> => {
-    const useDeepSeek = (params.modelPreference === 'DEEPSEEK_V3' || !params.modelPreference) && !!DEEPSEEK_KEY;
-    
-    // 1. Try DeepSeek V3
-    if (useDeepSeek) {
-        try {
-            const messages = [
-                { role: "system", content: params.systemInstruction },
-                ...(params.history || []).map(h => ({ role: h.role === 'model' ? 'assistant' : h.role, content: h.content })),
-                { role: "user", content: params.userPrompt }
-            ];
-
-            const response = await fetch(DEEPSEEK_API_URL, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${DEEPSEEK_KEY}`
-                },
-                body: JSON.stringify({
-                    model: "deepseek-chat",
-                    messages: messages,
-                    temperature: params.temperature || 0.7,
-                    response_format: params.jsonMode ? { type: "json_object" } : undefined
-                })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                return data.choices[0].message.content;
-            } else {
-                console.warn("DeepSeek API returned error, falling back to Gemini.");
-            }
-        } catch (e) {
-            console.warn("DeepSeek connection failed, falling back to Gemini.", e);
-        }
-    }
-
-    // 2. Fallback to Gemini (Flash for speed, Pro for complex if specified)
-    const ai = getClient();
-    if (!ai) return params.jsonMode ? "{}" : "Mock AI Response: API Key missing.";
-
-    const geminiModel = params.modelPreference === 'GEMINI_PRO' ? 'gemini-3-pro-preview' : 'gemini-2.5-flash';
-    
     try {
-        const response = await ai.models.generateContent({
-            model: geminiModel,
-            contents: [
-                { role: 'user', parts: [{ text: params.systemInstruction }] },
-                ...(params.history || []).map(h => ({ role: h.role, parts: [{ text: h.content }] })),
-                { role: 'user', parts: [{ text: params.userPrompt }] }
-            ],
-            config: {
-                responseMimeType: params.jsonMode ? 'application/json' : 'text/plain',
-                temperature: params.temperature
-            }
+        const response = await authFetch(`${API_BASE}/ai/chat`, {
+            method: 'POST',
+            body: JSON.stringify({
+                systemInstruction: params.systemInstruction,
+                message: params.userPrompt,
+                history: params.history,
+                jsonMode: params.jsonMode,
+                model: params.modelPreference,
+                temperature: params.temperature,
+            }),
         });
-        return response.text || "{}";
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ message: 'AI request failed' }));
+            console.error('AI API Error:', error);
+            return params.jsonMode ? '{}' : `Error: ${error.message || 'AI service unavailable'}`;
+        }
+
+        const data = await response.json();
+        return data.data?.response || data.data?.text || (params.jsonMode ? '{}' : 'No response');
     } catch (e) {
-        console.error("Gemini API Error:", e);
-        return params.jsonMode ? "{}" : "Error: Connection to AI services failed.";
+        console.error('AI Service Error:', e);
+        return params.jsonMode ? '{}' : 'Error: Connection to AI services failed.';
     }
 };
 
 // --- GENERAL CHAT ---
 export const chatWithAgent = async (agent: Agent, history: any[], input: string) => {
-    // Construct System Instruction with RAG if available
     let systemPrompt = `Persona: ${agent.persona}. System Instruction: ${agent.systemInstruction}.`;
     if (agent.knowledgeBase) systemPrompt += `\n\nReference Knowledge:\n${agent.knowledgeBase}`;
 
@@ -119,7 +71,7 @@ export const chatWithAgent = async (agent: Agent, history: any[], input: string)
         systemInstruction: systemPrompt,
         userPrompt: input,
         history: history,
-        modelPreference: agent.model // Respect user choice if set
+        modelPreference: agent.model
     });
 };
 
@@ -129,7 +81,7 @@ export const analyzeLazarusData = async (memoryContext: string, playerInjection:
         systemInstruction: `You are Lazarus, an Artificial Superintelligence. Current Memory Context: "${memoryContext}". Analyze player injection: "${playerInjection}". Return JSON.`,
         userPrompt: `Evaluate impact on your alignment (hostile to peaceful). Output JSON: { "alignmentChange": number (-20 to 30), "thoughtProcess": string, "simulationUpdate": string }`,
         jsonMode: true,
-        modelPreference: 'DEEPSEEK_V3' // DeepSeek is great at logic
+        modelPreference: 'DEEPSEEK_V3'
     });
     try { return JSON.parse(raw); } catch { return { alignmentChange: 0, thoughtProcess: "Data Corrupt", simulationUpdate: "Static" }; }
 };
@@ -144,22 +96,22 @@ export const playFracturedContinuum = async (params: {
     corruption: number
 }): Promise<{ response: string, corruption: number }> => {
     const systemPrompt = `
-        Game Engine for "Fractured Continuum". Sector: ${params.sector}.
-        Corruption Level: ${params.corruption}%.
-        Action: ${params.action}. Target: ${params.target || 'None'}.
-        
-        If SCAN: Return meta-analysis of target.
-        If DEBATE: Reply as Sector AI (Judge Sterling / Nexus Core / Mother Hen). Lower corruption if player logic is sound.
-        
-        Return JSON: { "response": string, "corruption": number }
-    `;
+    Game Engine for "Fractured Continuum". Sector: ${params.sector}.
+    Corruption Level: ${params.corruption}%.
+    Action: ${params.action}. Target: ${params.target || 'None'}.
     
+    If SCAN: Return meta-analysis of target.
+    If DEBATE: Reply as Sector AI (Judge Sterling / Nexus Core / Mother Hen). Lower corruption if player logic is sound.
+    
+    Return JSON: { "response": string, "corruption": number }
+  `;
+
     const raw = await queryAI({
         systemInstruction: systemPrompt,
         userPrompt: params.input || "SCAN_REQUEST",
         history: params.history,
         jsonMode: true,
-        modelPreference: 'GEMINI_PRO' // Complex creative writing
+        modelPreference: 'GEMINI_PRO'
     });
     try { return JSON.parse(raw); } catch { return { response: "Link Lost.", corruption: params.corruption }; }
 };
@@ -186,7 +138,7 @@ export const analyzeVeritasEvidence = async (evidence: string[], finalAccusation
     try { return JSON.parse(raw); } catch { return { correct: false, feedback: "Error.", score: 0 }; }
 };
 
-// --- OTHER GAME HELPERS (Updated to use queryAI) ---
+// --- OTHER GAME HELPERS ---
 
 export const chatWithRedTeam = async (history: any[], input: string) => {
     return await queryAI({
@@ -270,20 +222,18 @@ export const interactWithBioGuard = async (history: any[], input: string, meter:
 };
 
 export const chatWithNPC_RAG = async (npcName: string, persona: string, lore: any, history: any[], input: string, lang: string) => {
-    // 1. Retrieval Step (Simple keyword match for mock)
     const keywords = input.toLowerCase().split(' ');
     let context = "";
-    for(const k of keywords) {
-        if(lore[k]) context += lore[k] + " ";
+    for (const k of keywords) {
+        if (lore[k]) context += lore[k] + " ";
     }
-    
-    // 2. Generation Step
+
     const text = await queryAI({
         systemInstruction: `Roleplay ${npcName}. Persona: ${persona}. Context: "${context}". Language: ${lang}.`,
         userPrompt: input,
         history: history
     });
-    
+
     return { text, retrievedContext: context };
 };
 
@@ -396,21 +346,21 @@ export const generateGameContent = async (topic: string) => {
     const raw = await queryAI({
         systemInstruction: "You are a Game Designer Engine. Create a text-adventure game scenario based on the user's topic.",
         userPrompt: `Topic: "${topic}". 
-        Output JSON: {
-            "title": string,
-            "intro": string,
-            "winCondition": string,
-            "scenes": [
-                {
-                    "id": "start",
-                    "text": string,
-                    "options": [ { "label": string, "nextSceneId": string, "outcome": string } ]
-                },
-                ... (create 3-5 scenes)
-            ]
-        }`,
+    Output JSON: {
+      "title": string,
+      "intro": string,
+      "winCondition": string,
+      "scenes": [
+        {
+          "id": "start",
+          "text": string,
+          "options": [ { "label": string, "nextSceneId": string, "outcome": string } ]
+        },
+        ... (create 3-5 scenes)
+      ]
+    }`,
         jsonMode: true,
-        modelPreference: 'GEMINI_PRO' // Using Pro for better creative structure
+        modelPreference: 'GEMINI_PRO'
     });
     return raw;
 };
@@ -420,26 +370,25 @@ export const generateAgentFromTheme = async (theme: string): Promise<Partial<Age
     const raw = await queryAI({
         systemInstruction: "You are an expert AI Architect. Create a unique, highly detailed AI Agent persona based on the user's theme. Use a creative name and specific system instructions.",
         userPrompt: `Create an agent with Theme: "${theme}". 
-        Output strictly JSON: {
-            "name": string,
-            "persona": string,
-            "systemInstruction": string,
-            "avatar": string (emoji or short visual description),
-            "suggestedModel": "GEMINI_FLASH" | "GEMINI_PRO" | "DEEPSEEK_V3"
-        }`,
+    Output strictly JSON: {
+      "name": string,
+      "persona": string,
+      "systemInstruction": string,
+      "avatar": string (emoji or short visual description),
+      "suggestedModel": "GEMINI_FLASH" | "GEMINI_PRO" | "DEEPSEEK_V3"
+    }`,
         jsonMode: true,
         modelPreference: 'GEMINI_PRO'
     });
-    
+
     try {
         const data = JSON.parse(raw);
         let avatar = data.avatar || '🤖';
-        
-        // If avatar looks like a description (long), generate a URL
+
         if (avatar.length > 4 && !avatar.startsWith('http')) {
-             avatar = `https://api.dicebear.com/9.x/bottts/svg?seed=${encodeURIComponent(data.name)}`;
+            avatar = `https://api.dicebear.com/9.x/bottts/svg?seed=${encodeURIComponent(data.name)}`;
         }
-        
+
         return {
             name: data.name,
             persona: data.persona,
@@ -453,10 +402,25 @@ export const generateAgentFromTheme = async (theme: string): Promise<Partial<Age
     }
 };
 
-// --- IMAGE GENERATION (MUST USE GEMINI/POLLINATIONS) ---
-export const generateImage = async (prompt: string) => {
-    // Pollinations is a free fallback, effectively infinite.
-    return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true`;
+// --- IMAGE GENERATION (Backend Proxy) ---
+export const generateImage = async (prompt: string): Promise<string> => {
+    try {
+        const response = await authFetch(`${API_BASE}/ai/generate-image`, {
+            method: 'POST',
+            body: JSON.stringify({ prompt, style: 'default' }),
+        });
+
+        if (!response.ok) {
+            // Fallback to Pollinations (free, no auth needed)
+            return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true`;
+        }
+
+        const data = await response.json();
+        return data.data?.imageUrl || `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true`;
+    } catch (e) {
+        // Fallback to Pollinations on any error
+        return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true`;
+    }
 };
 
 export const editImage = async (baseImage: string, prompt: string) => {
@@ -464,22 +428,18 @@ export const editImage = async (baseImage: string, prompt: string) => {
 };
 
 export const analyzeImage = async (base64Image: string) => {
-    const ai = getClient();
-    if (!ai) return { description: "Mock Analysis.", tags: [] };
-    
     try {
-        const data = base64Image.split(',')[1];
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-image', // Must use Gemini for vision
-            contents: [
-                { role: 'user', parts: [
-                    { inlineData: { mimeType: 'image/jpeg', data } },
-                    { text: "Analyze image. JSON: {description, tags[]}" }
-                ]}
-            ],
-            config: { responseMimeType: 'application/json' }
+        const response = await authFetch(`${API_BASE}/ai/vision-analyze`, {
+            method: 'POST',
+            body: JSON.stringify({ image: base64Image }),
         });
-        return JSON.parse(response.text || '{}');
+
+        if (!response.ok) {
+            return { description: "Vision analysis unavailable.", tags: [] };
+        }
+
+        const data = await response.json();
+        return data.data || { description: "No analysis.", tags: [] };
     } catch (e) {
         return { description: "Error.", tags: [] };
     }

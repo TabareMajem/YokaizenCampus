@@ -113,6 +113,7 @@ export const config = {
   app: {
     frontendUrl: env.CORS_ORIGIN.split(',')[0],
     backendUrl: `http://localhost:${env.PORT}`,
+    corsOrigins: env.CORS_ORIGIN,
   },
   database: {
     url: env.DATABASE_URL,

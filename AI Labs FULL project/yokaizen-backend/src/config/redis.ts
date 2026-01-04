@@ -3,7 +3,6 @@ import { config } from './env';
 
 export const redis = new Redis(config.redis.url, {
   maxRetriesPerRequest: 3,
-  retryDelayOnFailover: 100,
   enableReadyCheck: true,
   connectTimeout: 10000,
   lazyConnect: true,
@@ -78,7 +77,7 @@ export const RedisKeys = {
 export const RedisHelpers = {
   // Set with expiration
   async setEx(key: string, value: string, seconds: number): Promise<void> {
-    await redis.setex(key, seconds, value);
+    await redis.setex(key, seconds, value as string);
   },
 
   // Get JSON value
@@ -96,7 +95,7 @@ export const RedisHelpers = {
   async setJson<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
     const jsonValue = JSON.stringify(value);
     if (ttlSeconds) {
-      await redis.setex(key, ttlSeconds, jsonValue);
+      await redis.setex(key, ttlSeconds, jsonValue as string);
     } else {
       await redis.set(key, jsonValue);
     }
@@ -113,7 +112,7 @@ export const RedisHelpers = {
 
   // Add to sorted set (leaderboard)
   async updateLeaderboard(key: string, score: number, member: string): Promise<void> {
-    await redis.zadd(key, score, member);
+    await redis.zadd(key, score, member as string);
   },
 
   // Get leaderboard range
@@ -131,7 +130,7 @@ export const RedisHelpers = {
 
   // Get user rank
   async getUserRank(key: string, member: string): Promise<number | null> {
-    const rank = await redis.zrevrank(key, member);
+    const rank = await redis.zrevrank(key, member as string);
     return rank !== null ? rank + 1 : null;
   },
 

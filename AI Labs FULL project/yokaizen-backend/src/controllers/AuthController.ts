@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { authService } from '@services/AuthService';
-import { asyncHandler, successResponse } from '@utils/errors';
+import { asyncHandler, successResponse, ApiError } from '@utils/errors';
 import { AuthenticatedRequest } from '@/types';
 
 export class AuthController {
@@ -12,6 +12,26 @@ export class AuthController {
     const { idToken } = req.body;
 
     const result = await authService.verifyAndCreateSession(idToken);
+
+    res.json(successResponse({
+      user: result.user,
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+    }));
+  });
+
+  /**
+   * POST /auth/verify-mock
+   * Mock phone verification for development/unified registration
+   */
+  verifyMock = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const { phoneNumber } = req.body;
+
+    if (!phoneNumber) {
+      throw ApiError.badRequest('Phone number required');
+    }
+
+    const result = await authService.verifyAndAuthenticateMock(phoneNumber);
 
     res.json(successResponse({
       user: result.user,

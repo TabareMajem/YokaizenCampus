@@ -24,9 +24,9 @@ export class AIController {
 
       const generator = await aiService.chat(
         req.user!.userId,
-        agentId,
+        agentId as string,
         history || [],
-        message,
+        message as string,
         true
       ) as AsyncGenerator<string>;
 
@@ -39,9 +39,9 @@ export class AIController {
     } else {
       const result = await aiService.chat(
         req.user!.userId,
-        agentId,
+        agentId as string,
         history || [],
-        message,
+        message as string,
         false
       );
 
@@ -58,7 +58,7 @@ export class AIController {
 
     const result = await aiService.generateImage(
       req.user!.userId,
-      prompt
+      prompt as string
     );
 
     res.json(successResponse(result));
@@ -73,8 +73,8 @@ export class AIController {
 
     const game = await aiService.generateGame(
       req.user!.userId,
-      topic,
-      difficulty
+      topic as string,
+      difficulty as string
     );
 
     res.json(successResponse(game));
@@ -89,8 +89,8 @@ export class AIController {
 
     const result = await aiService.analyzeVision(
       req.user!.userId,
-      imageBase64,
-      prompt
+      imageBase64 as string,
+      prompt as string
     );
 
     res.json(successResponse(result));
@@ -105,8 +105,8 @@ export class AIController {
 
     const audioBuffer = await aiService.synthesizeVoice(
       req.user!.userId,
-      text,
-      voiceId
+      text as string,
+      voiceId as string
     );
 
     res.setHeader('Content-Type', 'audio/mp3');
@@ -129,12 +129,12 @@ export class AIController {
    * Get public agents or user's own
    */
   listAgents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const { 
-      page = '1', 
+    const {
+      page = '1',
       limit = '20',
       search,
       category,
-      myAgents 
+      myAgents
     } = req.query;
 
     const query = this.agentRepository.createQueryBuilder('agent')
@@ -145,8 +145,9 @@ export class AIController {
         'agent.persona',
         'agent.avatarUrl',
         'agent.isPublic',
-        'agent.totalChats',
-        'agent.averageRating',
+        'agent.totalConversations',
+        'agent.rating',
+        'agent.ratingCount',
         'agent.createdAt',
         'creator.id',
         'creator.username',
@@ -155,8 +156,8 @@ export class AIController {
     if (myAgents === 'true') {
       query.where('agent.creatorId = :userId', { userId: req.user!.userId });
     } else {
-      query.where('(agent.isPublic = true OR agent.creatorId = :userId)', { 
-        userId: req.user?.userId 
+      query.where('(agent.isPublic = true OR agent.creatorId = :userId)', {
+        userId: req.user?.userId
       });
     }
 
@@ -174,13 +175,17 @@ export class AIController {
     const limitNum = parseInt(limit as string);
 
     const [agents, total] = await query
-      .orderBy('agent.totalChats', 'DESC')
+      .orderBy('agent.totalConversations', 'DESC')
       .skip((pageNum - 1) * limitNum)
       .take(limitNum)
       .getManyAndCount();
 
     res.json(successResponse({
-      agents,
+      agents: agents.map(a => ({
+        ...a,
+        averageRating: a.getAverageRating(),
+        totalChats: a.totalConversations
+      })),
       pagination: {
         page: pageNum,
         limit: limitNum,
@@ -221,14 +226,14 @@ export class AIController {
    * Create a new AI agent
    */
   createAgent = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const { 
-      name, 
-      persona, 
-      systemInstruction, 
+    const {
+      name,
+      persona,
+      systemInstruction,
       modelPreference,
       avatarUrl,
       isPublic,
-      category 
+      category
     } = req.body;
 
     const agent = this.agentRepository.create({
@@ -397,8 +402,8 @@ export class AIController {
     }
 
     // Update average rating (simplified - would need proper rating tracking)
-    const currentTotal = agent.averageRating * agent.totalChats;
-    agent.averageRating = (currentTotal + rating) / (agent.totalChats + 1);
+    agent.rating += rating;
+    agent.ratingCount += 1;
     await this.agentRepository.save(agent);
 
     res.json(successResponse({ message: 'Rating submitted' }));

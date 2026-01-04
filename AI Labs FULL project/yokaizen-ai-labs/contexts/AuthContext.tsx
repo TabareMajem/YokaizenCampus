@@ -8,7 +8,12 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   signInWithPhone: (phoneNumber: string) => Promise<string>;
+  signInWithPhoneMock: (phoneNumber: string) => Promise<string>;
   verifyOtp: (verificationId: string, otp: string, phoneNumber: string) => Promise<void>;
+  verifyOtpMock: (phoneNumber: string, otp: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  registerWithEmail: (email: string, password: string) => Promise<void>;
   logout: () => void;
   updateUser: (u: UserStats) => void;
 }
@@ -34,12 +39,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signInWithPhone = async (phoneNumber: string) => {
-      return await authService.signInWithPhoneNumber(phoneNumber);
+    return await authService.signInWithPhoneNumber(phoneNumber);
+  };
+
+  const signInWithPhoneMock = async (phoneNumber: string) => {
+    return await authService.signInWithPhoneNumberMock(phoneNumber);
   };
 
   const verifyOtp = async (verificationId: string, otp: string, phoneNumber: string) => {
-      const u = await authService.verifyOtp(verificationId, otp, phoneNumber);
-      setUser(u);
+    const u = await authService.verifyOtp(verificationId, otp, phoneNumber);
+    setUser(u);
+  };
+
+  const verifyOtpMock = async (phoneNumber: string, otp: string) => {
+    const u = await authService.verifyOtpMock(phoneNumber, otp);
+    setUser(u);
+  };
+
+  const signInWithGoogle = async () => {
+    const u = await authService.signInWithGoogle();
+    setUser(u);
+  };
+
+  const signInWithEmail = async (email: string, password: string) => {
+    const u = await authService.signInWithEmail(email, password);
+    setUser(u);
+  };
+
+  const registerWithEmail = async (email: string, password: string) => {
+    const u = await authService.registerWithEmail(email, password);
+    setUser(u);
   };
 
   const logout = async () => {
@@ -48,12 +77,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateUser = (u: UserStats) => {
-      setUser(u);
-      authService.updateUserData(u);
+    setUser(u);
+    authService.updateUserData(u);
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, isAuthenticated: !!user, signInWithPhone, verifyOtp, logout, updateUser }}>
+    <AuthContext.Provider value={{
+      user,
+      isLoading,
+      isAuthenticated: !!user,
+      signInWithPhone,
+      signInWithPhoneMock,
+      verifyOtp,
+      verifyOtpMock,
+      signInWithGoogle,
+      signInWithEmail,
+      registerWithEmail,
+      logout,
+      updateUser
+    }}>
       {children}
     </AuthContext.Provider>
   );

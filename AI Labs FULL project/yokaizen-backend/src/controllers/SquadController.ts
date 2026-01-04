@@ -9,21 +9,19 @@ export class SquadController {
    * List squads with optional filtering
    */
   list = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const { 
-      search, 
+    const {
+      search,
       recommended,
       tier,
-      page = '1', 
-      limit = '20' 
+      page = '1',
+      limit = '20'
     } = req.query;
 
-    const squads = await squadService.listSquads({
-      search: search as string,
+    const squads = await squadService.searchSquads({
+      query: search as string,
       recommended: recommended === 'true',
-      tier: tier as string,
-      page: parseInt(page as string),
+      tier: tier as any,
       limit: parseInt(limit as string),
-      userId: req.user?.userId,
     });
 
     res.json(successResponse(squads));
@@ -36,7 +34,7 @@ export class SquadController {
   get = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
 
-    const squad = await squadService.getSquadById(id, req.user?.userId);
+    const squad = await squadService.getSquadById(id);
     res.json(successResponse(squad));
   });
 
@@ -47,11 +45,7 @@ export class SquadController {
   create = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { name, icon, description } = req.body;
 
-    const squad = await squadService.createSquad(req.user!.userId, {
-      name,
-      icon,
-      description,
-    });
+    const squad = await squadService.createSquad(req.user!.userId, name, icon, description);
 
     res.json(successResponse(squad));
   });
@@ -64,7 +58,7 @@ export class SquadController {
     const { id } = req.params;
     const updates = req.body;
 
-    const squad = await squadService.updateSquad(id, req.user!.userId, updates);
+    const squad = await squadService.updateSquad(req.user!.userId, id, updates);
     res.json(successResponse(squad));
   });
 
@@ -75,7 +69,7 @@ export class SquadController {
   delete = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
 
-    await squadService.deleteSquad(id, req.user!.userId);
+    await squadService.deleteSquad(req.user!.userId, id);
     res.json(successResponse({ message: 'Squad disbanded' }));
   });
 
@@ -86,7 +80,7 @@ export class SquadController {
   join = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
 
-    const result = await squadService.joinSquad(id, req.user!.userId);
+    const result = await squadService.joinSquad(req.user!.userId, id);
     res.json(successResponse(result));
   });
 
@@ -97,7 +91,7 @@ export class SquadController {
   leave = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
 
-    await squadService.leaveSquad(id, req.user!.userId);
+    await squadService.leaveSquad(req.user!.userId);
     res.json(successResponse({ message: 'Left squad successfully' }));
   });
 
@@ -110,7 +104,6 @@ export class SquadController {
     const { amount } = req.body;
 
     const result = await squadService.contributeToSquad(
-      id,
       req.user!.userId,
       amount
     );
@@ -136,7 +129,7 @@ export class SquadController {
   promoteMember = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { id, memberId } = req.params;
 
-    await squadService.promoteMember(id, req.user!.userId, memberId);
+    await squadService.promoteMember(req.user!.userId, memberId);
     res.json(successResponse({ message: 'Member promoted' }));
   });
 
@@ -147,7 +140,7 @@ export class SquadController {
   demoteMember = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { id, memberId } = req.params;
 
-    await squadService.demoteMember(id, req.user!.userId, memberId);
+    await squadService.demoteMember(req.user!.userId, memberId);
     res.json(successResponse({ message: 'Member demoted' }));
   });
 
@@ -158,7 +151,7 @@ export class SquadController {
   kickMember = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { id, memberId } = req.params;
 
-    await squadService.kickMember(id, req.user!.userId, memberId);
+    await squadService.kickMember(req.user!.userId, memberId);
     res.json(successResponse({ message: 'Member removed' }));
   });
 
@@ -170,7 +163,7 @@ export class SquadController {
     const { id } = req.params;
     const { newOwnerId } = req.body;
 
-    await squadService.transferOwnership(id, req.user!.userId, newOwnerId);
+    await squadService.transferOwnership(req.user!.userId, newOwnerId);
     res.json(successResponse({ message: 'Ownership transferred' }));
   });
 
@@ -197,9 +190,9 @@ export class SquadController {
     const { missionType, targetScore } = req.body;
 
     const mission = await squadService.startMission(
-      id,
       req.user!.userId,
-      { missionType, targetScore }
+      missionType,
+      [{ id: 'default', target: targetScore }]
     );
 
     res.json(successResponse(mission));

@@ -2,6 +2,10 @@ import { initializeApp } from 'firebase/app';
 import {
   getAuth,
   signInWithPhoneNumber as firebaseSignInWithPhone,
+  signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  GoogleAuthProvider,
   RecaptchaVerifier,
   ConfirmationResult,
   User as FirebaseUser
@@ -9,20 +13,22 @@ import {
 import { UserStats, SkillType } from '../types';
 import { INITIAL_USER, detectBrowserLanguage } from '../constants';
 
-// Firebase configuration - Shared with Yokaizen Campus
+// Firebase configuration for Yokaizen (Shared between AI Labs and Campus)
 const firebaseConfig = {
-  apiKey: "AIzaSyDSwAeEpx7A5KXy-s61PWlDVeZyv9Glrpk",
-  authDomain: "yokaizen-campus.firebaseapp.com",
-  projectId: "yokaizen-campus",
-  storageBucket: "yokaizen-campus.firebasestorage.app",
-  messagingSenderId: "341491279919",
-  appId: "1:341491279919:web:5d208c5d980f3c5915feda",
-  measurementId: "G-VJ64PMCWVQ"
+  apiKey: "AIzaSyCYKje3N831EbB3R2uECzigTtUTga8FNg4",
+  authDomain: "ailabs-c18c0.firebaseapp.com",
+  databaseURL: "https://ailabs-c18c0-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "ailabs-c18c0",
+  storageBucket: "ailabs-c18c0.firebasestorage.app",
+  messagingSenderId: "166123763090",
+  appId: "1:166123763090:web:1d6674c37ca26f237efd4b",
+  measurementId: "G-Y2TFCLCXF4"
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
 
 // API Base URL for backend
 const API_BASE = import.meta.env.PROD
@@ -74,6 +80,12 @@ export const authService = {
     }
   },
 
+  // Send OTP to phone number (MOCK)
+  async signInWithPhoneNumberMock(phoneNumber: string): Promise<string> {
+    // For mock, we just return a fake verification ID
+    return `mock_vid_${Date.now()}`;
+  },
+
   // Verify OTP and get/create user
   async verifyOtp(verificationId: string, otp: string, phoneNumber: string): Promise<UserStats> {
     try {
@@ -106,7 +118,7 @@ export const authService = {
       }
 
       const data = await response.json();
-      const { user, token, refreshToken } = data.data;
+      const { user, token } = data.data; // Fixed: result -> token
 
       // Store tokens
       localStorage.setItem(TOKEN_KEY, token);
@@ -117,6 +129,165 @@ export const authService = {
     } catch (error: any) {
       console.error('OTP verification error:', error);
       throw new Error(error.message || 'Invalid verification code');
+    }
+  },
+
+  // Verify OTP (MOCK)
+  async verifyOtpMock(phoneNumber: string, otp: string): Promise<UserStats> {
+    try {
+      // Internal check for mock OTP (usually 123456)
+      if (otp !== '123456') {
+        throw new Error('Invalid verification code (MOCK)');
+      }
+
+      // Sync with backend to get/create user (Mock endpoint)
+      const response = await fetch(`${API_BASE}/auth/verify-mock`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phoneNumber: phoneNumber.replace(/\s/g, ''),
+        }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.message || 'Failed to verify with mock backend');
+      }
+
+      const data = await response.json();
+      const { user, accessToken } = data.data;
+
+      // Store tokens
+      localStorage.setItem(TOKEN_KEY, accessToken);
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+
+      // Convert backend user to UserStats format
+      return this.mapBackendUserToStats(user);
+    } catch (error: any) {
+      console.error('Mock OTP verification error:', error);
+      throw new Error(error.message || 'Verification failed');
+    }
+  },
+
+  // Sign in with Google (Firebase Auth)
+  async signInWithGoogle(): Promise<UserStats> {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const firebaseUser = result.user;
+
+      // Get Firebase ID token
+      const idToken = await firebaseUser.getIdToken();
+
+      // Sync with backend to get/create user
+      const response = await fetch(`${API_BASE}/auth/verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          idToken,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName,
+          photoURL: firebaseUser.photoURL,
+          authProvider: 'google'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to verify with backend');
+      }
+
+      const data = await response.json();
+      const { user, token } = data.data;
+
+      // Store tokens
+      localStorage.setItem(TOKEN_KEY, token);
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+
+      return this.mapBackendUserToStats(user);
+    } catch (error: any) {
+      console.error('Google sign-in error:', error);
+      throw new Error(error.message || 'Google sign-in failed');
+    }
+  },
+
+  // Sign in with Email/Password (Firebase Auth)
+  async signInWithEmail(email: string, password: string): Promise<UserStats> {
+    try {
+      const credential = await signInWithEmailAndPassword(auth, email, password);
+      const firebaseUser = credential.user;
+
+      // Get Firebase ID token
+      const idToken = await firebaseUser.getIdToken();
+
+      // Sync with backend
+      const response = await fetch(`${API_BASE}/auth/verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          idToken,
+          email: firebaseUser.email,
+          authProvider: 'email'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to verify with backend');
+      }
+
+      const data = await response.json();
+      const { user, token } = data.data;
+
+      localStorage.setItem(TOKEN_KEY, token);
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+
+      return this.mapBackendUserToStats(user);
+    } catch (error: any) {
+      console.error('Email sign-in error:', error);
+      throw new Error(error.message || 'Email sign-in failed');
+    }
+  },
+
+  // Register with Email/Password (Firebase Auth)
+  async registerWithEmail(email: string, password: string): Promise<UserStats> {
+    try {
+      const credential = await createUserWithEmailAndPassword(auth, email, password);
+      const firebaseUser = credential.user;
+
+      // Get Firebase ID token
+      const idToken = await firebaseUser.getIdToken();
+
+      // Create user on backend
+      const response = await fetch(`${API_BASE}/auth/verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          idToken,
+          email: firebaseUser.email,
+          authProvider: 'email'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create user on backend');
+      }
+
+      const data = await response.json();
+      const { user, token } = data.data;
+
+      localStorage.setItem(TOKEN_KEY, token);
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+
+      return this.mapBackendUserToStats(user);
+    } catch (error: any) {
+      console.error('Email registration error:', error);
+      throw new Error(error.message || 'Registration failed');
     }
   },
 

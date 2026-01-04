@@ -7,6 +7,7 @@ import morgan from 'morgan';
 
 import { config } from './config';
 import routes from './routes';
+import { paymentController } from './controllers';
 import { errorHandler } from './middleware/errorHandler';
 import { initializeSocketGateway } from './sockets';
 import { prisma } from './utils/prisma';
@@ -44,18 +45,18 @@ app.use(cors({
 app.use(compression());
 
 // Request logging
-if (config.nodeEnv !== 'test') {
-  app.use(morgan(config.nodeEnv === 'production' ? 'combined' : 'dev'));
+if (config.env !== 'test') {
+  app.use(morgan(config.env === 'production' ? 'combined' : 'dev'));
 }
 
 // Body parsing - with raw body for Stripe webhooks
-app.use('/api/v1/payment/webhook', express.raw({ type: 'application/json' }));
+app.use(['/api/v1/payment/webhook', '/api/stripe/webhook'], express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Store raw body for webhook verification
 app.use((req: Request, res: Response, next: NextFunction) => {
-  if (req.originalUrl === '/api/v1/payment/webhook') {
+  if (req.originalUrl === '/api/v1/payment/webhook' || req.originalUrl === '/api/stripe/webhook') {
     (req as any).rawBody = req.body;
   }
   next();
@@ -73,6 +74,9 @@ app.get('/health', (req: Request, res: Response) => {
 
 // API routes
 app.use('/api/v1', routes);
+
+// Stripe Webhook Alias (Top-level)
+app.post('/api/stripe/webhook', paymentController.handleWebhook);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
@@ -147,7 +151,7 @@ const startServer = async () => {
 ║   🎓 Yokaizen Campus Backend                               ║
 ║                                                            ║
 ║   Server running on port ${String(config.port || 7789).padEnd(30)}║
-║   Environment: ${String(config.nodeEnv || 'production').padEnd(36)}║
+║   Environment: ${String(config.env || 'production').padEnd(36)}║
 ║   Mock AI Mode: ${(config.features?.mockAI ? 'enabled' : 'disabled').padEnd(35)}║
 ║                                                            ║
 ║   API:    http://localhost:${config.port}/api/v1              ║

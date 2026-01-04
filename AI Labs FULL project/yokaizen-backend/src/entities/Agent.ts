@@ -5,7 +5,10 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { User } from './User';
 
 export enum AgentModel {
   GEMINI_PRO = 'GEMINI_PRO',
@@ -139,6 +142,10 @@ export class Agent {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'creator_id' })
+  creator: User;
 
   // Get full system prompt
   getFullSystemPrompt(): string {

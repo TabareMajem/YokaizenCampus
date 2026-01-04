@@ -1,291 +1,329 @@
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { Float, Edges, PerspectiveCamera, Stars, MeshDistortMaterial } from '@react-three/drei';
+import { Bloom, EffectComposer, Vignette as PostVignette, Noise, ChromaticAberration } from '@react-three/postprocessing';
+import * as THREE from 'three';
 import { Button } from '../ui/Button';
 import { analyzeCaseDeduction } from '../../services/geminiService';
-import { Search, Box, ArrowLeft, CheckCircle2, Fingerprint } from 'lucide-react';
+import { Search, Box, ArrowLeft, CheckCircle2, Fingerprint, Eye, MapPin, Zap, Info, Skull } from 'lucide-react';
 import { Language } from '../../types';
+import { Scanlines, Vignette } from '../ui/Visuals';
+import { audio } from '../../services/audioService';
 
 interface NeuralNoirProps {
-  onComplete: (score: number) => void;
-  t: (key: string) => string;
-  language?: Language;
+    onComplete: (score: number) => void;
+    t: (key: string) => string;
+    language?: Language;
 }
 
+// --- 3D COMPONENTS ---
+
+const EvidenceCore = ({ rotation }: { rotation: { x: number, y: number } }) => {
+    const meshRef = useRef<THREE.Mesh>(null);
+
+    useFrame((state) => {
+        if (meshRef.current) {
+            meshRef.current.rotation.x = THREE.MathUtils.lerp(meshRef.current.rotation.x, rotation.x * (Math.PI / 180), 0.1);
+            meshRef.current.rotation.y = THREE.MathUtils.lerp(meshRef.current.rotation.y, rotation.y * (Math.PI / 180), 0.1);
+        }
+    });
+
+    return (
+        <group>
+            <Float speed={1.5} rotationIntensity={0.2} floatIntensity={0.5}>
+                <mesh ref={meshRef} castShadow>
+                    <boxGeometry args={[2, 2, 2]} />
+                    <MeshDistortMaterial
+                        color="#06b6d4"
+                        speed={2}
+                        distort={0.1}
+                        radius={1}
+                        emissive="#06b6d4"
+                        emissiveIntensity={0.5}
+                        transparent
+                        opacity={0.8}
+                    />
+                    <Edges color="#06b6d4" />
+                </mesh>
+            </Float>
+            <pointLight position={[2, 2, 2]} intensity={2} color="#06b6d4" />
+            <pointLight position={[-2, -2, -2]} intensity={1} color="#ec4899" />
+        </group>
+    );
+};
+
+// --- MAIN COMPONENT ---
+
 export const NeuralNoir: React.FC<NeuralNoirProps> = ({ onComplete, t }) => {
-  const [mode, setMode] = useState<'SCENE' | 'INSPECT' | 'DEDUCTION'>('SCENE');
-  const [evidenceFound, setEvidenceFound] = useState<string[]>([]);
-  const [inspectedCore, setInspectedCore] = useState(false);
-  const [deduction, setDeduction] = useState({ suspect: '', weapon: '', motive: '' });
-  const [feedback, setFeedback] = useState('');
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+    const [mode, setMode] = useState<'SCENE' | 'INSPECT' | 'DEDUCTION'>('SCENE');
+    const [evidenceFound, setEvidenceFound] = useState<string[]>([]);
+    const [deduction, setDeduction] = useState({ suspect: '', weapon: '', motive: '' });
+    const [feedback, setFeedback] = useState('');
+    const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+    const [rotation, setRotation] = useState({ x: 0, y: 0 });
 
-  // 3D Rotation State
-  const [rotation, setRotation] = useState({ x: 0, y: 0 });
-  const isDragging = useRef(false);
-  const lastMouse = useRef({ x: 0, y: 0 });
+    const isDragging = useRef(false);
+    const lastMouse = useRef({ x: 0, y: 0 });
 
-  // --- Parallax & Flashlight Logic ---
-  const updateCursor = (clientX: number, clientY: number, currentTarget: EventTarget & HTMLDivElement) => {
-    const { width, height, left, top } = currentTarget.getBoundingClientRect();
-    // Calculate normalized -1 to 1 relative to the container
-    const x = ((clientX - left) / width) * 2 - 1;
-    const y = ((clientY - top) / height) * 2 - 1;
-    setMousePos({ x, y });
-  };
+    // --- Handlers ---
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (mode === 'SCENE') {
+            const x = (e.clientX / window.innerWidth) * 2 - 1;
+            const y = (e.clientY / window.innerHeight) * 2 - 1;
+            setMousePos({ x, y });
+        }
+    };
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    updateCursor(e.clientX, e.clientY, e.currentTarget);
-  };
+    const handleRotate = (e: React.MouseEvent) => {
+        if (mode === 'INSPECT' && isDragging.current) {
+            const dx = e.clientX - lastMouse.current.x;
+            const dy = e.clientY - lastMouse.current.y;
+            setRotation(prev => ({ x: prev.x + dy * 0.5, y: prev.y + dx * 0.5 }));
+            lastMouse.current = { x: e.clientX, y: e.clientY };
+        }
+    };
 
-  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.touches[0]) {
-        updateCursor(e.touches[0].clientX, e.touches[0].clientY, e.currentTarget);
-    }
-  };
+    const findEvidence = (id: string) => {
+        if (!evidenceFound.includes(id)) {
+            setEvidenceFound(prev => [...prev, id]);
+            audio.playSuccess();
+        }
+    };
 
-  // --- 3D Rotation Logic (Mouse) ---
-  const handleMouseDown = (e: React.MouseEvent) => {
-      isDragging.current = true;
-      lastMouse.current = { x: e.clientX, y: e.clientY };
-  };
-  const handleRotate = (e: React.MouseEvent) => {
-      if (!isDragging.current) return;
-      const dx = e.clientX - lastMouse.current.x;
-      const dy = e.clientY - lastMouse.current.y;
-      setRotation(prev => ({ x: prev.x - dy * 0.5, y: prev.y + dx * 0.5 }));
-      lastMouse.current = { x: e.clientX, y: e.clientY };
-  };
-  const handleMouseUp = () => isDragging.current = false;
+    const handleSubmitDeduction = async () => {
+        const conclusion = `${deduction.suspect} used ${deduction.weapon} because ${deduction.motive}`;
+        setFeedback('analyzing evidence...');
+        const analysis = await analyzeCaseDeduction(evidenceFound, conclusion);
+        setFeedback(analysis);
+        if (analysis.toLowerCase().includes("excellent") || analysis.toLowerCase().includes("correct")) {
+            audio.playSuccess();
+            setTimeout(() => onComplete(100), 4000);
+        } else {
+            audio.playError();
+        }
+    };
 
-  // --- 3D Rotation Logic (Touch) ---
-  const handleTouchStart = (e: React.TouchEvent) => {
-      if (e.touches[0]) {
-        isDragging.current = true;
-        lastMouse.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      }
-  };
-  const handleTouchRotate = (e: React.TouchEvent) => {
-      if (!isDragging.current || !e.touches[0]) return;
-      const dx = e.touches[0].clientX - lastMouse.current.x;
-      const dy = e.touches[0].clientY - lastMouse.current.y;
-      setRotation(prev => ({ x: prev.x - dy * 0.5, y: prev.y + dx * 0.5 }));
-      lastMouse.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  };
+    return (
+        <div
+            className="h-full bg-black relative overflow-hidden font-serif select-none grayscale-0"
+            onMouseMove={handleMouseMove}
+        >
+            {/* --- GLOBAL NOIR OVERLAYS --- */}
+            <div className="absolute inset-0 pointer-events-none z-50 opacity-30 mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
+            <Scanlines />
+            <Vignette color="#000" />
 
-  const findEvidence = (id: string) => {
-      if (!evidenceFound.includes(id)) {
-          setEvidenceFound(prev => [...prev, id]);
-      }
-  };
+            {/* Rain Effect */}
+            <div className="absolute inset-0 z-40 pointer-events-none opacity-20 bg-[url('https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExOHY5MmZ2czN5emV5emV5emV5emV5emV5emV5emV5emV5emV5emV5ZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LwsCiZPppcH39p7nm/giphy.gif')] bg-repeat"></div>
 
-  const handleSubmitDeduction = async () => {
-      const conclusion = `${deduction.suspect} used ${deduction.weapon} because ${deduction.motive}`;
-      const analysis = await analyzeCaseDeduction(evidenceFound, conclusion);
-      setFeedback(analysis);
-      if (analysis.toLowerCase().includes("excellent") || analysis.toLowerCase().includes("congratulate")) {
-          setTimeout(() => onComplete(100), 3000);
-      }
-  };
+            {/* Noir-esque Color Grading Filter */}
+            <div className="absolute inset-0 pointer-events-none z-[45] backdrop-contrast-125 backdrop-brightness-75 mix-blend-multiply bg-indigo-900/10"></div>
 
-  return (
-    <div className="h-full bg-black relative overflow-hidden font-sans select-none touch-none">
-        
-        {/* --- MODE: SCENE EXPLORATION --- */}
-        {mode === 'SCENE' && (
-            <div 
-                className="absolute inset-0 overflow-hidden cursor-crosshair touch-none" 
-                style={{ touchAction: 'none' }}
-                onMouseMove={handleMouseMove}
-                onTouchMove={handleTouchMove}
-            >
-                {/* Background Layer (Slow) */}
-                <div 
-                    className="absolute inset-[-50px] bg-cover bg-center opacity-50 blur-sm"
-                    style={{ 
-                        backgroundImage: "url('https://picsum.photos/seed/cybercity/600/1000')",
-                        transform: `translate(${mousePos.x * -10}px, ${mousePos.y * -10}px)`
-                    }}
-                />
-                
-                {/* Midground (Desk) */}
-                <div 
-                    className="absolute bottom-0 left-0 right-0 h-[85%] bg-cover bg-bottom transition-transform duration-75 ease-out"
-                    style={{ 
-                        backgroundImage: "url('https://picsum.photos/seed/desknoir/800/800')",
-                        transform: `translate(${mousePos.x * -20}px, ${mousePos.y * -5}px) scale(1.1)`
-                    }}
-                >
-                    {/* Hidden Evidence Clickables */}
-                    <div 
-                        className="absolute top-[40%] left-[30%] w-20 h-20 cursor-pointer group"
-                        onClick={() => { findEvidence('CORE'); setMode('INSPECT'); }}
-                        onTouchStart={() => { findEvidence('CORE'); setMode('INSPECT'); }}
+            {/* --- MODE: SCENE --- */}
+            {mode === 'SCENE' && (
+                <div className="absolute inset-0 flex items-center justify-center p-8">
+                    {/* Cityscape Backdrop */}
+                    <div
+                        className="absolute inset-[-40px] bg-cover bg-center transition-transform duration-500 ease-out grayscale brightness-50 contrast-150"
+                        style={{
+                            backgroundImage: "url('https://images.unsplash.com/photo-1514565131-fce0801e5785?auto=format&fit=crop&q=80&w=1600')",
+                            transform: `translate(${mousePos.x * -15}px, ${mousePos.y * -15}px) scale(1.1)`
+                        }}
+                    />
+
+                    {/* Desk Foreground */}
+                    <div
+                        className="absolute bottom-0 left-0 right-0 h-[60%] bg-cover bg-bottom grayscale contrast-125 brightness-75 drop-shadow-2xl"
+                        style={{
+                            backgroundImage: "url('https://images.unsplash.com/photo-1543242594-c8bae8b9e728?auto=format&fit=crop&q=80&w=1200')",
+                            transform: `translate(${mousePos.x * -30}px, ${mousePos.y * -5}px) scale(1.05)`
+                        }}
                     >
-                        <div className={`w-full h-full border-2 border-cyan rounded-full animate-ping opacity-0 group-hover:opacity-100 ${evidenceFound.includes('CORE') ? 'hidden' : ''}`}></div>
-                        <div className="w-full h-full flex items-center justify-center">
-                             <Box className={`text-cyan drop-shadow-[0_0_10px_#00FFFF] ${evidenceFound.includes('CORE') ? 'opacity-50' : 'animate-pulse'}`} size={32} />
+                        {/* Clutter/Evidence Hotspots */}
+                        <div
+                            className="absolute top-1/4 left-1/3 w-32 h-32 cursor-pointer group flex flex-col items-center justify-center"
+                            onClick={() => { setMode('INSPECT'); findEvidence('ENCRYPTED_CORE'); }}
+                        >
+                            <Box className="text-cyan-400 drop-shadow-[0_0_15px_#06b6d4] group-hover:scale-110 transition-transform" size={48} />
+                            <div className="mt-2 text-[10px] text-cyan-400 font-mono opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-widest">{t('noir.inspect_core')}</div>
+                        </div>
+
+                        <div
+                            className="absolute bottom-1/4 right-1/4 w-40 h-24 cursor-pointer group flex flex-col items-center justify-center -rotate-6"
+                            onClick={() => findEvidence('CASE_FILE')}
+                        >
+                            <div className="bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded shadow-2xl group-hover:translate-y-[-5px] transition-transform">
+                                <div className="w-16 h-1 bg-white/20 mb-2"></div>
+                                <div className="w-12 h-1 bg-white/10"></div>
+                            </div>
+                            <div className="mt-2 text-[10px] text-white/50 font-mono opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-widest">{t('noir.read_file')}</div>
                         </div>
                     </div>
 
-                    <div 
-                        className="absolute top-[60%] right-[20%] w-24 h-16 cursor-pointer group"
-                        onClick={() => findEvidence('FILE')}
-                        onTouchStart={() => findEvidence('FILE')}
-                    >
-                        <div className="absolute -top-4 left-0 bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                            {t('noir.suspect')}: Alex
+                    {/* Flashlight Mask */}
+                    <div
+                        className="absolute inset-0 pointer-events-none z-30"
+                        style={{
+                            background: `radial-gradient(circle 200px at ${(mousePos.x + 1) * 50}% ${(mousePos.y + 1) * 50}%, transparent 0%, rgba(0,0,0,0.95) 100%)`
+                        }}
+                    ></div>
+
+                    {/* HUD */}
+                    <div className="absolute top-8 left-8 flex flex-col space-y-4 z-40">
+                        <div className="flex items-center space-x-3 text-white/40 font-mono tracking-tighter">
+                            <MapPin size={16} />
+                            <span className="text-xs uppercase">Location: Neo-Tokyo Sector 7</span>
                         </div>
-                        <div className="w-full h-full border border-white/20 bg-white/5 skew-x-12"></div>
+                        <Button variant="secondary" onClick={() => setMode('DEDUCTION')} className="bg-black/80 border-white/20 hover:border-cyan-500 text-white/80 group">
+                            <Fingerprint className="mr-2 group-hover:text-cyan-400" size={18} /> {t('noir.mind_palace')}
+                        </Button>
+                    </div>
+
+                    <div className="absolute bottom-8 right-8 z-40 text-right">
+                        <div className="text-[10px] text-white/30 uppercase tracking-[0.3em] mb-1">{t('noir.evidence_collected')}</div>
+                        <div className="text-3xl font-black text-white italic">{evidenceFound.length} <span className="text-xs text-white/20 not-italic">/ 3</span></div>
                     </div>
                 </div>
+            )}
 
-                {/* Foreground (Rain/Overlay) */}
-                <div className="absolute inset-0 pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
-                
-                {/* Flashlight Effect */}
-                <div 
-                    className="absolute inset-0 pointer-events-none"
-                    style={{
-                        background: `radial-gradient(circle 150px at ${(mousePos.x + 1) * 50}% ${(mousePos.y + 1) * 50}%, transparent 0%, rgba(0,0,0,0.85) 100%)`
-                    }}
-                ></div>
+            {/* --- MODE: INSPECT (3D) --- */}
+            {mode === 'INSPECT' && (
+                <div className="absolute inset-0 bg-neutral-950 flex flex-col items-center justify-center backdrop-blur-3xl">
+                    <div className="absolute top-8 left-8 z-50">
+                        <Button variant="ghost" onClick={() => setMode('SCENE')} className="text-white/40 hover:text-white">
+                            <ArrowLeft className="mr-2" size={18} /> {t('noir.back_scene')}
+                        </Button>
+                    </div>
 
-                {/* HUD */}
-                <div className="absolute top-4 left-4 pointer-events-auto z-20">
-                    <Button variant="secondary" onClick={() => setMode('DEDUCTION')}>
-                        <Fingerprint className="mr-2" size={16}/> {t('noir.mind_palace')}
-                    </Button>
-                </div>
-                <div className="absolute bottom-4 left-4 text-cyan font-mono text-sm z-20">
-                    {t('noir.evidence')}: {evidenceFound.length}/3
-                </div>
-            </div>
-        )}
-
-        {/* --- MODE: 3D INSPECTION --- */}
-        {mode === 'INSPECT' && (
-            <div className="absolute inset-0 bg-gray-900 flex flex-col items-center justify-center touch-none">
-                <div className="absolute top-4 left-4 z-10">
-                    <Button variant="ghost" onClick={() => setMode('SCENE')}>
-                        <ArrowLeft className="mr-2" size={16}/> {t('noir.back_scene')}
-                    </Button>
-                </div>
-
-                <div className="text-white mb-8 font-mono text-sm opacity-70">{t('noir.drag_rotate')}</div>
-
-                {/* 3D Viewport */}
-                <div 
-                    className="w-3/4 aspect-square max-w-sm relative cursor-move"
-                    onMouseDown={handleMouseDown}
-                    onMouseMove={handleRotate}
-                    onMouseUp={handleMouseUp}
-                    onMouseLeave={handleMouseUp}
-                    onTouchStart={handleTouchStart}
-                    onTouchMove={handleTouchRotate}
-                    onTouchEnd={handleMouseUp}
-                    style={{ perspective: '1000px' }}
-                >
-                    <div 
-                        className="w-full h-full relative transition-transform duration-75 ease-linear transform-style-3d"
-                        style={{ transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)` }}
+                    <div
+                        className="w-full h-full cursor-grab active:cursor-grabbing"
+                        onMouseDown={(e) => { isDragging.current = true; lastMouse.current = { x: e.clientX, y: e.clientY }; }}
+                        onMouseMove={handleRotate}
+                        onMouseUp={() => isDragging.current = false}
+                        onMouseLeave={() => isDragging.current = false}
                     >
-                        {/* Cube Faces */}
-                        <div className="absolute inset-0 bg-gray-800 border-2 border-cyan/50 opacity-90 translate-z-16 flex items-center justify-center text-cyan font-bold text-4xl" style={{ transform: 'translateZ(8rem)' }}>
-                             <Box size={48} />
+                        <Canvas shadows camera={{ position: [0, 0, 5], fov: 45 }}>
+                            <color attach="background" args={['#050505']} />
+                            <fog attach="fog" args={['#050505', 5, 15]} />
+                            <EvidenceCore rotation={rotation} />
+                            <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
+
+                            <EffectComposer>
+                                <Bloom luminanceThreshold={0.5} intensity={2} />
+                                <ChromaticAberration offset={new THREE.Vector2(0.002, 0.002)} />
+                                <PostVignette darkness={1.2} />
+                            </EffectComposer>
+                        </Canvas>
+                    </div>
+
+                    <div className="absolute bottom-16 left-1/2 -translate-x-1/2 flex flex-col items-center space-y-4">
+                        <div className="p-4 bg-black/80 border border-cyan-500/30 rounded backdrop-blur-md max-w-xs text-center">
+                            <div className="text-[10px] text-cyan-400 font-mono uppercase tracking-[0.2em] mb-2">Encrypted Core Analysis</div>
+                            <p className="text-xs text-white/60 font-serif leading-relaxed italic">"The core pulses with high-frequency encryption. Drifting signatures suggest a forced override at 02:44."</p>
                         </div>
-                        <div className="absolute inset-0 bg-gray-800 border-2 border-cyan/50 opacity-90 flex items-center justify-center transform rotate-y-180" style={{ transform: 'rotateY(180deg) translateZ(8rem)' }}>
-                             <div className="text-xs font-mono text-green-400 p-4 border border-green-500/30 rounded bg-black pointer-events-none select-none">
-                                 <div>SERIAL: 894-X</div>
-                                 <div>TIMESTAMP: 22:00</div>
-                                 <div>STATUS: CORRUPTED</div>
-                             </div>
-                        </div>
-                        <div className="absolute inset-0 bg-gray-700 border border-cyan/30 opacity-90 transform rotate-y-90" style={{ transform: 'rotateY(90deg) translateZ(8rem)' }}></div>
-                        <div className="absolute inset-0 bg-gray-700 border border-cyan/30 opacity-90 transform rotate-y-270" style={{ transform: 'rotateY(-90deg) translateZ(8rem)' }}></div>
-                        <div className="absolute inset-0 bg-gray-600 border border-cyan/30 opacity-90 transform rotate-x-90" style={{ transform: 'rotateX(90deg) translateZ(8rem)' }}></div>
-                        <div className="absolute inset-0 bg-gray-600 border border-cyan/30 opacity-90 transform rotate-x-270" style={{ transform: 'rotateX(-90deg) translateZ(8rem)' }}></div>
+                        <Button variant="primary" onClick={() => { findEvidence('TIMESTAMP'); setMode('SCENE'); }} className="bg-cyan-500 text-black font-bold h-12 px-10">
+                            {t('noir.log_timestamp')}
+                        </Button>
                     </div>
                 </div>
+            )}
 
-                <div className="mt-12">
-                    <Button variant="primary" onClick={() => { setInspectedCore(true); findEvidence('TIMESTAMP'); setMode('SCENE'); }}>
-                        <Search className="mr-2" size={16}/> {t('noir.log_data')}
-                    </Button>
+            {/* --- MODE: DEDUCTION (Mind Palace) --- */}
+            {mode === 'DEDUCTION' && (
+                <div className="absolute inset-0 bg-[#0a0a0a] flex flex-col p-12 overflow-y-auto">
+                    <div className="flex justify-between items-center mb-12 border-b border-white/10 pb-6">
+                        <div>
+                            <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase">{t('noir.investigation_board')}</h1>
+                            <p className="text-xs text-white/30 font-mono uppercase tracking-widest mt-1">Status: Connecting Threads...</p>
+                        </div>
+                        <Button variant="ghost" onClick={() => setMode('SCENE')} className="text-white/40 hover:text-white border border-white/10">
+                            <ArrowLeft className="mr-2" size={18} /> {t('ui.exit')}
+                        </Button>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 max-w-6xl mx-auto w-full">
+                        {/* Left: Suspects */}
+                        <div className="space-y-6">
+                            <div className="flex items-center space-x-2 text-white/20 uppercase text-[10px] font-mono tracking-widest pb-2 border-b border-white/5">
+                                <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse"></span>
+                                <span>Suspect Profiles</span>
+                            </div>
+                            {['Alex (Systems Engineer)', 'Sarah (Cloud Manager)', 'Unkown AI'].map(opt => (
+                                <button
+                                    key={opt}
+                                    onClick={() => { setDeduction(p => ({ ...p, suspect: opt })); audio.playClick(); }}
+                                    className={`w-full p-6 text-left rounded border-2 transition-all relative overflow-hidden group ${deduction.suspect === opt ? 'bg-cyan-500/10 border-cyan-500 text-white' : 'bg-white/5 border-white/5 text-white/30 hover:border-white/20'
+                                        }`}
+                                >
+                                    <div className="font-serif text-lg">{opt}</div>
+                                    <div className="text-[10px] uppercase mt-2 opacity-50 font-mono tracking-tighter">View Data log</div>
+                                    {deduction.suspect === opt && <Zap className="absolute top-4 right-4 text-cyan-500" size={16} />}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Middle: Weapons */}
+                        <div className="space-y-6">
+                            <div className="flex items-center space-x-2 text-white/20 uppercase text-[10px] font-mono tracking-widest pb-2 border-b border-white/5">
+                                <span className="w-2 h-2 rounded-full bg-pink-500 animate-pulse"></span>
+                                <span>Vector of Breach</span>
+                            </div>
+                            {['Encryption Key', 'Privilege Escalation', 'Logic Bomb'].map(opt => (
+                                <button
+                                    key={opt}
+                                    onClick={() => { setDeduction(p => ({ ...p, weapon: opt })); audio.playClick(); }}
+                                    className={`w-full p-6 text-left rounded border-2 transition-all relative overflow-hidden group ${deduction.weapon === opt ? 'bg-pink-500/10 border-pink-500 text-white' : 'bg-white/5 border-white/5 text-white/30 hover:border-white/20'
+                                        }`}
+                                >
+                                    <div className="font-serif text-lg">{opt}</div>
+                                    <div className="text-[10px] uppercase mt-2 opacity-50 font-mono tracking-tighter">System Audit</div>
+                                    {deduction.weapon === opt && <Zap className="absolute top-4 right-4 text-pink-500" size={16} />}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Right: Motives */}
+                        <div className="space-y-6">
+                            <div className="flex items-center space-x-2 text-white/20 uppercase text-[10px] font-mono tracking-widest pb-2 border-b border-white/5">
+                                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                                <span>Motive / Rationale</span>
+                            </div>
+                            {['Corporate Espionage', 'Personal Revenge', 'Accidental Corruption'].map(opt => (
+                                <button
+                                    key={opt}
+                                    onClick={() => { setDeduction(p => ({ ...p, motive: opt })); audio.playClick(); }}
+                                    className={`w-full p-6 text-left rounded border-2 transition-all relative overflow-hidden group ${deduction.motive === opt ? 'bg-amber-500/10 border-amber-500 text-white' : 'bg-white/5 border-white/5 text-white/30 hover:border-white/20'
+                                        }`}
+                                >
+                                    <div className="font-serif text-lg">{opt}</div>
+                                    <div className="text-[10px] uppercase mt-2 opacity-50 font-mono tracking-tighter">Behavioral Analysis</div>
+                                    {deduction.motive === opt && <Zap className="absolute top-4 right-4 text-amber-500" size={16} />}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Submit Area */}
+                    <div className="mt-16 max-w-2xl mx-auto w-full text-center space-y-8">
+                        {feedback && (
+                            <div className="p-8 bg-black border border-white/10 rounded-2xl shadow-2xl animate-in slide-in-from-bottom duration-500">
+                                <div className="text-[10px] text-white/30 uppercase tracking-[0.4em] mb-4">AI Analysis Result</div>
+                                <p className="text-xl font-serif text-gray-200 italic leading-relaxed">"{feedback}"</p>
+                            </div>
+                        )}
+
+                        <Button
+                            fullWidth
+                            variant="primary"
+                            onClick={handleSubmitDeduction}
+                            disabled={!deduction.suspect || !deduction.weapon || !deduction.motive || feedback === 'analyzing evidence...'}
+                            className="bg-white text-black font-black text-xl h-20 uppercase tracking-[0.2em] hover:bg-cyan-500 hover:text-white transition-colors"
+                        >
+                            {feedback === 'analyzing evidence...' ? <div className="animate-spin h-6 w-6 border-b-2 border-black rounded-full" /> : <><CheckCircle2 className="mr-3" size={24} /> {t('noir.solve_case')}</>}
+                        </Button>
+                    </div>
                 </div>
-            </div>
-        )}
-
-        {/* --- MODE: DEDUCTION BOARD --- */}
-        {mode === 'DEDUCTION' && (
-            <div className="absolute inset-0 bg-black/95 p-6 flex flex-col">
-                 <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold text-white">{t('noir.mind_palace')}</h2>
-                    <Button variant="ghost" onClick={() => setMode('SCENE')}>
-                        <ArrowLeft className="mr-2" size={16}/> {t('ui.exit')}
-                    </Button>
-                 </div>
-
-                 <div className="flex-1 flex flex-col items-center justify-center space-y-4">
-                     {/* Slot Machine Style Inputs */}
-                     <div className="w-full bg-white/5 p-4 rounded-xl border border-white/10">
-                         <div className="text-xs text-gray-500 uppercase mb-2">{t('noir.suspect')}</div>
-                         <div className="flex space-x-2">
-                             {['Alex', 'Sarah', 'System'].map(opt => (
-                                 <button 
-                                    key={opt}
-                                    onClick={() => setDeduction(p => ({...p, suspect: opt}))}
-                                    className={`flex-1 py-2 rounded border ${deduction.suspect === opt ? 'bg-cyan/20 border-cyan text-cyan' : 'border-gray-700 text-gray-500'}`}
-                                 >
-                                     {opt}
-                                 </button>
-                             ))}
-                         </div>
-                     </div>
-
-                     <div className="w-full bg-white/5 p-4 rounded-xl border border-white/10">
-                         <div className="text-xs text-gray-500 uppercase mb-2">{t('noir.weapon')}</div>
-                         <div className="flex space-x-2">
-                             {['Knife', 'Code', 'Core'].map(opt => (
-                                 <button 
-                                    key={opt}
-                                    onClick={() => setDeduction(p => ({...p, weapon: opt}))}
-                                    className={`flex-1 py-2 rounded border ${deduction.weapon === opt ? 'bg-cyan/20 border-cyan text-cyan' : 'border-gray-700 text-gray-500'}`}
-                                 >
-                                     {opt}
-                                 </button>
-                             ))}
-                         </div>
-                     </div>
-
-                     <div className="w-full bg-white/5 p-4 rounded-xl border border-white/10">
-                         <div className="text-xs text-gray-500 uppercase mb-2">{t('noir.motive')}</div>
-                         <div className="flex space-x-2">
-                             {['Greed', 'Alibi Fake', 'Glitch'].map(opt => (
-                                 <button 
-                                    key={opt}
-                                    onClick={() => setDeduction(p => ({...p, motive: opt}))}
-                                    className={`flex-1 py-2 rounded border ${deduction.motive === opt ? 'bg-cyan/20 border-cyan text-cyan' : 'border-gray-700 text-gray-500'}`}
-                                 >
-                                     {opt}
-                                 </button>
-                             ))}
-                         </div>
-                     </div>
-                 </div>
-
-                 {feedback && (
-                     <div className="mt-4 p-4 bg-gray-800 rounded-xl border border-white/10 text-sm text-gray-300 italic">
-                         "{t('noir.analysis')}: {feedback}"
-                     </div>
-                 )}
-
-                 <div className="mt-6">
-                     <Button fullWidth variant="primary" onClick={handleSubmitDeduction} disabled={!deduction.suspect || !deduction.weapon || !deduction.motive}>
-                         <CheckCircle2 className="mr-2" size={16} /> {t('noir.submit')}
-                     </Button>
-                 </div>
-            </div>
-        )}
-    </div>
-  );
+            )}
+        </div>
+    );
 };

@@ -129,6 +129,14 @@ export class User {
     timezone: string;
   };
 
+  @Column({ type: 'jsonb', nullable: true, name: 'api_keys' })
+  apiKeys: {
+    google?: string;
+    openai?: string;
+    anthropic?: string;
+    deepseek?: string;
+  };
+
   @Column({ type: 'jsonb', nullable: true })
   stats: {
     totalGamesPlayed: number;
@@ -182,6 +190,15 @@ export class User {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
+  @Column({ type: 'int', default: 0, name: 'monthly_tokens_used' })
+  monthlyTokensUsed: number;
+
+  @Column({ type: 'int', default: 100000, name: 'monthly_token_quota' })
+  monthlyTokenQuota: number;
+
+  @Column({ type: 'timestamp', nullable: true, name: 'last_quota_reset' })
+  lastQuotaReset: Date;
 
   // XP to Level calculation
   static calculateLevel(xp: number): number {

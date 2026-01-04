@@ -12,6 +12,12 @@ import { KnowledgeChunk } from '@entities/KnowledgeChunk';
 import { ApiError } from '@utils/errors';
 import { sanitizeForPrompt } from '@utils/helpers';
 
+// DeepSeek AI client (OpenAI compatible)
+const DEEPSEEK_MODELS = {
+  CHAT: 'deepseek-chat',
+  CODER: 'deepseek-coder',
+} as const;
+
 interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
@@ -49,6 +55,7 @@ interface GeneratedGame {
 export class AIService {
   private genAI: GoogleGenerativeAI;
   private openai: OpenAI | null = null;
+  private deepseek: OpenAI | null = null; // DeepSeek uses OpenAI-compatible API
   private agentRepository: Repository<Agent>;
   private userRepository: Repository<User>;
   private knowledgeRepository: Repository<KnowledgeChunk>;
@@ -62,6 +69,15 @@ export class AIService {
     this.geminiPro = this.genAI.getGenerativeModel({ model: config.google.modelPro });
     this.geminiFlash = this.genAI.getGenerativeModel({ model: config.google.modelFlash });
 
+    // Initialize DeepSeek as PRIMARY model (cost-effective)
+    if (config.deepseek?.apiKey) {
+      this.deepseek = new OpenAI({
+        apiKey: config.deepseek.apiKey,
+        baseURL: config.deepseek.baseUrl || 'https://api.deepseek.com/v1',
+      });
+      aiLogger.info('DeepSeek AI initialized as primary model');
+    }
+
     // Initialize OpenAI if key is available (fallback)
     if (config.openai?.apiKey) {
       this.openai = new OpenAI({ apiKey: config.openai.apiKey });
@@ -70,6 +86,25 @@ export class AIService {
     this.agentRepository = AppDataSource.getRepository(Agent);
     this.userRepository = AppDataSource.getRepository(User);
     this.knowledgeRepository = AppDataSource.getRepository(KnowledgeChunk);
+  }
+
+  // Helper to get client with user key or fallback to system
+  private getGeminiClient(user: User): { pro: GenerativeModel; flash: GenerativeModel } {
+    if (user.apiKeys?.google) {
+      const genAI = new GoogleGenerativeAI(user.apiKeys.google);
+      return {
+        pro: genAI.getGenerativeModel({ model: config.google.modelPro }),
+        flash: genAI.getGenerativeModel({ model: config.google.modelFlash }),
+      };
+    }
+    return { pro: this.geminiPro, flash: this.geminiFlash };
+  }
+
+  private getOpenAIClient(user: User): OpenAI | null {
+    if (user.apiKeys?.openai) {
+      return new OpenAI({ apiKey: user.apiKeys.openai });
+    }
+    return this.openai;
   }
 
   async chat(
@@ -124,28 +159,144 @@ export class AIService {
     // Increment rate limit counter
     await incrementAIRateLimit(userId);
 
-    // Try primary model, fallback on failure
+    // Check token quota
+    if (user.monthlyTokensUsed >= user.monthlyTokenQuota) {
+      throw ApiError.rateLimitExceeded('Monthly token quota exceeded');
+    }
+
+    // Try DeepSeek first (cost-effective), then fallback to other models
+    let result: GenerationResult | AsyncGenerator<string, void, unknown>;
     try {
-      if (stream) {
-        return this.streamChat(modelPreference, fullSystemPrompt, history, sanitizedMessage);
+      // DeepSeek is our primary model for cost efficiency
+      if (this.deepseek) {
+        if (stream) {
+          result = this.streamChatDeepSeek(user, fullSystemPrompt, history, sanitizedMessage);
+        } else {
+          result = await this.generateChatDeepSeek(user, fullSystemPrompt, history, sanitizedMessage);
+        }
+      } else if (stream) {
+        result = this.streamChat(user, modelPreference, fullSystemPrompt, history, sanitizedMessage);
+      } else {
+        result = await this.generateChat(user, modelPreference, fullSystemPrompt, history, sanitizedMessage);
       }
-      return await this.generateChat(modelPreference, fullSystemPrompt, history, sanitizedMessage);
     } catch (error) {
       aiLogger.warn('Primary model failed, attempting fallback', { error, modelPreference });
-      return this.fallbackChat(fullSystemPrompt, history, sanitizedMessage, stream);
+      result = await this.fallbackChat(user, fullSystemPrompt, history, sanitizedMessage, stream);
+    }
+
+    // Record token usage if not streaming (streaming usage is harder to track perfectly but can be estimated)
+    if (!stream && typeof result === 'object' && 'tokensUsed' in result) {
+      const tokens = result.tokensUsed || 0;
+      await this.updateUserTokenUsage(user, tokens);
+    }
+
+    return result;
+  }
+
+  private async updateUserTokenUsage(user: User, tokens: number): Promise<void> {
+    try {
+      user.monthlyTokensUsed += tokens;
+      await this.userRepository.save(user);
+    } catch (error) {
+      aiLogger.error('Failed to update token usage', { userId: user.id, tokens, error });
     }
   }
 
-  private async generateChat(
-    model: AIModel,
+  // DeepSeek chat generation (PRIMARY - cost effective)
+  private async generateChatDeepSeek(
+    user: User,
     systemPrompt: string,
     history: ChatMessage[],
     message: string
   ): Promise<GenerationResult> {
     const startTime = Date.now();
 
-    if (model === AIModel.GPT4 && this.openai) {
-      const response = await this.openai.chat.completions.create({
+    // Use user's DeepSeek key if available (BYO)
+    const client = user.apiKeys?.deepseek
+      ? new OpenAI({ apiKey: user.apiKeys.deepseek, baseURL: 'https://api.deepseek.com/v1' })
+      : this.deepseek;
+
+    if (!client) {
+      throw new Error('DeepSeek client not available');
+    }
+
+    const response = await client.chat.completions.create({
+      model: DEEPSEEK_MODELS.CHAT,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...history.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+        { role: 'user', content: message },
+      ],
+      max_tokens: 2048,
+      temperature: 0.7,
+    });
+
+    const tokensUsed = response.usage?.total_tokens || 0;
+
+    aiLogger.info('DeepSeek chat completed', {
+      model: DEEPSEEK_MODELS.CHAT,
+      duration: Date.now() - startTime,
+      tokens: tokensUsed,
+      cost: this.calculateDeepSeekCost(tokensUsed),
+    });
+
+    return {
+      text: response.choices[0].message.content || '',
+      model: 'deepseek-chat',
+      tokensUsed,
+    };
+  }
+
+  // Calculate DeepSeek cost (very cheap: ~$0.14/1M input, $0.28/1M output)
+  private calculateDeepSeekCost(tokens: number): number {
+    // Approximate: $0.21 per 1M tokens average
+    return (tokens / 1000000) * 0.21;
+  }
+
+  // DeepSeek Streaming
+  private async *streamChatDeepSeek(
+    user: User,
+    systemPrompt: string,
+    history: ChatMessage[],
+    message: string
+  ): AsyncGenerator<string, void, unknown> {
+    // Use user's DeepSeek key if available
+    const client = user.apiKeys?.deepseek
+      ? new OpenAI({ apiKey: user.apiKeys.deepseek, baseURL: 'https://api.deepseek.com/v1' })
+      : this.deepseek;
+
+    if (!client) return; // Should not happen given check above
+
+    const stream = await client.chat.completions.create({
+      model: DEEPSEEK_MODELS.CHAT,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...history.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+        { role: 'user', content: message },
+      ],
+      max_tokens: 2048,
+      temperature: 0.7,
+      stream: true,
+    });
+
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content || '';
+      if (content) yield content;
+    }
+  }
+
+  private async generateChat(
+    user: User,
+    model: AIModel,
+    systemPrompt: string,
+    history: ChatMessage[],
+    message: string
+  ): Promise<GenerationResult> {
+    const startTime = Date.now();
+    const openaiClient = this.getOpenAIClient(user);
+
+    if (model === AIModel.GPT4 && openaiClient) {
+      const response = await openaiClient.chat.completions.create({
         model: 'gpt-4-turbo-preview',
         messages: [
           { role: 'system', content: systemPrompt },
@@ -169,8 +320,9 @@ export class AIService {
     }
 
     // Use Gemini
-    const geminiModel = model === AIModel.GEMINI_PRO ? this.geminiPro : this.geminiFlash;
-    
+    const { pro, flash } = this.getGeminiClient(user);
+    const geminiModel = model === AIModel.GEMINI_PRO ? pro : flash;
+
     const chat = geminiModel.startChat({
       history: this.convertHistoryToGemini(history),
       generationConfig: {
@@ -180,7 +332,7 @@ export class AIService {
     });
 
     // Prepend system prompt to first message if needed
-    const fullMessage = history.length === 0 
+    const fullMessage = history.length === 0
       ? `${systemPrompt}\n\nUser: ${message}`
       : message;
 
@@ -199,13 +351,15 @@ export class AIService {
   }
 
   private async *streamChat(
+    user: User,
     model: AIModel,
     systemPrompt: string,
     history: ChatMessage[],
     message: string
   ): AsyncGenerator<string, void, unknown> {
-    const geminiModel = model === AIModel.GEMINI_PRO ? this.geminiPro : this.geminiFlash;
-    
+    const { pro, flash } = this.getGeminiClient(user);
+    const geminiModel = model === AIModel.GEMINI_PRO ? pro : flash;
+
     const chat = geminiModel.startChat({
       history: this.convertHistoryToGemini(history),
       generationConfig: {
@@ -214,7 +368,7 @@ export class AIService {
       },
     });
 
-    const fullMessage = history.length === 0 
+    const fullMessage = history.length === 0
       ? `${systemPrompt}\n\nUser: ${message}`
       : message;
 
@@ -227,6 +381,7 @@ export class AIService {
   }
 
   private async fallbackChat(
+    user: User,
     systemPrompt: string,
     history: ChatMessage[],
     message: string,
@@ -235,14 +390,15 @@ export class AIService {
     // Try Gemini Flash as fallback
     try {
       if (stream) {
-        return this.streamChat(AIModel.GEMINI_FLASH, systemPrompt, history, message);
+        return this.streamChat(user, AIModel.GEMINI_FLASH, systemPrompt, history, message);
       }
-      return await this.generateChat(AIModel.GEMINI_FLASH, systemPrompt, history, message);
+      return await this.generateChat(user, AIModel.GEMINI_FLASH, systemPrompt, history, message);
     } catch (error) {
       // Try OpenAI if available
-      if (this.openai) {
+      const openaiClient = this.getOpenAIClient(user);
+      if (openaiClient) {
         aiLogger.warn('Gemini fallback failed, trying OpenAI');
-        return await this.generateChat(AIModel.GPT4, systemPrompt, history, message);
+        return await this.generateChat(user, AIModel.GPT4, systemPrompt, history, message);
       }
       throw ApiError.serviceUnavailable('AI service temporarily unavailable');
     }
@@ -286,7 +442,7 @@ export class AIService {
         // Download and upload to our storage
         const imageResponse = await fetch(imageUrl);
         const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
-        
+
         const storagePath = `generated/${userId}/${Date.now()}.png`;
         const finalUrl = await storage.uploadFile(storagePath, imageBuffer, 'image/png');
 
@@ -300,7 +456,7 @@ export class AIService {
 
       // Fallback to Pollinations (free API)
       const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(sanitizedPrompt)}`;
-      
+
       aiLogger.info('Image generated via Pollinations', { userId });
 
       return {
@@ -345,11 +501,11 @@ export class AIService {
       });
 
       const responseText = result.response.text();
-      
+
       // Parse JSON from response
-      const jsonMatch = responseText.match(/```json\n?([\s\S]*?)\n?```/) || 
-                        responseText.match(/\{[\s\S]*\}/);
-      
+      const jsonMatch = responseText.match(/```json\n?([\s\S]*?)\n?```/) ||
+        responseText.match(/\{[\s\S]*\}/);
+
       if (!jsonMatch) {
         throw new Error('Failed to parse game JSON');
       }

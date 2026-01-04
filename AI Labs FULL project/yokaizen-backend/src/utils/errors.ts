@@ -191,7 +191,7 @@ export const asyncHandler = <T>(
 // Global error handler middleware
 export const globalErrorHandler = (
   err: Error,
-  req: unknown,
+  _req: unknown,
   res: Response,
   next: (err?: Error) => void
 ): void => {
@@ -203,10 +203,59 @@ export const globalErrorHandler = (
   sendErrorResponse(res, err);
 };
 
+// Export formatters for ease of use in controllers
+export const successResponse = <T>(data: T, meta?: ApiResponse['meta']): ApiResponse<T> => ({
+  success: true,
+  data,
+  meta,
+});
+
+export const errorResponse = (message: string, code: string = ErrorCodes.INTERNAL_ERROR, details?: unknown): ApiResponse => ({
+  success: false,
+  error: {
+    message,
+    code,
+    details,
+  },
+});
+
+// Format error response for API output
+export const formatErrorResponse = (error: ApiError | Error): ApiResponse['error'] & { success: false } => {
+  if (error instanceof ApiError) {
+    return {
+      success: false,
+      error: {
+        message: error.message,
+        code: error.errorCode,
+        details: error.details,
+      },
+    } as any;
+  }
+  return {
+    success: false,
+    error: {
+      message: error.message,
+      code: ErrorCodes.INTERNAL_ERROR,
+    },
+  } as any;
+};
+
+// Format Zod validation errors
+export const formatZodErrors = (error: ZodError): { path: string; message: string }[] => {
+  return error.errors.map((err) => ({
+    path: err.path.join('.'),
+    message: err.message,
+  }));
+};
+
 export default {
   ApiError,
   sendErrorResponse,
   sendSuccessResponse,
+  successResponse,
+  errorResponse,
+  formatErrorResponse,
+  formatZodErrors,
   asyncHandler,
   globalErrorHandler,
 };

@@ -140,6 +140,7 @@ export const loggers = {
 // ============================================
 // BACKWARDS COMPATIBLE LOGGER ALIASES
 // ============================================
+
 export const aiLogger = {
   info: (message: string, details?: object) => loggers.ai('GenAI', message, details),
   error: (error: Error, context?: object) => loggers.error(error, context),
@@ -154,9 +155,23 @@ export const paymentLogger = {
 };
 
 export const socketLogger = {
-  info: (event: string, userId: string, details?: object) => loggers.socket(event, userId, details),
-  error: (error: Error, context?: object) => loggers.error(error, context),
-  debug: (event: string, userId: string, details?: object) => loggers.socket(event, userId, details),
+  info: (message: string, details?: object) => logger.info(`Socket: ${message}`, details),
+  error: (error: Error | string, context?: object) => {
+    if (typeof error === 'string') {
+      logger.error(`Socket: ${error}`, context);
+    } else {
+      loggers.error(error, context);
+    }
+  },
+  warn: (message: string, details?: object) => logger.warn(`Socket: ${message}`, details),
+  debug: (message: string, details?: object) => logger.debug(`Socket: ${message}`, details),
 };
 
+export const securityLogger = {
+  info: (message: string, details?: object) => logger.info(`Security: ${message}`, details),
+  warn: (message: string, details?: object) => logger.warn(`Security: ${message}`, details),
+  error: (error: Error, context?: object) => loggers.error(error, context),
+};
+
+export const httpLogger = logger;
 export default logger;

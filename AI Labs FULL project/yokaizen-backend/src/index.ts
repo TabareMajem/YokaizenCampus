@@ -62,7 +62,7 @@ app.use(compression());
 app.use(timeoutHandler(30000));
 
 // Global IP rate limiting (before body parsing)
-app.use(ipRateLimit(100, 60000)); // 100 requests per minute per IP
+app.use(ipRateLimit(100, 60000) as any); // 100 requests per minute per IP
 
 // Body parsing (skip for webhook routes that need raw body)
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -81,19 +81,23 @@ app.use(sanitizeInput);
 // =========== Logging ===========
 
 // HTTP request logging
-const morganFormat = config.app.nodeEnv === 'production' 
-  ? 'combined' 
+const morganFormat = config.server.isProduction
+  ? 'combined'
   : 'dev';
 
 app.use(morgan(morganFormat, {
   stream: {
     write: (message: string) => {
-      httpLogger.info(message.trim());
+      if (httpLogger && typeof httpLogger.info === 'function') {
+        httpLogger.info(message.trim());
+      } else {
+        console.log(message.trim());
+      }
     },
   },
   skip: (req: Request) => {
     // Skip health check logging in production
-    return config.app.nodeEnv === 'production' && req.path === '/api/v1/health';
+    return config.server.isProduction && req.path === '/api/v1/health';
   },
 }));
 
@@ -140,7 +144,7 @@ async function startServer(): Promise<void> {
 
     // Initialize Socket.io
     const io = initializeSocketServer(httpServer);
-    
+
     // Start ticker updates
     startTickerUpdates(io);
 
@@ -148,11 +152,13 @@ async function startServer(): Promise<void> {
     await scheduleRecurringJobs();
 
     // Start HTTP server
-    httpServer.listen(config.app.port, () => {
-      logger.info(`🚀 Server running on port ${config.app.port}`);
-      logger.info(`📦 Environment: ${config.app.nodeEnv}`);
-      logger.info(`🔗 API Base: http://localhost:${config.app.port}/api/v1`);
-      logger.info(`🔌 WebSocket: ws://localhost:${config.app.port}`);
+    const PORT = config.server.port || 7792;
+
+    httpServer.listen(PORT, () => {
+      logger.info(`🚀 Server running on port ${PORT}`);
+      logger.info(`📦 Environment: ${config.server.env}`);
+      logger.info(`🔗 API Base: ${config.app.backendUrl}/api/${config.server.apiVersion}`);
+      logger.info(`🔌 WebSocket: ws://localhost:${PORT}`);
     });
 
   } catch (error) {
@@ -199,12 +205,14 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error: Error) => {
+  console.error('CRITICAL ERROR:', error);
   logger.error('Uncaught Exception', { error: error.message, stack: error.stack });
   gracefulShutdown('uncaughtException');
 });
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason: any) => {
+  console.error('UNHANDLED REJECTION:', reason);
   logger.error('Unhandled Rejection', { reason });
   gracefulShutdown('unhandledRejection');
 });

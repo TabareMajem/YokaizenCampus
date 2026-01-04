@@ -233,8 +233,8 @@ export function initializeSocketServer(httpServer: HttpServer): Server {
     });
 
     // Error handler
-    socket.on('error', (error) => {
-      socketLogger.error('Socket error', { userId, error });
+    socket.on('error', (error: any) => {
+      socketLogger.error(error, { userId });
     });
   });
 

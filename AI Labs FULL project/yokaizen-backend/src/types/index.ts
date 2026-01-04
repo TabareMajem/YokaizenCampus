@@ -1,12 +1,16 @@
-import { User, UserTier, UserRole } from '../entities/User';
+import * as express from 'express';
+import { UserTier, UserRole } from '../entities/User';
 
 export { UserRole, UserTier };
 
 // Extended Express Request with authenticated user
-export interface AuthenticatedRequest extends Request {
+export type AuthenticatedRequest = express.Request & {
   user?: AuthUser;
   rawBody?: Buffer;
-}
+  params: any;
+  query: any;
+  body: any;
+};
 
 // Authenticated user payload
 export interface AuthUser {
@@ -115,8 +119,9 @@ export interface GameSession {
   gameType: string;
   difficulty: string;
   sessionToken: string;
-  startedAt: Date;
+  startTime: number;
   metadata?: Record<string, unknown>;
+  isActive: boolean;
 }
 
 // Leaderboard entry

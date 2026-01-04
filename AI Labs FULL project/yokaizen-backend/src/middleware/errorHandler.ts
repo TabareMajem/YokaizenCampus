@@ -98,26 +98,45 @@ export const errorHandler = (
       path: req.path,
       method: req.method,
       userId: (req as any).user?.userId,
-      body: config.app.nodeEnv === 'development' ? req.body : undefined,
+      body: config.server.isDevelopment ? req.body : undefined,
     });
 
     response = {
       success: false,
       error: {
-        message: config.app.nodeEnv === 'production' 
-          ? 'An unexpected error occurred' 
+        message: config.server.isProduction
+          ? 'An unexpected error occurred'
           : err.message,
         code: 'INT_001',
         // Only include stack in development
-        ...(config.app.nodeEnv === 'development' && { stack: err.stack }),
+        ...(config.server.isDevelopment && { stack: err.stack }),
       },
     };
   }
 
   // Security: Don't leak error details for auth/security errors in production
-  if (config.app.nodeEnv === 'production' && statusCode === 401) {
+  if (config.server.isProduction && statusCode === 401) {
     response.error.message = 'Authentication failed';
     delete response.error.details;
+  }
+
+  // Guard: Ensure res.status exists and headers haven't been sent
+  if (typeof res.status !== 'function') {
+    logger.error('Critical: res.status is not a function. Possible middleware corruption.', {
+      path: req.path,
+      method: req.method,
+      error: err.message
+    });
+    return;
+  }
+
+  if (res.headersSent) {
+    logger.warn('Error handler: Headers already sent, cannot send error response.', {
+      path: req.path,
+      method: req.method,
+      error: err.message
+    });
+    return;
   }
 
   res.status(statusCode).json(response);
@@ -146,7 +165,7 @@ export const securityErrorLogger = (
   if (err instanceof ApiError) {
     // Log potential security issues
     if (
-      err.statusCode === 401 || 
+      err.statusCode === 401 ||
       err.statusCode === 403 ||
       err.code?.startsWith('AUTH_') ||
       err.code?.startsWith('RATE_')

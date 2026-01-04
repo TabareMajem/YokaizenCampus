@@ -37,11 +37,20 @@ sudo chown -R $USER:$USER $DEPLOY_DIR
 echo -e "${YELLOW}📦 Deploying Backend...${NC}"
 cp -r "$REPO_SOURCE/AI Labs FULL project/yokaizen-backend/"* $DEPLOY_DIR/backend/
 
-# Create production .env
-cp "$REPO_SOURCE/AI Labs FULL project/yokaizen-backend/.env.production" $DEPLOY_DIR/backend/.env
+# Create production .env from template if not exists
+if [ ! -f "$DEPLOY_DIR/backend/.env" ]; then
+    echo -e "${YELLOW}⚠️ Setup .env file manually from .env.production.template${NC}"
+    cp "$REPO_SOURCE/AI Labs FULL project/yokaizen-backend/.env.production.template" $DEPLOY_DIR/backend/.env
+else
+    echo -e "${GREEN}✅ Existing .env found${NC}"
+fi
 
-# Copy Firebase admin SDK
-cp "$REPO_SOURCE/yokaizen-campus-firebase-adminsdk-fbsvc-0964fd16e7.json" $DEPLOY_DIR/backend/firebase-admin.json
+# Copy Firebase admin SDK (Optional - warn if missing)
+if [ -f "$REPO_SOURCE/yokaizen-campus-firebase-adminsdk-fbsvc-0964fd16e7.json" ]; then
+    cp "$REPO_SOURCE/yokaizen-campus-firebase-adminsdk-fbsvc-0964fd16e7.json" $DEPLOY_DIR/backend/firebase-admin.json
+else
+    echo -e "${YELLOW}⚠️ Firebase Admin SDK json not found. Please upload manually to $DEPLOY_DIR/backend/firebase-admin.json${NC}"
+fi
 
 cd $DEPLOY_DIR/backend
 
@@ -115,11 +124,12 @@ echo -e "${GREEN}✅ Nginx configured${NC}"
 # ============================================
 if [ ! -f "/etc/letsencrypt/live/ai.yokaizencampus.com/fullchain.pem" ]; then
     echo -e "${YELLOW}🔐 Requesting SSL certificate...${NC}"
-    sudo certbot certonly --nginx -d ai.yokaizencampus.com --non-interactive --agree-tos -m admin@yokaizen.com
+    # Use --non-interactive only if we are sure all params are correct
+    sudo certbot certonly --nginx -d ai.yokaizencampus.com --agree-tos -m admin@yokaizen.com || echo -e "${RED}⚠️ SSL Certbot failed. Run manually.${NC}"
     
     # Reload nginx to use new certificate
     sudo systemctl reload nginx
-    echo -e "${GREEN}✅ SSL certificate obtained${NC}"
+    echo -e "${GREEN}✅ SSL setup attempt finished${NC}"
 else
     echo -e "${GREEN}✅ SSL certificate already exists${NC}"
 fi

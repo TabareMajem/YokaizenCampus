@@ -328,6 +328,98 @@ export class AuthService {
       return null;
     }
   }
+
+  // Login with Google OAuth (Firebase ID token)
+  async loginWithGoogle(idToken: string): Promise<AuthResponse> {
+    // NOTE: In production, you would verify the idToken using firebase-admin SDK
+    // For now, we decode the token to extract the email.
+    // This requires firebase-admin to be set up with a service account.
+    // const decodedToken = await admin.auth().verifyIdToken(idToken);
+    // const email = decodedToken.email;
+
+    // For MVP, trust the frontend and accept email directly in body
+    // This endpoint should only be called from the frontend after successful Google Sign-In
+    throw new Error('Google OAuth not fully implemented. Use email/password login for now.');
+  }
+
+  // Login or Register with Google (Firebase verified user)
+  async loginOrRegisterWithFirebase(firebaseUid: string, email: string, displayName: string | null): Promise<AuthResponse> {
+    // Check if user exists
+    let user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+      include: { careerPath: true },
+    });
+
+    if (!user) {
+      // Auto-register the user
+      const randomPassword = generateSecureToken(32);
+      const passwordHash = await bcrypt.hash(randomPassword, SALT_ROUNDS);
+
+      user = await prisma.user.create({
+        data: {
+          email: email.toLowerCase(),
+          passwordHash,
+          fullName: displayName || 'Campus User',
+          role: 'STUDENT',
+          careerPath: {
+            create: {
+              unlockedNodes: ['SCOUT'],
+              stats: {
+                orchestration: 10, resilience: 10, creativity: 10, logic: 10, ethics: 10,
+              },
+            },
+          },
+        },
+        include: { careerPath: true },
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          userId: user.id,
+          actionType: 'REGISTER',
+          details: `User auto-registered via Firebase/Google: ${firebaseUid}`,
+        },
+      });
+    }
+
+    // Update last active
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastActiveAt: new Date() },
+    });
+
+    // Generate tokens
+    const accessToken = generateAccessToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      tier: user.subscriptionTier,
+      schoolId: user.schoolId || undefined,
+    });
+
+    const refreshToken = await generateRefreshToken(user.id);
+
+    await prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        actionType: 'LOGIN',
+        details: 'User logged in via Firebase/Google',
+      },
+    });
+
+    return {
+      user: this.toSafeUser(user),
+      tokens: { accessToken, refreshToken },
+      careerPath: user.careerPath ? {
+        id: user.careerPath.id,
+        userId: user.careerPath.userId,
+        unlockedNodes: user.careerPath.unlockedNodes,
+        stats: user.careerPath.stats as any,
+        achievements: user.careerPath.achievements,
+        chaosEventsSurvived: user.careerPath.chaosEventsSurvived,
+      } : null,
+    };
+  }
 }
 
 // Factory function

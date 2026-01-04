@@ -13,6 +13,7 @@ router.use(authenticate);
 // Profile
 router.get('/me', userController.getProfile);
 router.patch('/me', validate(userSchemas.updateProfile), userController.updateProfile);
+router.patch('/keys', validate(userSchemas.updateApiKeys), userController.updateApiKeys);
 router.get('/stats', userController.getStats);
 
 // Inventory

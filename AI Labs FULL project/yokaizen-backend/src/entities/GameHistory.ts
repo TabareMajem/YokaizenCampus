@@ -4,7 +4,10 @@ import {
   Column,
   CreateDateColumn,
   Index,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { User } from './User';
 
 export enum GameType {
   BRAIN_BOOST = 'BRAIN_BOOST',
@@ -52,6 +55,10 @@ export class GameHistory {
   @Column({ type: 'uuid', name: 'user_id' })
   @Index('idx_game_history_user_id')
   userId: string;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'user_id' })
+  user: User;
 
   @Column({
     type: 'enum',
@@ -131,6 +138,9 @@ export class GameHistory {
 
   @Column({ type: 'boolean', default: false, name: 'is_ranked' })
   isRanked: boolean;
+
+  @Column({ type: 'boolean', default: true, name: 'is_valid' })
+  isValid: boolean;
 
   @Column({ nullable: true, name: 'session_token' })
   sessionToken: string;

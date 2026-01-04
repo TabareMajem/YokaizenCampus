@@ -100,7 +100,7 @@ export class AuthController {
    */
   logout = asyncHandler(async (req: Request, res: Response) => {
     const { refreshToken } = req.body;
-    
+
     if (refreshToken) {
       await authService.logout(refreshToken);
     }
@@ -131,7 +131,7 @@ export class AuthController {
    */
   updateProfile = asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user!.id;
-    
+
     const validation = updateProfileSchema.safeParse(req.body);
     if (!validation.success) {
       throw new ValidationError(validation.error.errors[0].message);
@@ -152,7 +152,7 @@ export class AuthController {
    */
   changePassword = asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user!.id;
-    
+
     const validation = changePasswordSchema.safeParse(req.body);
     if (!validation.success) {
       throw new ValidationError(validation.error.errors[0].message);
@@ -176,7 +176,7 @@ export class AuthController {
    */
   verifyToken = asyncHandler(async (req: Request, res: Response) => {
     const { token } = req.body;
-    
+
     if (!token) {
       throw new ValidationError('Token is required');
     }
@@ -186,6 +186,30 @@ export class AuthController {
     res.json({
       success: true,
       data: { valid: true, userId: payload.userId, role: payload.role }
+    });
+  });
+
+  /**
+   * POST /auth/firebase
+   * Login or register using Firebase/Google credentials
+   */
+  loginWithFirebase = asyncHandler(async (req: Request, res: Response) => {
+    const { firebaseUid, email, displayName } = req.body;
+
+    if (!firebaseUid || !email) {
+      throw new ValidationError('Firebase UID and email are required');
+    }
+
+    const result = await authService.loginOrRegisterWithFirebase(
+      firebaseUid,
+      email,
+      displayName || null
+    );
+
+    res.json({
+      success: true,
+      message: 'Firebase login successful',
+      data: result
     });
   });
 }
