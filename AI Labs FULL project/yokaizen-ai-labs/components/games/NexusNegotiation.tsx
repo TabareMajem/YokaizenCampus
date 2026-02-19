@@ -107,7 +107,7 @@ export const NexusNegotiation: React.FC<NexusNegotiationProps> = ({ onComplete, 
             <div className="flex flex-col w-1/3 text-right">
                 <div className="flex justify-between text-[10px] font-bold text-red-400 uppercase mb-1">
                     <span>{t('nexus.core_temp')}</span>
-                    <span>{(100 - patience) * 10 + 500}°C</span>
+                    <span>{(100 - patience) * 10 + 500}{t('games.nexusnegotiation.c')}</span>
                 </div>
                 <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
                     <div 
@@ -140,7 +140,7 @@ export const NexusNegotiation: React.FC<NexusNegotiationProps> = ({ onComplete, 
                             ? 'bg-blue-900/30 border-blue-600 text-blue-100 rounded-br-none' 
                             : 'bg-red-900/20 border-red-600 text-red-100 rounded-bl-none font-serif tracking-wider'
                         }`}>
-                            {m.role !== 'user' && <div className="text-[8px] text-red-500 mb-1 uppercase">Nexus-9 [SYSTEM_ADMIN]</div>}
+                            {m.role !== 'user' && <div className="text-[8px] text-red-500 mb-1 uppercase">{t('games.nexusnegotiation.nexus_9_system_admin')}</div>}
                             {m.content}
                         </div>
                     </div>

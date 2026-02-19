@@ -270,7 +270,7 @@ export const GradientSki: React.FC<GradientSkiProps> = ({ onComplete, t }) => {
                 <div className="text-right">
                     <div className="text-[10px] text-cyan-500 font-bold uppercase italic tracking-widest mb-1">{t('ski.velocity')}</div>
                     <div className="text-4xl font-black text-white italic drop-shadow-[2px_2px_0px_#06b6d4]">
-                        {gameState.speed.toFixed(0)} <span className="text-sm not-italic text-gray-400">EPOCHS/S</span>
+                        {gameState.speed.toFixed(0)} <span className="text-sm not-italic text-gray-400">{t('games.gradientski.epochs_s')}</span>
                     </div>
                 </div>
             </div>
@@ -308,7 +308,7 @@ export const GradientSki: React.FC<GradientSkiProps> = ({ onComplete, t }) => {
                     <h1 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-cyan-400 to-pink-500 mb-2 italic tracking-tighter">
                         {t('ski.title')}
                     </h1>
-                    <p className="text-gray-300 mb-10 font-mono text-sm">3D GRADIENT DESCENT SIMULATOR</p>
+                    <p className="text-gray-300 mb-10 font-mono text-sm">{t('games.gradientski.3d_gradient_descent_')}</p>
                     <Button size="lg" variant="primary" onClick={startGame} className="shadow-[0_0_40px_#06b6d4] h-16 w-64 text-xl border-cyan-400 text-cyan-100 font-bold tracking-widest">
                         {t('ski.jack_in')}
                     </Button>

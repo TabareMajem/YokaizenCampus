@@ -5,7 +5,7 @@ import { config } from '@config/env';
 import { stripe, createCheckoutSession, createPortalSession, PLAN_CONFIG } from '@config/stripe';
 import { logger, paymentLogger } from '@config/logger';
 import { User, UserTier } from '@entities/User';
-import { Transaction, TransactionType, TransactionStatus } from '@entities/Transaction';
+import { Transaction as TransactionEntity, TransactionType, TransactionStatus } from '@entities/Transaction';
 import { ApiError } from '@utils/errors';
 
 interface CheckoutResult {
@@ -19,11 +19,11 @@ interface PortalResult {
 
 export class PaymentService {
   private userRepository: Repository<User>;
-  private transactionRepository: Repository<Transaction>;
+  private transactionRepository: Repository<TransactionEntity>;
 
   constructor() {
     this.userRepository = AppDataSource.getRepository(User);
-    this.transactionRepository = AppDataSource.getRepository(Transaction);
+    this.transactionRepository = AppDataSource.getRepository(TransactionEntity);
   }
 
   async createCheckoutSession(
@@ -61,22 +61,21 @@ export class PaymentService {
       `${config.app.frontendUrl}/subscription/cancel`
     );
 
-    paymentLogger.info('Checkout session created', {
-      userId,
+    paymentLogger.info('Checkout session created', userId, {
       planId,
       sessionId: session.id,
     });
 
     // Create pending transaction
     const transaction = this.transactionRepository.create({
-      user,
-      type: TransactionType.SUBSCRIPTION,
+      userId: user.id,
+      type: TransactionType.SUBSCRIPTION_START,
       amount: PLAN_CONFIG[planId].price,
       currency: 'JPY',
       status: TransactionStatus.PENDING,
-      stripeSessionId: session.id,
-      metadata: { planId },
-    });
+      referenceId: session.id,
+      metadata: { planId, stripeSessionId: session.id },
+    } as any);
     await this.transactionRepository.save(transaction);
 
     return {
@@ -98,7 +97,7 @@ export class PaymentService {
       `${config.app.frontendUrl}/settings/billing`
     );
 
-    paymentLogger.info('Portal session created', { userId });
+    paymentLogger.info('Portal session created', userId);
 
     return { url: session.url };
   }
@@ -113,11 +112,11 @@ export class PaymentService {
         config.stripe.webhookSecret
       );
     } catch (error) {
-      paymentLogger.error('Webhook signature verification failed', { error });
+      paymentLogger.warn('Webhook signature verification failed', { error });
       throw ApiError.badRequest('Invalid webhook signature');
     }
 
-    paymentLogger.info('Webhook received', { type: event.type, id: event.id });
+    logger.info('Webhook received', { type: event.type, id: event.id });
 
     switch (event.type) {
       case 'checkout.session.completed':
@@ -141,7 +140,7 @@ export class PaymentService {
         break;
 
       default:
-        paymentLogger.info('Unhandled webhook event', { type: event.type });
+        logger.info('Unhandled webhook event', { type: event.type });
     }
   }
 
@@ -154,18 +153,19 @@ export class PaymentService {
     });
 
     if (!user) {
-      paymentLogger.error('User not found for checkout', { customerId });
+      logger.warn('User not found for checkout', { customerId });
       return;
     }
 
     // Update transaction
     const transaction = await this.transactionRepository.findOne({
-      where: { stripeSessionId: session.id },
+      where: { referenceId: session.id },
     });
 
     if (transaction) {
       transaction.status = TransactionStatus.COMPLETED;
-      transaction.stripePaymentId = session.payment_intent as string;
+      // transaction.stripePaymentId = session.payment_intent as string; // Removed as property doesn't exist
+      transaction.metadata = { ...transaction.metadata, stripePaymentId: session.payment_intent as string };
       await this.transactionRepository.save(transaction);
     }
 
@@ -211,8 +211,7 @@ export class PaymentService {
 
     await this.userRepository.save(user);
 
-    paymentLogger.info('Subscription activated with cross-product access', {
-      userId: user.id,
+    paymentLogger.info('Subscription activated with cross-product access', user.id, {
       tier: newTier,
       subscriptionId,
       campusAccess: user.campusAccess,
@@ -233,14 +232,14 @@ export class PaymentService {
 
     // Create transaction record
     const transaction = this.transactionRepository.create({
-      user,
-      type: TransactionType.SUBSCRIPTION,
-      amount: invoice.amount_paid / 100, // Convert from cents
+      userId: user.id,
+      type: TransactionType.SUBSCRIPTION_RENEW,
+      amount: invoice.amount_paid / 100, // Convert from cents,
       currency: invoice.currency.toUpperCase(),
       status: TransactionStatus.COMPLETED,
-      stripePaymentId: invoice.payment_intent as string,
-      metadata: { invoiceId: invoice.id },
-    });
+      referenceId: invoice.payment_intent as string,
+      metadata: { invoiceId: invoice.id, stripePaymentId: invoice.payment_intent as string },
+    } as any);
     await this.transactionRepository.save(transaction);
 
     // Update subscription end date
@@ -250,8 +249,7 @@ export class PaymentService {
       await this.userRepository.save(user);
     }
 
-    paymentLogger.info('Invoice paid', {
-      userId: user.id,
+    paymentLogger.info('Invoice paid', user.id, {
       amount: invoice.amount_paid,
     });
   }
@@ -267,13 +265,13 @@ export class PaymentService {
 
     // Create failed transaction record
     const transaction = this.transactionRepository.create({
-      user,
-      type: TransactionType.SUBSCRIPTION,
+      userId: user.id,
+      type: TransactionType.SUBSCRIPTION_RENEW,
       amount: invoice.amount_due / 100,
       currency: invoice.currency.toUpperCase(),
       status: TransactionStatus.FAILED,
       metadata: { invoiceId: invoice.id, failureReason: 'payment_failed' },
-    });
+    } as any);
     await this.transactionRepository.save(transaction);
 
     paymentLogger.warn('Invoice payment failed', {
@@ -311,8 +309,7 @@ export class PaymentService {
     user.subscriptionExpiresAt = new Date(subscription.current_period_end * 1000);
     await this.userRepository.save(user);
 
-    paymentLogger.info('Subscription updated', {
-      userId: user.id,
+    paymentLogger.info('Subscription updated', user.id, {
       tier: newTier,
     });
   }
@@ -333,7 +330,7 @@ export class PaymentService {
     user.subscriptionExpiresAt = null;
     await this.userRepository.save(user);
 
-    paymentLogger.info('Subscription cancelled', { userId: user.id });
+    paymentLogger.info('Subscription cancelled', user.id);
   }
 
   async purchaseCredits(userId: string, amount: number): Promise<CheckoutResult> {
@@ -386,14 +383,14 @@ export class PaymentService {
 
     // Create pending transaction
     const transaction = this.transactionRepository.create({
-      user,
+      userId: user.id,
       type: TransactionType.CREDIT_PURCHASE,
       amount,
       currency: 'JPY',
       status: TransactionStatus.PENDING,
-      stripeSessionId: session.id,
-      metadata: { credits: packages[amount] },
-    });
+      referenceId: session.id,
+      metadata: { credits: packages[amount], stripeSessionId: session.id },
+    } as any);
     await this.transactionRepository.save(transaction);
 
     return {
@@ -406,9 +403,9 @@ export class PaymentService {
     userId: string,
     page: number = 1,
     limit: number = 20
-  ): Promise<{ transactions: Transaction[]; total: number }> {
+  ): Promise<{ transactions: TransactionEntity[]; total: number }> {
     const [transactions, total] = await this.transactionRepository.findAndCount({
-      where: { user: { id: userId } },
+      where: { userId },
       order: { createdAt: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,

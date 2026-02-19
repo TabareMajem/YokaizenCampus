@@ -15,7 +15,7 @@ import { INITIAL_USER, detectBrowserLanguage } from '../constants';
 
 // Firebase configuration for Yokaizen (Shared between AI Labs and Campus)
 const firebaseConfig = {
-  apiKey: "AIzaSyCYKje3N831EbB3R2uECzigTtUTga8FNg4",
+  apiKey: "AIzaSyAHuhgKtJeX2_yVlJ2QeZP7ejQpkS-i5Mc",
   authDomain: "ailabs-c18c0.firebaseapp.com",
   databaseURL: "https://ailabs-c18c0-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "ailabs-c18c0",

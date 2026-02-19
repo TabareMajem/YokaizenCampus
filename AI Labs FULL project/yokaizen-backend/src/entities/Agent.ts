@@ -7,8 +7,15 @@ import {
   Index,
   ManyToOne,
   JoinColumn,
+  OneToMany,
+  ManyToMany,
+  JoinTable,
 } from 'typeorm';
 import { User } from './User';
+import { AgentTask } from './AgentTask';
+import { AgentSkill } from './AgentSkill';
+import { AgentMemory } from './AgentMemory';
+import { AgentSchedule } from './AgentSchedule';
 
 export enum AgentModel {
   GEMINI_PRO = 'GEMINI_PRO',
@@ -146,6 +153,23 @@ export class Agent {
   @ManyToOne(() => User)
   @JoinColumn({ name: 'creator_id' })
   creator: User;
+
+  @OneToMany(() => AgentTask, (task) => task.agent)
+  tasks: AgentTask[];
+
+  @OneToMany(() => AgentMemory, (memory) => memory.agent)
+  memories: AgentMemory[];
+
+  @ManyToMany(() => AgentSkill, (skill) => skill.agents)
+  @JoinTable({
+    name: 'agent_skills_enabled',
+    joinColumn: { name: 'agent_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'skill_id', referencedColumnName: 'id' },
+  })
+  skills: AgentSkill[];
+
+  @OneToMany(() => AgentSchedule, (schedule) => schedule.agent)
+  schedules: AgentSchedule[];
 
   // Get full system prompt
   getFullSystemPrompt(): string {

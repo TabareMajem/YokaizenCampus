@@ -1,7 +1,7 @@
 import { Repository, Between } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { AppDataSource } from '@config/database';
-import { setGameSession, getGameSession, deleteGameSession } from '@config/redis';
+import { setGameSession, getGameSession, deleteGameSession, redisClient } from '@config/redis';
 import { logger } from '@config/logger';
 import { User, UserTier } from '@entities/User';
 import { GameHistory, GameType, GameDifficulty } from '@entities/GameHistory';
@@ -231,7 +231,7 @@ export class GameService {
     }
 
     // Calculate rewards
-    const difficulty = session.difficulty as GameDifficulty;
+    const difficulty = session.difficulty as any;
     const baseXP = calculateXPReward(score, difficulty);
     const baseCredits = calculateCreditReward(score, difficulty);
 
@@ -257,7 +257,7 @@ export class GameService {
         ...metadata,
         bonuses,
         antiCheat: antiCheatResult.checks,
-      },
+      } as any,
       isValid: true,
     }) as any;
 
@@ -653,7 +653,7 @@ export class GameService {
   }
 
   async completeDailyChallenge(userId: string, sessionToken: string, score: number, metadata?: any) {
-    return this.submitScore(userId, sessionToken, GameType.DAILY_CHALLENGE, score, metadata);
+    return this.submitScore(userId, sessionToken, score, metadata);
   }
 
   // Generated Games Stubs

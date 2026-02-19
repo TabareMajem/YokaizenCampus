@@ -1,4 +1,5 @@
 import * as admin from 'firebase-admin';
+export const firebaseAdmin = admin;
 import { config } from './env';
 import * as fs from 'fs';
 import * as path from 'path';

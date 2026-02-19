@@ -8,6 +8,8 @@ import { leaderboardService } from '@services/LeaderboardService';
 import { AppDataSource } from '@config/database';
 import { User, UserTier } from '@entities/User';
 
+import { processAgentTask } from './AgentJobs';
+
 // Redis connection for BullMQ
 const connection = new IORedis(config.redis.url, {
   maxRetriesPerRequest: null,
@@ -20,6 +22,7 @@ export const imageGenerationQueue = new Queue('image-generation', { connection }
 export const notificationQueue = new Queue('notifications', { connection });
 export const analyticsQueue = new Queue('analytics', { connection });
 export const maintenanceQueue = new Queue('maintenance', { connection });
+export const agentQueue = new Queue('agent-tasks', { connection });
 
 // =========== Worker Definitions ===========
 
@@ -167,6 +170,16 @@ const maintenanceWorker = new Worker(
   {
     connection,
     concurrency: 1, // Run maintenance tasks sequentially
+  }
+);
+
+// Agent Worker
+const agentWorker = new Worker(
+  'agent-tasks',
+  processAgentTask,
+  {
+    connection,
+    concurrency: 5,
   }
 );
 
@@ -328,7 +341,7 @@ export async function scheduleRecurringJobs(): Promise<void> {
 
 // =========== Worker Event Handlers ===========
 
-const workers = [ragWorker, imageWorker, notificationWorker, analyticsWorker, maintenanceWorker];
+const workers = [ragWorker, imageWorker, notificationWorker, analyticsWorker, maintenanceWorker, agentWorker];
 
 workers.forEach((worker) => {
   worker.on('completed', (job) => {
@@ -355,6 +368,7 @@ export async function closeWorkers(): Promise<void> {
     notificationWorker.close(),
     analyticsWorker.close(),
     maintenanceWorker.close(),
+    agentWorker.close(),
   ]);
 
   await connection.quit();

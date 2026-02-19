@@ -8,6 +8,8 @@ import paymentRoutes from './payments';
 import leaderboardRoutes from './leaderboard';
 import adminRoutes from './admin';
 import competitionRoutes from './competitions';
+import agentRoutes from './agents';
+
 
 const router = Router();
 
@@ -30,5 +32,7 @@ router.use('/payments', paymentRoutes);
 router.use('/leaderboard', leaderboardRoutes);
 router.use('/admin', adminRoutes);
 router.use('/competitions', competitionRoutes);
+router.use('/agents', agentRoutes);
+
 
 export default router;

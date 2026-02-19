@@ -84,7 +84,7 @@ export const DeepfakeDetective: React.FC<DeepfakeDetectiveProps> = ({ onComplete
                 <Eye size={20} className="mr-2 animate-pulse"/>
                 <span className="font-bold tracking-widest text-sm">{t('deepfake.title')}</span>
             </div>
-            <div className="text-xs font-mono text-slate-400">CASE {currentIdx + 1}/{IMAGES.length}</div>
+            <div className="text-xs font-mono text-slate-400">{t('games.deepfakedetective.case')}{currentIdx + 1}/{IMAGES.length}</div>
         </div>
 
         {/* Main Viewport */}

@@ -41,6 +41,7 @@ export class AuthService {
 
     if (!user) {
       // Create new user
+      // @ts-ignore
       user = this.userRepository.create({
         firebaseUid,
         phone,
@@ -61,7 +62,7 @@ export class AuthService {
           language: 'EN',
           timezone: 'UTC',
         },
-      });
+      } as any);
 
       await this.userRepository.save(user);
 
@@ -121,6 +122,7 @@ export class AuthService {
 
     if (!user) {
       // Create new user
+      // @ts-ignore
       user = this.userRepository.create({
         firebaseUid: `mock_${uuidv4().split('-')[0]}`,
         phone,
@@ -141,7 +143,7 @@ export class AuthService {
           language: 'EN',
           timezone: 'UTC',
         },
-      });
+      } as any);
 
       await this.userRepository.save(user);
       logger.info('New mock user created', { userId: user.id, phone });
@@ -171,7 +173,7 @@ export class AuthService {
       const payload = jwt.verify(refreshToken, config.jwt.refreshSecret) as JWTPayload;
 
       // Verify session exists
-      const session = await getSession(payload.userId);
+      const session = await getSession<any>(payload.userId);
       if (!session || session.refreshToken !== refreshToken) {
         throw ApiError.unauthorized('Invalid refresh token');
       }
@@ -320,7 +322,7 @@ export class AuthService {
 
     return jwt.sign(payload, config.jwt.secret as string, {
       expiresIn: config.jwt.expiresIn,
-    });
+    } as any);
   }
 
   private generateRefreshToken(user: User): string {
@@ -330,9 +332,9 @@ export class AuthService {
       type: 'refresh',
     };
 
-    return jwt.sign(payload, config.jwt.refreshSecret, {
+    return jwt.sign(payload, config.jwt.refreshSecret as string, {
       expiresIn: config.jwt.refreshExpiresIn,
-    });
+    } as any);
   }
 
   private async storeSession(

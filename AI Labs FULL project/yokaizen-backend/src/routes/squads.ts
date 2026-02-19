@@ -91,6 +91,12 @@ router.post(
 );
 
 router.post(
+  '/:id/attack',
+  validateUUID('id'),
+  squadController.attack
+);
+
+router.post(
   '/:id/missions/:missionId/join',
   validateUUID('id'),
   validateUUID('missionId'),

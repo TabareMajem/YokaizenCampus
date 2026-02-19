@@ -1,42 +1,13 @@
 // AI Labs - Agent Service
 // Fetches and manages AI agents from backend API
+import { Agent, AIModel, AgentTask, AgentSkill, AgentSchedule } from '../types';
 
 // API Base URL for backend
 const API_BASE_URL = typeof import.meta !== 'undefined' && import.meta.env?.PROD
     ? 'https://ai.yokaizencampus.com/api/v1'
     : 'http://localhost:7792/api/v1';
 
-export interface Agent {
-    id: string;
-    name: string;
-    description: string;
-    persona: string;
-    systemInstruction: string;
-    avatar: string;
-    avatarUrl?: string;
-    creatorId: string;
-    modelPref: 'GEMINI_PRO' | 'GEMINI_FLASH' | 'GPT4' | 'DEEPSEEK';
-    category: 'COACH' | 'COMPANION' | 'TUTOR' | 'THERAPIST' | 'MENTOR' | 'ASSISTANT' | 'CREATIVE' | 'GAMING' | 'CUSTOM';
-    isPublic: boolean;
-    rating: number;
-    totalConversations: number;
-    hasKnowledgeBase: boolean;
-    conversationStarters?: string[];
-    tags?: string[];
-}
-
-export interface CreateAgentRequest {
-    name: string;
-    description?: string;
-    persona: string;
-    systemInstruction: string;
-    avatarUrl?: string;
-    modelPref?: Agent['modelPref'];
-    category?: Agent['category'];
-    isPublic?: boolean;
-    conversationStarters?: string[];
-    tags?: string[];
-}
+export type CreateAgentRequest = Partial<Agent>;
 
 const getAuthHeaders = (): HeadersInit => {
     const token = localStorage.getItem('yokaizen_ailabs_token');
@@ -151,6 +122,24 @@ export const rateAgent = async (id: string, rating: number): Promise<boolean> =>
     }
 };
 
+// Tasks
+export const getAgentTasks = async (agentId: string, limit = 50): Promise<AgentTask[]> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/ai/agents/${agentId}/tasks?limit=${limit}`, {
+            method: 'GET',
+            headers: getAuthHeaders(),
+        });
+
+        if (!response.ok) return [];
+
+        const data = await response.json();
+        return data.data || [];
+    } catch (error) {
+        console.error('Failed to fetch agent tasks:', error);
+        return [];
+    }
+};
+
 // AI Chat
 export interface ChatMessage {
     role: 'user' | 'assistant';
@@ -222,4 +211,17 @@ export const getKnowledgeStats = async (agentId: string): Promise<{ chunks: numb
         console.error('Failed to get knowledge stats:', error);
         return null;
     }
+};
+
+// Skills - Mock implementations
+export const listSkills = async (): Promise<AgentSkill[]> => {
+    return [];
+};
+
+export const addAgentSkill = async (agentId: string, skill: AgentSkill): Promise<boolean> => {
+    return true;
+};
+
+export const removeAgentSkill = async (agentId: string, skillId: string): Promise<boolean> => {
+    return true;
 };

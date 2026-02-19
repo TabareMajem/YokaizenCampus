@@ -477,8 +477,8 @@ export const PlanariumHeist: React.FC<PlanariumHeistProps> = ({ onComplete, t })
           
           <div className="absolute top-16 left-4 bg-black/80 p-3 rounded-xl border border-green-500/50 backdrop-blur pointer-events-none shadow-2xl z-30">
               <div className="text-green-400 font-mono text-xs font-bold mb-1 flex items-center"><Target size={14} className="mr-2"/> {t('heist.objective')}</div>
-              <div className="text-white text-lg font-black">{terminalsHacked}/4 TERMINALS</div>
-              <div className="text-[10px] text-gray-500 mt-1">{t('heist.distract')} (TAP)</div>
+              <div className="text-white text-lg font-black">{terminalsHacked}{t('games.planariumheist.4_terminals')}</div>
+              <div className="text-[10px] text-gray-500 mt-1">{t('heist.distract')} {t('games.planariumheist.tap')}</div>
           </div>
       </div>
 
@@ -517,13 +517,12 @@ export const PlanariumHeist: React.FC<PlanariumHeistProps> = ({ onComplete, t })
                   <Target size={100} className="text-green-500 animate-spin-slow" />
                   <div className="absolute inset-0 bg-green-500/20 blur-3xl animate-pulse"></div>
               </div>
-              <h1 className="text-6xl font-black text-white mb-4 tracking-tighter italic drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">NEON <span className="text-green-500">INFILTRATOR</span></h1>
+              <h1 className="text-6xl font-black text-white mb-4 tracking-tighter italic drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">{t('games.planariumheist.neon')}<span className="text-green-500">{t('games.planariumheist.infiltrator')}</span></h1>
               <p className="text-gray-400 mb-8 max-w-md text-sm font-mono leading-relaxed border-l-4 border-green-500 pl-4 text-left bg-gray-900/50 p-4 rounded-r-lg">
                   {t('heist.start_desc')}<br/><br/>
-                  <Footprints className="inline mr-2 text-cyan-400" size={14}/> <span className="text-cyan-400">DRAG</span> to move silently.<br/>
-                  <Bell className="inline mr-2 text-amber-400" size={14}/> <span className="text-white">TAP</span> to create sound decoys.<br/>
-                  <Fingerprint className="inline mr-2 text-green-400" size={14}/> <span className="text-green-400">HOLD</span> near terminals to hack.
-              </p>
+                  <Footprints className="inline mr-2 text-cyan-400" size={14}/> <span className="text-cyan-400">{t('games.planariumheist.drag')}</span> {t('games.planariumheist.to_move_silently')}<br/>
+                  <Bell className="inline mr-2 text-amber-400" size={14}/> <span className="text-white">{t('games.planariumheist.tap')}</span> {t('games.planariumheist.to_create_sound_deco')}<br/>
+                  <Fingerprint className="inline mr-2 text-green-400" size={14}/> <span className="text-green-400">{t('games.planariumheist.hold')}</span> {t('games.planariumheist.near_terminals_to_ha')}</p>
               <Button size="lg" variant="primary" onClick={startGame} className="shadow-[0_0_40px_rgba(34,197,94,0.4)] h-16 px-12 text-xl font-bold">
                   {t('ui.start')}
               </Button>

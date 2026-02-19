@@ -33,17 +33,17 @@ export class Squad {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true, length: 50 })
+  @Column({ type: 'varchar', unique: true, length: 50 })
   @Index('idx_squads_name')
   name: string;
 
-  @Column({ nullable: true, length: 200 })
+  @Column({ type: 'varchar', nullable: true, length: 200 })
   description: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   icon: string;
 
-  @Column({ nullable: true, name: 'banner_url' })
+  @Column({ type: 'varchar', nullable: true, name: 'banner_url' })
   bannerUrl: string;
 
   @Column({
@@ -124,6 +124,16 @@ export class Squad {
 
   @Column({ type: 'simple-array', nullable: true, name: 'officer_ids' })
   officerIds: string[];
+
+  // RAID BOSS PERSISTENCE
+  @Column({ type: 'int', default: 1000000, name: 'boss_hp' })
+  bossHp: number;
+
+  @Column({ type: 'int', default: 1000000, name: 'max_boss_hp' })
+  maxBossHp: number;
+
+  @Column({ type: 'int', default: 1, name: 'boss_level' })
+  bossLevel: number;
 
   @Column({ type: 'timestamp', nullable: true, name: 'last_mission_at' })
   lastMissionAt: Date;

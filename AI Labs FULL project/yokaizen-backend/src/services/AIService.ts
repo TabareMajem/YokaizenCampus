@@ -6,7 +6,7 @@ import { config } from '@config/env';
 import { redis, checkAIRateLimit, incrementAIRateLimit } from '@config/redis';
 import { logger, aiLogger } from '@config/logger';
 import { storage } from '@config/storage';
-import { Agent, AIModel } from '@entities/Agent';
+import { Agent, AgentModel } from '@entities/Agent';
 import { User, UserTier } from '@entities/User';
 import { KnowledgeChunk } from '@entities/KnowledgeChunk';
 import { ApiError } from '@utils/errors';
@@ -66,8 +66,15 @@ export class AIService {
 
   constructor() {
     this.genAI = new GoogleGenerativeAI(config.google.apiKey);
-    this.geminiPro = this.genAI.getGenerativeModel({ model: config.google.modelPro });
-    this.geminiFlash = this.genAI.getGenerativeModel({ model: config.google.modelFlash });
+    const requestOptions = {
+      customHeaders: {
+        'Referer': 'https://ai.yokaizencampus.com',
+        'X-Goog-Api-Client': 'yokaizen-backend/1.0.0'
+      }
+    };
+
+    this.geminiPro = this.genAI.getGenerativeModel({ model: config.google.modelPro }, requestOptions);
+    this.geminiFlash = this.genAI.getGenerativeModel({ model: config.google.modelFlash }, requestOptions);
 
     // Initialize DeepSeek as PRIMARY model (cost-effective)
     if (config.deepseek?.apiKey) {
@@ -92,11 +99,18 @@ export class AIService {
   private getGeminiClient(user: User): { pro: GenerativeModel; flash: GenerativeModel } {
     if (user.apiKeys?.google) {
       const genAI = new GoogleGenerativeAI(user.apiKeys.google);
+      const requestOptions = {
+        customHeaders: {
+          'Referer': 'https://ai.yokaizencampus.com'
+        }
+      };
+
       return {
-        pro: genAI.getGenerativeModel({ model: config.google.modelPro }),
-        flash: genAI.getGenerativeModel({ model: config.google.modelFlash }),
+        pro: genAI.getGenerativeModel({ model: config.google.modelPro }, requestOptions),
+        flash: genAI.getGenerativeModel({ model: config.google.modelFlash }, requestOptions),
       };
     }
+
     return { pro: this.geminiPro, flash: this.geminiFlash };
   }
 
@@ -118,14 +132,14 @@ export class AIService {
     const user = await this.userRepository.findOneBy({ id: userId });
     if (!user) throw ApiError.notFound('User not found');
 
-    const canProceed = await checkAIRateLimit(userId, user.tier);
+    const canProceed = await checkAIRateLimit(userId);
     if (!canProceed) {
       throw ApiError.rateLimitExceeded('AI rate limit exceeded');
     }
 
     // Get agent if specified
     let systemPrompt = this.getDefaultSystemPrompt();
-    let modelPreference = AIModel.GEMINI_FLASH;
+    let modelPreference = AgentModel.GEMINI_FLASH;
     let knowledgeContext = '';
 
     if (agentId) {
@@ -140,7 +154,7 @@ export class AIService {
       }
 
       systemPrompt = agent.systemInstruction;
-      modelPreference = agent.modelPreference;
+      modelPreference = agent.modelPref;
 
       // RAG: Get relevant knowledge if agent has knowledge base
       if (agent.hasKnowledgeBase) {
@@ -148,7 +162,7 @@ export class AIService {
       }
 
       // Increment agent usage
-      agent.totalChats += 1;
+      agent.totalConversations += 1;
       await this.agentRepository.save(agent);
     }
 
@@ -198,7 +212,7 @@ export class AIService {
       user.monthlyTokensUsed += tokens;
       await this.userRepository.save(user);
     } catch (error) {
-      aiLogger.error('Failed to update token usage', { userId: user.id, tokens, error });
+      aiLogger.error(new Error('Failed to update token usage'), { userId: user.id, tokens, error });
     }
   }
 
@@ -287,7 +301,7 @@ export class AIService {
 
   private async generateChat(
     user: User,
-    model: AIModel,
+    model: AgentModel,
     systemPrompt: string,
     history: ChatMessage[],
     message: string
@@ -295,7 +309,7 @@ export class AIService {
     const startTime = Date.now();
     const openaiClient = this.getOpenAIClient(user);
 
-    if (model === AIModel.GPT4 && openaiClient) {
+    if (model === AgentModel.GPT4 && openaiClient) {
       const response = await openaiClient.chat.completions.create({
         model: 'gpt-4-turbo-preview',
         messages: [
@@ -321,7 +335,7 @@ export class AIService {
 
     // Use Gemini
     const { pro, flash } = this.getGeminiClient(user);
-    const geminiModel = model === AIModel.GEMINI_PRO ? pro : flash;
+    const geminiModel = model === AgentModel.GEMINI_PRO ? pro : flash;
 
     const chat = geminiModel.startChat({
       history: this.convertHistoryToGemini(history),
@@ -352,13 +366,13 @@ export class AIService {
 
   private async *streamChat(
     user: User,
-    model: AIModel,
+    model: AgentModel,
     systemPrompt: string,
     history: ChatMessage[],
     message: string
   ): AsyncGenerator<string, void, unknown> {
     const { pro, flash } = this.getGeminiClient(user);
-    const geminiModel = model === AIModel.GEMINI_PRO ? pro : flash;
+    const geminiModel = model === AgentModel.GEMINI_PRO ? pro : flash;
 
     const chat = geminiModel.startChat({
       history: this.convertHistoryToGemini(history),
@@ -390,15 +404,15 @@ export class AIService {
     // Try Gemini Flash as fallback
     try {
       if (stream) {
-        return this.streamChat(user, AIModel.GEMINI_FLASH, systemPrompt, history, message);
+        return this.streamChat(user, AgentModel.GEMINI_FLASH, systemPrompt, history, message);
       }
-      return await this.generateChat(user, AIModel.GEMINI_FLASH, systemPrompt, history, message);
+      return await this.generateChat(user, AgentModel.GEMINI_FLASH, systemPrompt, history, message);
     } catch (error) {
       // Try OpenAI if available
       const openaiClient = this.getOpenAIClient(user);
       if (openaiClient) {
         aiLogger.warn('Gemini fallback failed, trying OpenAI');
-        return await this.generateChat(user, AIModel.GPT4, systemPrompt, history, message);
+        return await this.generateChat(user, AgentModel.GPT4, systemPrompt, history, message);
       }
       throw ApiError.serviceUnavailable('AI service temporarily unavailable');
     }
@@ -416,7 +430,7 @@ export class AIService {
       throw ApiError.forbidden('Image generation requires OPERATIVE or PRO tier');
     }
 
-    const canProceed = await checkAIRateLimit(userId, user.tier);
+    const canProceed = await checkAIRateLimit(userId);
     if (!canProceed) {
       throw ApiError.rateLimitExceeded('AI rate limit exceeded');
     }
@@ -444,7 +458,11 @@ export class AIService {
         const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
 
         const storagePath = `generated/${userId}/${Date.now()}.png`;
-        const finalUrl = await storage.uploadFile(storagePath, imageBuffer, 'image/png');
+        const finalUrl = (await storage.upload(imageBuffer, 'image.png', {
+          folder: `generated/${userId}`,
+          isPublic: true,
+          contentType: 'image/png'
+        })).url;
 
         aiLogger.info('Image generated', { userId, model: 'dall-e-3' });
 
@@ -464,7 +482,7 @@ export class AIService {
         model: 'pollinations',
       };
     } catch (error) {
-      aiLogger.error('Image generation failed', { error, userId });
+      aiLogger.error(new Error('Image generation failed'), { userId, prompt, error });
       throw ApiError.internal('Image generation failed');
     }
   }
@@ -482,7 +500,7 @@ export class AIService {
       throw ApiError.forbidden('Game generation requires PRO_CREATOR tier');
     }
 
-    const canProceed = await checkAIRateLimit(userId, user.tier);
+    const canProceed = await checkAIRateLimit(userId);
     if (!canProceed) {
       throw ApiError.rateLimitExceeded('AI rate limit exceeded');
     }
@@ -516,7 +534,7 @@ export class AIService {
 
       return gameData;
     } catch (error) {
-      aiLogger.error('Game generation failed', { error, userId, topic });
+      aiLogger.error(new Error('Game generation failed'), { userId, topic, error });
       throw ApiError.internal('Game generation failed');
     }
   }
@@ -529,7 +547,7 @@ export class AIService {
     const user = await this.userRepository.findOneBy({ id: userId });
     if (!user) throw ApiError.notFound('User not found');
 
-    const canProceed = await checkAIRateLimit(userId, user.tier);
+    const canProceed = await checkAIRateLimit(userId);
     if (!canProceed) {
       throw ApiError.rateLimitExceeded('AI rate limit exceeded');
     }
@@ -555,7 +573,7 @@ export class AIService {
         model: 'gemini-flash-vision',
       };
     } catch (error) {
-      aiLogger.error('Vision analysis failed', { error, userId });
+      aiLogger.error(new Error('Vision analysis failed'), { error, userId });
       throw ApiError.internal('Vision analysis failed');
     }
   }
@@ -572,7 +590,7 @@ export class AIService {
       throw ApiError.forbidden('Voice synthesis requires OPERATIVE or PRO tier');
     }
 
-    const canProceed = await checkAIRateLimit(userId, user.tier);
+    const canProceed = await checkAIRateLimit(userId);
     if (!canProceed) {
       throw ApiError.rateLimitExceeded('AI rate limit exceeded');
     }

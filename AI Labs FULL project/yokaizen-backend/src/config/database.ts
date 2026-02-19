@@ -14,6 +14,14 @@ import { Transaction } from '../entities/Transaction';
 import { SquadMission } from '../entities/SquadMission';
 import { KnowledgeChunk } from '../entities/KnowledgeChunk';
 
+import { Badge } from '../entities/Badge';
+import { AgentSkill } from '../entities/AgentSkill';
+import { AgentTask } from '../entities/AgentTask';
+import { AgentMemory } from '../entities/AgentMemory';
+import { AgentSchedule } from '../entities/AgentSchedule';
+import { Reward } from '../entities/Reward';
+import { Competition } from '../entities/Competition';
+
 export const entities = [
   User,
   Squad,
@@ -25,6 +33,13 @@ export const entities = [
   Transaction,
   SquadMission,
   KnowledgeChunk,
+  Badge,
+  AgentSkill,
+  AgentTask,
+  AgentMemory,
+  AgentSchedule,
+  Reward,
+  Competition,
 ];
 
 export const dataSourceOptions: DataSourceOptions = {

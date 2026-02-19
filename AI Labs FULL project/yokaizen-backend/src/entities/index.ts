@@ -10,4 +10,7 @@ export { SquadMission, MissionType, MissionStatus } from './SquadMission';
 export { KnowledgeChunk } from './KnowledgeChunk';
 export { Reward, RewardType, RewardRarity } from './Reward';
 export { Competition, CompetitionStatus } from './Competition';
+export { AgentSkill, SkillCategory as AgentSkillCategory } from './AgentSkill';
+export { AgentTask, TaskType, TaskStatus } from './AgentTask';
+export { AgentMemory, MemoryType } from './AgentMemory';
 

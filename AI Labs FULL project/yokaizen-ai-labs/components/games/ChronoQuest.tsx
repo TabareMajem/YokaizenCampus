@@ -260,58 +260,149 @@ export const ChronoQuest: React.FC<ChronoQuestProps> = ({ onComplete, t }) => {
         if (choice.includes("Leave")) setTimeout(() => setMode('EXPLORE'), 1000);
     };
 
+    // --- VISUAL COMPONENTS ---
+    const TimelineVisualizer = ({ stability }: { stability: number }) => {
+        return (
+            <div className="relative h-12 bg-black/50 border-b border-white/10 flex items-center px-4 overflow-hidden">
+                {/* Background Grid */}
+                <div className="absolute inset-0 opacity-20"
+                    style={{ backgroundImage: 'linear-gradient(90deg, transparent 50%, rgba(255,255,255,0.1) 50%)', backgroundSize: '20px 100%' }}>
+                </div>
+
+                {/* Stability Text */}
+                <div className="absolute top-1 left-4 text-[10px] font-mono text-cyan-500/70 uppercase">
+                    {t('games.chronoquest.temporal_integrity')}</div>
+                <div className="absolute top-1 right-4 text-[10px] font-mono font-bold text-white">
+                    {stability}%
+                </div>
+
+                {/* The Timeline Waveform */}
+                <div className="flex-1 flex items-end h-6 space-x-[2px] mt-3">
+                    {Array.from({ length: 40 }).map((_, i) => {
+                        const isStable = stability > 60;
+                        const isCritical = stability < 30;
+                        // Procedural height based on stability noise
+                        const baseHeight = 30 + Math.sin(i * 0.5) * 20;
+                        const jitter = isCritical ? Math.random() * 40 : 0;
+                        const height = Math.min(100, Math.max(10, (stability / 100) * baseHeight + jitter));
+
+                        let color = 'bg-cyan-500/50';
+                        if (stability < 70) color = 'bg-yellow-500/50';
+                        if (stability < 30) color = 'bg-red-500/80';
+
+                        return (
+                            <div
+                                key={i}
+                                className={`w-1 rounded-t-sm transition-all duration-300 ${color}`}
+                                style={{
+                                    height: `${height}%`,
+                                    opacity: i / 40 > stability / 100 ? 0.2 : 1
+                                }}
+                            />
+                        );
+                    })}
+                </div>
+
+                {/* Glitch Overlay for Low Stability */}
+                {stability < 40 && (
+                    <div className="absolute inset-0 bg-red-500/10 animate-pulse pointer-events-none mix-blend-overlay"></div>
+                )}
+            </div>
+        );
+    };
+
     return (
-        <div className="h-full flex flex-col bg-void overflow-hidden relative font-mono">
+        <div className="h-full flex flex-col bg-void overflow-hidden relative font-mono text-white select-none">
             <ModalComponent />
             {/* --- EXPLORE MODE --- */}
             {mode === 'EXPLORE' && (
-                <div className="flex-1 relative flex items-center justify-center bg-gray-900">
+                <div className="flex-1 relative flex items-center justify-center bg-gray-950 perspective-[1000px]">
                     {/* HUD */}
-                    <div className="absolute top-4 left-4 bg-black/50 p-2 rounded border border-white/10 z-10 flex space-x-4">
-                        <div className="text-xs text-green-400 font-bold flex items-center"><Heart size={12} className="mr-1" /> {player.hp}/{player.maxHp}</div>
-                        <div className="text-xs text-electric font-bold flex items-center"><Zap size={12} className="mr-1" /> {player.tokens}</div>
-                        <div className="text-xs text-amber-400 font-bold">{t('chrono.lvl')} {player.level}</div>
+                    <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md p-3 rounded-lg border border-white/10 z-10 flex space-x-6 shadow-xl">
+                        <div className="text-xs text-green-400 font-bold flex items-center tracking-wider"><Heart size={14} className="mr-2" /> {player.hp}/{player.maxHp}</div>
+                        <div className="text-xs text-electric font-bold flex items-center tracking-wider"><Zap size={14} className="mr-2" /> {player.tokens}</div>
+                        <div className="text-xs text-amber-400 font-bold tracking-wider">{t('chrono.lvl')} {player.level}</div>
                     </div>
 
                     <div className="absolute top-4 right-4 z-10">
-                        <Button size="sm" variant="secondary" onClick={() => setMode('INVENTORY')}>
+                        <Button size="sm" variant="secondary" onClick={() => setMode('INVENTORY')} className="bg-black/60 border-white/20">
                             <Backpack size={16} />
                         </Button>
                     </div>
 
                     {/* Isometric Grid */}
-                    <div className="relative w-[300px] h-[300px] transform rotate-x-60 rotate-z-45" style={{ transform: 'rotateX(60deg) rotateZ(-45deg)' }}>
+                    <div className="relative w-[300px] h-[300px] transform-style-3d transition-transform duration-500"
+                        style={{ transform: 'rotateX(60deg) rotateZ(-45deg) scale(1.2)' }}>
+                        {/* Floor Shadow */}
+                        <div className="absolute inset-0 bg-black/50 blur-xl transform translate-z-[-20px]"></div>
+
                         {WORLD_MAP.map((row, y) => row.map((cell, x) => {
                             const isPlayer = player.x === x && player.y === y;
-                            let color = 'bg-gray-800';
-                            if (cell === 1) color = 'bg-gray-700';
-                            if (cell === 4 && chestsOpened.includes(`${x},${y}`)) color = 'bg-gray-900';
+                            let baseColor = 'bg-slate-800';
+                            let height = 'h-2';
+                            let transform = 'translateZ(0px)';
+
+                            if (cell === 1) { // Wall
+                                baseColor = 'bg-slate-700';
+                                height = 'h-12';
+                                transform = 'translateZ(0px)';
+                            }
+                            if (cell === 4 && chestsOpened.includes(`${x},${y}`)) baseColor = 'bg-slate-900 border-dashed border-slate-700';
 
                             return (
                                 <div
                                     key={`${x}-${y}`}
-                                    className={`absolute w-[40px] h-[40px] border border-white/5 ${color} transition-all duration-200`}
-                                    style={{ left: x * 42, top: y * 42 }}
+                                    className={`absolute w-[42px] h-[42px] border border-white/5 transition-all duration-300 ${baseColor} shadow-inner`}
+                                    style={{ left: x * 44, top: y * 44 }}
                                 >
-                                    {isPlayer && <div className="absolute -top-10 left-1/2 -translate-x-1/2 z-20"><div className="w-5 h-10 bg-gradient-to-t from-cyan-500 to-cyan-300 shadow-[0_0_20px_#00FFFF,0_0_40px_#00FFFF] rounded-t-sm animate-pulse"></div><div className="absolute -bottom-1 w-8 h-2 bg-cyan-500/50 blur-sm rounded-full left-1/2 -translate-x-1/2"></div></div>}
-                                    {cell === 2 && <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-10 animate-bounce"><User size={20} className="text-amber-500" /></div>}
-                                    {cell === 3 && <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-10"><Sword size={20} className="text-red-500" /></div>}
-                                    {cell === 4 && !chestsOpened.includes(`${x},${y}`) && <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10"><div className="w-6 h-4 bg-yellow-600 border border-yellow-400 animate-pulse"></div></div>}
+                                    {/* 3D Sides pseudo-effect (simple CSS) */}
+                                    {cell === 1 && (
+                                        <div className="absolute -top-4 left-0 right-0 h-4 bg-slate-600 origin-bottom transform -skew-x-12"></div>
+                                    )}
+
+                                    {/* Player */}
+                                    {isPlayer && (
+                                        <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-30 transition-all duration-300">
+                                            <div className="w-6 h-12 bg-gradient-to-t from-cyan-600 to-cyan-300 shadow-[0_0_20px_#22d3ee] rounded-t-sm flex items-start justify-center pt-1 border border-cyan-200">
+                                                <div className="w-4 h-1 bg-cyan-900/50 rounded-full"></div>
+                                            </div>
+                                            {/* Shadow */}
+                                            <div className="absolute -bottom-2 w-8 h-3 bg-black/60 blur-sm rounded-full left-1/2 -translate-x-1/2"></div>
+                                        </div>
+                                    )}
+
+                                    {cell === 2 && (
+                                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 z-20 animate-float">
+                                            <User size={24} className="text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.5)]" />
+                                        </div>
+                                    )}
+                                    {cell === 3 && (
+                                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 z-20">
+                                            <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center animate-pulse">
+                                                <Sword size={20} className="text-red-500" />
+                                            </div>
+                                        </div>
+                                    )}
+                                    {cell === 4 && !chestsOpened.includes(`${x},${y}`) && (
+                                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-10 animate-bounce">
+                                            <div className="w-6 h-5 bg-yellow-600 border border-yellow-300 shadow-[0_0_15px_rgba(234,179,8,0.6)]"></div>
+                                        </div>
+                                    )}
                                 </div>
                             );
                         }))}
                     </div>
 
                     {/* Controls */}
-                    <div className="absolute bottom-8 right-8 grid grid-cols-3 gap-2">
+                    <div className="absolute bottom-8 right-8 grid grid-cols-3 gap-2 bg-black/40 p-4 rounded-2xl backdrop-blur-sm border border-white/5">
                         <div />
-                        <Button size="sm" variant="secondary" onClick={() => move(0, -1)}><ArrowUp size={20} /></Button>
+                        <Button size="sm" variant="secondary" onClick={() => move(0, -1)} className="bg-slate-800 border-slate-600"><ArrowUp size={24} /></Button>
                         <div />
-                        <Button size="sm" variant="secondary" onClick={() => move(-1, 0)}><ArrowLeft size={20} /></Button>
+                        <Button size="sm" variant="secondary" onClick={() => move(-1, 0)} className="bg-slate-800 border-slate-600"><ArrowLeft size={24} /></Button>
                         <div />
-                        <Button size="sm" variant="secondary" onClick={() => move(1, 0)}><ArrowRight size={20} /></Button>
+                        <Button size="sm" variant="secondary" onClick={() => move(1, 0)} className="bg-slate-800 border-slate-600"><ArrowRight size={24} /></Button>
                         <div />
-                        <Button size="sm" variant="secondary" onClick={() => move(0, 1)}><ArrowDown size={20} /></Button>
+                        <Button size="sm" variant="secondary" onClick={() => move(0, 1)} className="bg-slate-800 border-slate-600"><ArrowDown size={24} /></Button>
                         <div />
                     </div>
                 </div>
@@ -319,146 +410,149 @@ export const ChronoQuest: React.FC<ChronoQuestProps> = ({ onComplete, t }) => {
 
             {/* --- INVENTORY MODE --- */}
             {mode === 'INVENTORY' && (
-                <div className="absolute inset-0 bg-black/90 z-30 p-6 animate-in fade-in">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-xl font-bold text-white">Inventory</h2>
-                        <Button variant="ghost" onClick={() => setMode('EXPLORE')}><X size={20} /></Button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        {inventory.map(item => (
-                            <div key={item.id} className="bg-gray-800 p-3 rounded-lg border border-gray-700 flex items-center justify-between">
-                                <div className="flex items-center">
-                                    <span className="text-2xl mr-2">{item.icon}</span>
-                                    <div>
-                                        <div className="text-sm font-bold text-white">{item.name}</div>
-                                        <div className="text-[10px] text-gray-400">{item.type} +{item.value}</div>
+                <div className="absolute inset-0 bg-black/90 z-30 p-6 animate-in fade-in flex items-center justify-center">
+                    <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl">
+                        <div className="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
+                            <h2 className="text-xl font-bold text-white flex items-center"><Backpack size={20} className="mr-2 text-cyan-400" /> {t('games.chronoquest.inventory')}</h2>
+                            <Button variant="ghost" onClick={() => setMode('EXPLORE')}><X size={20} /></Button>
+                        </div>
+                        <div className="grid grid-cols-1 gap-3 max-h-[60vh] overflow-y-auto">
+                            {inventory.map(item => (
+                                <div key={item.id} className="bg-slate-800 p-4 rounded-xl border border-slate-700 flex items-center justify-between hover:border-cyan-500/50 transition-colors">
+                                    <div className="flex items-center">
+                                        <div className="w-10 h-10 bg-black/30 rounded-lg flex items-center justify-center text-2xl mr-4 border border-white/5">{item.icon}</div>
+                                        <div>
+                                            <div className="text-sm font-bold text-white">{item.name}</div>
+                                            <div className="text-[10px] text-cyan-400 font-mono tracking-wide">{item.type} +{item.value}</div>
+                                        </div>
                                     </div>
+                                    <Button size="sm" variant="primary" onClick={() => useItem(item)}>{t('games.chronoquest.use')}</Button>
                                 </div>
-                                <Button size="sm" variant="primary" onClick={() => useItem(item)}>Use</Button>
-                            </div>
-                        ))}
-                        {inventory.length === 0 && <div className="text-gray-500 col-span-2 text-center py-10">Bag Empty</div>}
+                            ))}
+                            {inventory.length === 0 && <div className="text-gray-500 text-center py-10 italic">{t('games.chronoquest.your_backpack_is_emp')}</div>}
+                        </div>
                     </div>
                 </div>
             )}
 
             {/* --- DIALOGUE MODE --- */}
             {mode === 'DIALOGUE' && (
-                <div className="absolute inset-0 bg-black/90 z-20 flex flex-col p-6">
-                    <div className="flex-1 overflow-y-auto space-y-4 mb-4">
-                        {dialogueHistory.map((msg, i) => (
-                            <div key={i} className={`p-4 rounded-xl ${msg.speaker === 'You' ? 'bg-electric/20 ml-8 border border-electric/50' : 'bg-gray-800 mr-8 border border-gray-700'}`}>
-                                <div className="text-xs font-bold mb-1 opacity-70">{msg.speaker}</div>
-                                <div className="text-sm">{msg.text}</div>
-                            </div>
-                        ))}
-                    </div>
-                    <div className="grid grid-cols-1 gap-2">
-                        <Button variant="secondary" onClick={() => handleDialogueChoice("Who are you?")}>"Who are you?"</Button>
-                        <Button variant="secondary" onClick={() => handleDialogueChoice("I need to fix the timeline.")}>"I need to fix the timeline."</Button>
-                        <Button variant="ghost" onClick={() => handleDialogueChoice("Leave")}>[Leave]</Button>
+                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-20 flex flex-col justify-end p-0">
+                    <div className="w-full max-w-3xl mx-auto flex-1 flex flex-col p-6 animate-in slide-in-from-bottom-10 fade-in duration-500">
+                        <div className="flex-1 overflow-y-auto space-y-6 mb-8 scrollbar-hide">
+                            {dialogueHistory.map((msg, i) => (
+                                <div key={i} className={`flex ${msg.speaker === 'You' ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`max-w-[80%] p-5 rounded-2xl shadow-lg border ${msg.speaker === 'You'
+                                            ? 'bg-cyan-900/40 border-cyan-500/30 text-cyan-100 rounded-br-none'
+                                            : 'bg-slate-800 border-slate-600 text-slate-200 rounded-bl-none'
+                                        }`}>
+                                        <div className="text-xs font-bold mb-2 opacity-50 uppercase tracking-widest">{msg.speaker}</div>
+                                        <div className="text-sm md:text-base leading-relaxed">{msg.text}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="grid grid-cols-1 gap-3">
+                            <Button variant="secondary" className="justify-start h-14 text-left px-6 border-slate-600" onClick={() => handleDialogueChoice("Who are you?")}>
+                                <span className="text-cyan-400 mr-2">1.</span> {t('games.chronoquest.who_are_you')}</Button>
+                            <Button variant="secondary" className="justify-start h-14 text-left px-6 border-slate-600" onClick={() => handleDialogueChoice("I need to fix the timeline.")}>
+                                <span className="text-cyan-400 mr-2">2.</span> {t('games.chronoquest.i_need_to_fix_the_ti')}</Button>
+                            <Button variant="ghost" className="justify-start h-12 text-gray-400 hover:text-white" onClick={() => handleDialogueChoice("Leave")}>
+                                {t('games.chronoquest.end_conversation')}</Button>
+                        </div>
                     </div>
                 </div>
             )}
 
             {/* --- BATTLE MODE --- */}
             {mode === 'BATTLE' && (
-                <div className="absolute inset-0 bg-gray-950 z-30 flex flex-col overflow-hidden">
-                    {/* Timeline Stability Header */}
-                    <div className="bg-black border-b border-white/10 p-3">
-                        <div className="flex justify-between items-center text-[10px] uppercase font-bold mb-1">
-                            <span className={`${timelineStability < 40 ? 'text-red-500 animate-pulse' : 'text-gray-500'}`}>{t('chrono.timeline_unstable')}</span>
-                            <span className="text-white font-mono">{timelineStability}%</span>
-                            <span className={`${timelineStability > 70 ? 'text-blue-400' : 'text-gray-500'}`}>{t('chrono.timeline_stable')}</span>
-                        </div>
-                        <div className="h-2 bg-gray-800 rounded-full overflow-hidden relative">
-                            <div
-                                className={`h-full transition-all duration-500 ${timelineStability < 30 ? 'bg-red-600' : timelineStability > 70 ? 'bg-blue-500' : 'bg-yellow-500'}`}
-                                style={{ width: `${timelineStability}%` }}
-                            ></div>
-                        </div>
-                    </div>
+                <div className="absolute inset-0 bg-gray-950 z-30 flex flex-col overflow-hidden animate-in fade-in duration-700">
+                    <TimelineVisualizer stability={timelineStability} />
 
                     {/* Battle Scene */}
-                    <div className="flex-1 relative flex flex-col items-center justify-center">
+                    <div className="flex-1 relative flex flex-col items-center justify-center p-6">
+
+                        {/* Background Effect */}
+                        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-red-900/10 rounded-full blur-[100px] animate-pulse"></div>
+                        </div>
 
                         {/* Enemy Card */}
-                        <div className="mb-8 text-center relative w-full max-w-xs mx-auto">
-                            <div className={`w-36 h-36 mx-auto bg-red-900/20 border-4 ${isEnemyStunned ? 'border-yellow-400 animate-pulse' : 'border-red-500/50'} rounded-full flex items-center justify-center mb-3 relative transition-all`}>
-                                {timelineStability < 40 && <div className="absolute inset-0 bg-red-500/30 animate-ping rounded-full"></div>}
-                                {enemyIntent === 'CHARGE' && <div className="absolute inset-0 bg-orange-500/20 animate-pulse rounded-full"></div>}
-                                <Zap size={72} className={`${isEnemyStunned ? 'text-yellow-400 rotate-180' : enemyIntent === 'CHARGE' ? 'text-orange-500 scale-110' : 'text-red-500'} transition-all drop-shadow-[0_0_20px_currentColor]`} />
-                            </div>
-                            <div className="text-red-500 font-bold text-xl tracking-widest mb-1">{t('chrono.enemy')}</div>
-                            {/* Enemy Intent Display */}
-                            <div className={`text-xs font-mono px-2 py-1 rounded mb-2 inline-block ${enemyIntent === 'CHARGE' ? 'bg-orange-500/30 text-orange-400 animate-pulse' : enemyIntent === 'ATTACK' ? 'bg-red-500/30 text-red-400' : 'bg-purple-500/30 text-purple-400'}`}>
-                                INTENT: {enemyIntent}
-                            </div>
-                            <div className="w-48 h-3 bg-gray-800 rounded-full mx-auto overflow-hidden border border-gray-700">
-                                <div className="h-full bg-gradient-to-r from-red-600 to-red-500 transition-all duration-500" style={{ width: `${(enemyHP / enemyMaxHP) * 100}%` }}></div>
-                            </div>
-                            <div className="text-xs text-red-400 mt-1 font-mono">{enemyHP}/{enemyMaxHP} {t('chrono.hp')}</div>
-                        </div>
+                        <div className="mb-8 text-center relative w-full max-w-xs mx-auto z-10 perspective-[500px]">
+                            <div className={`w-40 h-40 mx-auto bg-black/40 backdrop-blur border-4 ${isEnemyStunned ? 'border-yellow-400 animate-pulse' : 'border-red-500/50'} rounded-full flex items-center justify-center mb-4 relative transition-all duration-500 transform ${enemyIntent === 'CHARGE' ? 'scale-110' : ''}`}>
 
-                        {/* Player Card */}
-                        <div className="flex items-center space-x-6 bg-black/70 p-4 rounded-2xl border border-cyan-500/30 backdrop-blur shadow-[0_0_30px_rgba(6,182,212,0.2)]">
-                            <div className="text-center">
-                                <div className="text-[10px] text-gray-400 uppercase mb-1">{t('chrono.hp')}</div>
-                                <div className={`text-2xl font-bold flex items-center justify-center font-mono ${player.hp < 30 ? 'text-red-400 animate-pulse' : 'text-green-400'}`}>
-                                    <Heart size={18} className={`mr-2 ${player.hp < 30 ? 'fill-red-400' : 'fill-green-400'}`} /> {player.hp}
-                                </div>
-                            </div>
-                            <div className="h-8 w-px bg-gray-700"></div>
-                            <div className="text-center">
-                                <div className="text-[10px] text-gray-400 uppercase mb-1">Tokens</div>
-                                <div className="text-2xl font-bold text-electric flex items-center justify-center font-mono">
-                                    <Zap size={18} className="mr-2 fill-electric" /> {player.tokens}
-                                </div>
-                            </div>
-                            <div className="h-8 w-px bg-gray-700"></div>
-                            <div className="text-center">
-                                <div className="text-[10px] text-gray-400 uppercase mb-1">Turn</div>
-                                <div className={`text-lg font-bold ${playerTurn ? 'text-green-400' : 'text-gray-500'}`}>
-                                    {playerTurn ? 'YOUR MOVE' : 'ENEMY...'}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                                {timelineStability < 40 && <div className="absolute inset-0 bg-red-500/20 animate-ping rounded-full duration-1000"></div>}
 
-                    {/* Battle Log */}
-                    <div className="h-20 bg-black/80 border-t border-white/10 p-2 overflow-y-auto text-xs font-mono text-gray-300">
-                        {battleLog.slice(-4).map((l, i) => (
-                            <div key={i} className="mb-1 border-l-2 border-gray-700 pl-2">{l}</div>
-                        ))}
-                    </div>
+                                <Zap size={80} className={`${isEnemyStunned ? 'text-yellow-400 rotate-180' : enemyIntent === 'CHARGE' ? 'text-orange-500 scale-110 drop-shadow-[0_0_20px_orange]' : 'text-red-500 drop-shadow-[0_0_15px_red]'} transition-all duration-300`} />
 
-                    {/* Action Grid */}
-                    <div className="p-4 bg-gray-900 border-t border-white/10 grid grid-cols-2 gap-3 safe-area-pb">
-                        {MOVES.map(m => {
-                            const canAfford = player.tokens >= m.cost;
-                            return (
-                                <button
-                                    key={m.id}
-                                    onClick={() => executeMove(m)}
-                                    disabled={!playerTurn || !canAfford}
-                                    className={`p-3 rounded-xl border text-left transition-all active:scale-95 flex flex-col relative overflow-hidden ${playerTurn && canAfford
-                                        ? 'bg-gray-800 border-gray-600 hover:border-electric hover:bg-gray-750'
-                                        : 'bg-black/50 border-gray-800 opacity-50 cursor-not-allowed'
-                                        }`}
-                                >
-                                    <div className="flex justify-between items-center mb-1 relative z-10">
-                                        <div className="font-bold text-white text-sm flex items-center">
-                                            {m.icon} <span className="ml-2">{m.name}</span>
-                                        </div>
-                                        <div className={`text-xs font-mono ${canAfford ? 'text-electric' : 'text-red-500'}`}>{m.cost}</div>
+                                <div className="absolute -bottom-3 bg-black/80 px-3 py-1 rounded-full border border-red-500/30">
+                                    <div className={`text-[10px] font-mono font-bold uppercase ${enemyIntent === 'CHARGE' ? 'text-orange-400' : 'text-red-400'}`}>
+                                        {t('games.chronoquest.intent')}{enemyIntent}
                                     </div>
-                                    <div className="text-[10px] text-gray-400 relative z-10 leading-tight">{m.description}</div>
+                                </div>
+                            </div>
 
-                                    {/* Cool Down Overlay if not turn */}
-                                    {!playerTurn && <div className="absolute inset-0 bg-black/20 z-20"></div>}
-                                </button>
-                            );
-                        })}
+                            <div className="text-white font-black text-2xl tracking-widest shadow-black drop-shadow-lg mb-2">{t('chrono.enemy')}</div>
+
+                            <div className="w-full h-2 bg-gray-800 rounded-full mx-auto overflow-hidden border border-gray-700">
+                                <div className="h-full bg-gradient-to-r from-red-600 to-red-400 transition-all duration-500" style={{ width: `${(enemyHP / enemyMaxHP) * 100}%` }}></div>
+                            </div>
+                            <div className="text-xs text-red-400/70 mt-1 font-mono">{enemyHP}/{enemyMaxHP} {t('games.chronoquest.hp')}</div>
+                        </div>
+
+                        {/* Player Stats */}
+                        <div className="flex items-center space-x-8 bg-black/60 p-4 rounded-2xl border border-cyan-500/20 backdrop-blur-md shadow-2xl z-10">
+                            <div className="text-center w-20">
+                                <div className="text-[10px] text-gray-500 uppercase font-bold mb-1">{t('chrono.hp')}</div>
+                                <div className={`text-xl font-bold flex items-center justify-center font-mono ${player.hp < 30 ? 'text-red-400 animate-pulse' : 'text-green-400'}`}>
+                                    <Heart size={16} className="mr-1.5" /> {player.hp}
+                                </div>
+                            </div>
+                            <div className="h-8 w-px bg-white/10"></div>
+                            <div className="text-center w-20">
+                                <div className="text-[10px] text-gray-500 uppercase font-bold mb-1">{t('games.chronoquest.tokens')}</div>
+                                <div className="text-xl font-bold text-electric flex items-center justify-center font-mono">
+                                    <Zap size={16} className="mr-1.5" /> {player.tokens}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Action Deck */}
+                    <div className="bg-gray-900 border-t border-white/10 flex flex-col z-20 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+                        {/* Battle LogTicker */}
+                        <div className="bg-black/50 py-1 px-4 overflow-hidden border-b border-white/5">
+                            <div className="text-[10px] font-mono text-gray-400 whitespace-nowrap overflow-hidden text-ellipsis opacity-70">
+                                {battleLog.length > 0 ? `> ${battleLog[battleLog.length - 1]}` : '> SYSTEM READY'}
+                            </div>
+                        </div>
+
+                        <div className="p-4 grid grid-cols-2 gap-3 safe-area-pb">
+                            {MOVES.map(m => {
+                                const canAfford = player.tokens >= m.cost;
+                                return (
+                                    <button
+                                        key={m.id}
+                                        onClick={() => executeMove(m)}
+                                        disabled={!playerTurn || !canAfford}
+                                        className={`p-3 rounded-xl border text-left transition-all active:scale-95 flex flex-col relative overflow-hidden group ${playerTurn && canAfford
+                                            ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-600 hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)]'
+                                            : 'bg-black/40 border-gray-800 opacity-40 cursor-not-allowed'
+                                            }`}
+                                    >
+                                        <div className="flex justify-between items-start mb-1 relative z-10">
+                                            <div className="font-bold text-white text-sm flex items-center group-hover:text-cyan-300 transition-colors">
+                                                {m.icon} <span className="ml-2">{m.name}</span>
+                                            </div>
+                                            <div className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${canAfford ? 'bg-cyan-900/30 text-cyan-400 border border-cyan-500/30' : 'text-red-500 bg-red-900/20'}`}>
+                                                {m.cost} T
+                                            </div>
+                                        </div>
+                                        <div className="text-[10px] text-gray-400 relative z-10 leading-tight mt-1 group-hover:text-gray-300">{m.description}</div>
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             )}

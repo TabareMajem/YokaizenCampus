@@ -373,10 +373,10 @@ export const DataWhisperer: React.FC<DataWhispererProps> = ({ onComplete, t }) =
                 <Terminal size={64} className="text-cyan-500 mb-4 animate-bounce"/>
                 <h1 className="text-4xl font-black text-white mb-2 italic tracking-tighter">{t('whisperer.title')}</h1>
                 <div className="text-gray-400 text-sm mb-8 space-y-2 font-mono border border-gray-700 p-4 rounded bg-gray-900">
-                    <p>{'>'} SYSTEM: NEURAL_LINK_ESTABLISHED</p>
-                    <p>{'>'} MISSION: FILTER DATA STREAM</p>
-                    <p>{'>'} <span className="text-cyan-400">BLUE</span> = {t('whisperer.collect')} ({t('architect.match')})</p>
-                    <p>{'>'} <span className="text-red-500">RED</span> = {t('whisperer.avoid')} (Firewall)</p>
+                    <p>{'>'} {t('games.datawhisperer.system_neural_link_e')}</p>
+                    <p>{'>'} {t('games.datawhisperer.mission_filter_data_')}</p>
+                    <p>{'>'} <span className="text-cyan-400">{t('games.datawhisperer.blue')}</span> = {t('whisperer.collect')} ({t('architect.match')})</p>
+                    <p>{'>'} <span className="text-red-500">{t('games.datawhisperer.red')}</span> = {t('whisperer.avoid')} {t('games.datawhisperer.firewall')}</p>
                 </div>
                 <Button size="lg" variant="primary" onClick={startGame} className="w-full max-w-xs shadow-[0_0_20px_#06b6d4]">
                     <Play size={20} className="mr-2"/> {t('whisperer.jack_in')}
@@ -388,7 +388,7 @@ export const DataWhisperer: React.FC<DataWhispererProps> = ({ onComplete, t }) =
             <div className="absolute inset-0 z-50 bg-red-950/90 flex flex-col items-center justify-center p-8 animate-in zoom-in text-center">
                 <ShieldAlert size={80} className="text-white mb-4" />
                 <h2 className="text-4xl font-black text-white mb-2">{t('whisperer.disconnected')}</h2>
-                <p className="text-red-200 mb-8">Signal Integrity Lost.</p>
+                <p className="text-red-200 mb-8">{t('games.datawhisperer.signal_integrity_los')}</p>
                 <Button variant="primary" onClick={startGame}>{t('whisperer.reconnect')}</Button>
             </div>
         )}

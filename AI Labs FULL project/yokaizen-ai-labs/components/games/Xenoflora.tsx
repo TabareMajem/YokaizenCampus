@@ -17,7 +17,7 @@ const GaleWhaleIcon = () => (
     <path d="M64 8C32 8 12 32 12 64C12 96 32 120 64 120C96 120 116 96 116 64" stroke="#38BDF8" strokeWidth="4" strokeLinecap="round" className="animate-pulse-slow"/>
     <path d="M64 120V100M54 100H74" stroke="#F472B6" strokeWidth="6"/>
     <circle cx="64" cy="64" r="24" stroke="#38BDF8" strokeWidth="2" strokeDasharray="4 4" className="animate-spin-slow"/>
-    <text x="64" y="64" textAnchor="middle" fill="#FFFFFF" fontSize="10" fontFamily="monospace" dy="4">BIO-FORM</text>
+    <text x="64" y="64" textAnchor="middle" fill="#FFFFFF" fontSize="10" fontFamily="monospace" dy="4">{t('games.xenoflora.bio_form')}</text>
   </svg>
 );
 
@@ -317,7 +317,7 @@ export const Xenoflora: React.FC<XenofloraProps> = ({ onComplete, t, language = 
                         <div className="flex items-center space-x-2 px-4">
                             <Thermometer size={16} className={heat > 80 ? 'text-red-500' : 'text-teal-500'} />
                             <div className="flex-1 h-3 bg-gray-800 rounded-full overflow-hidden border border-gray-700 relative">
-                                <div className="absolute inset-0 flex items-center justify-center text-[8px] text-white font-bold z-10 mix-blend-difference">NOISE</div>
+                                <div className="absolute inset-0 flex items-center justify-center text-[8px] text-white font-bold z-10 mix-blend-difference">{t('games.xenoflora.noise')}</div>
                                 <div 
                                     className={`h-full transition-all duration-200 ${heat > 80 ? 'bg-red-500' : 'bg-teal-500'}`}
                                     style={{ width: `${heat}%` }}
@@ -433,7 +433,7 @@ export const Xenoflora: React.FC<XenofloraProps> = ({ onComplete, t, language = 
                             <textarea 
                                 className="w-full bg-black/50 border border-teal-800 rounded-xl p-4 text-white text-sm focus:border-teal-500 focus:outline-none resize-none font-sans"
                                 rows={4}
-                                placeholder="Describe the creature... (e.g. 'Huge fins for gliding')"
+                                placeholder={t('games.xenoflora.describe_the_creatur')}
                                 value={creaturePrompt}
                                 onChange={e => setCreaturePrompt(e.target.value)}
                             />

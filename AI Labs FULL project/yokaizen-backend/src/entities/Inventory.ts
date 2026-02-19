@@ -42,7 +42,7 @@ export class Inventory {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @Column({ name: 'item_id' })
+  @Column({ type: 'varchar', name: 'item_id' })
   @Index('idx_inventory_item_id')
   itemId: string;
 
@@ -59,13 +59,13 @@ export class Inventory {
   })
   rarity: ItemRarity;
 
-  @Column({ length: 100 })
+  @Column({ type: 'varchar', length: 100 })
   name: string;
 
-  @Column({ nullable: true, length: 500 })
+  @Column({ type: 'varchar', nullable: true, length: 500 })
   description: string;
 
-  @Column({ nullable: true, name: 'image_url' })
+  @Column({ type: 'varchar', nullable: true, name: 'image_url' })
   imageUrl: string;
 
   @Column({ type: 'int', default: 1 })
@@ -79,14 +79,14 @@ export class Inventory {
 
   @Column({ type: 'jsonb', nullable: true })
   attributes: {
-    effect?: string;
+    effect?: any; // Can be string or object
     duration?: number;
     value?: number;
     stackable?: boolean;
     maxStack?: number;
   };
 
-  @Column({ nullable: true, name: 'source' })
+  @Column({ type: 'varchar', nullable: true, name: 'source' })
   source: string; // 'PURCHASE', 'REWARD', 'ACHIEVEMENT', 'GIFT', 'CRAFT'
 
   @Column({ type: 'int', nullable: true, name: 'purchase_price' })

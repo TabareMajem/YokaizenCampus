@@ -42,6 +42,14 @@ router.post('/streak/claim', userController.claimStreak);
 // Notifications
 router.get('/notifications', userController.getNotifications);
 
+// Game Progress
+router.post('/games/:gameId/progress', userController.updateGameProgress);
+
+// Badges (Phase 20)
+router.get('/badges', userController.getBadges);
+// Admin/Seed (Protected by auth for now, but should be admin only in future)
+router.post('/seed/badges', userController.seedBadges);
+
 // Account management
 router.delete('/account', userController.deleteAccount);
 

@@ -125,7 +125,7 @@ export const DreamSim: React.FC<DreamSimProps> = ({ onComplete, t, language = 'E
         <div className="flex justify-between items-center p-4 border-b border-green-900/30 bg-black/80 backdrop-blur z-10">
             <div className="flex items-center space-x-2">
                 <Terminal size={18} className="text-green-500" />
-                <span className="text-xs font-bold text-green-500 tracking-widest uppercase">OASIS ENGINE v9.4</span>
+                <span className="text-xs font-bold text-green-500 tracking-widest uppercase">{t('games.dreamsim.oasis_engine_v9_4')}</span>
             </div>
             <div className="flex items-center space-x-3">
                 <div className="flex flex-col items-end">
@@ -153,7 +153,7 @@ export const DreamSim: React.FC<DreamSimProps> = ({ onComplete, t, language = 'E
                         {msg.role === 'model' && (
                             <div className="flex items-center mb-1 opacity-50">
                                 <Zap size={10} className="mr-1 text-amber-500" />
-                                <span className="text-[8px] font-bold uppercase tracking-wider">Render Output</span>
+                                <span className="text-[8px] font-bold uppercase tracking-wider">{t('games.dreamsim.render_output')}</span>
                             </div>
                         )}
                         <p className={`text-sm leading-relaxed ${isGlitching && msg.role === 'model' ? 'blur-[0.5px]' : ''}`}>

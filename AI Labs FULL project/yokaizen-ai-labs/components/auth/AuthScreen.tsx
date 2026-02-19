@@ -5,6 +5,7 @@ import { Button } from '../ui/Button';
 import { Logo } from '../ui/Logo';
 import { Smartphone, ChevronRight, AlertTriangle, Phone, Hash, Mail, Lock, User } from 'lucide-react';
 import { Scanlines, Vignette, Noise } from '../ui/Visuals';
+import { ValueProposition } from '../onboarding/ValueProposition';
 import { audio } from '../../services/audioService';
 import { TRANSLATIONS } from '../../translations';
 import { detectBrowserLanguage } from '../../constants';
@@ -21,7 +22,7 @@ const GoogleIcon = () => (
 );
 
 export const AuthScreen = () => {
-    const { signInWithPhoneMock, verifyOtpMock, signInWithGoogle, signInWithEmail, registerWithEmail } = useAuth();
+    const { signInWithPhone, verifyOtp, signInWithGoogle, signInWithEmail, registerWithEmail } = useAuth();
     const lang: Language = detectBrowserLanguage(); // Use detected language since user is not logged in
 
     const t = (key: string) => TRANSLATIONS[lang]?.[key] || TRANSLATIONS['EN']?.[key] || key;
@@ -83,7 +84,7 @@ export const AuthScreen = () => {
         e.preventDefault();
         setError('');
 
-        // Basic formatting check for simulation
+        // Basic formatting check
         if (phoneNumber.length < 5) {
             setError("Please enter a valid phone number");
             audio.playError();
@@ -93,12 +94,13 @@ export const AuthScreen = () => {
         setIsLoading(true);
         audio.playClick();
         try {
-            // Use MOCK flow
-            await signInWithPhoneMock(phoneNumber);
+            const vid = await signInWithPhone(phoneNumber);
+            setVerificationId(vid);
             setStep('OTP');
             audio.playSuccess();
-        } catch (e) {
-            setError(t('auth.connection_failed'));
+        } catch (e: any) {
+            console.error(e);
+            setError(t('auth.connection_failed') + ": " + e.message);
             audio.playError();
         } finally {
             setIsLoading(false);
@@ -111,10 +113,9 @@ export const AuthScreen = () => {
         setIsLoading(true);
         audio.playClick();
         try {
-            // Use MOCK flow
-            await verifyOtpMock(phoneNumber, otp);
+            await verifyOtp(verificationId, otp, phoneNumber);
             audio.playSuccess();
-        } catch (e) {
+        } catch (e: any) {
             setError(e instanceof Error ? e.message : t('auth.invalid_code'));
             audio.playError();
         } finally {
@@ -129,8 +130,13 @@ export const AuthScreen = () => {
         try {
             await signInWithGoogle();
             audio.playSuccess();
-        } catch (e) {
-            setError(e instanceof Error ? e.message : 'Google sign-in failed');
+        } catch (e: any) {
+            console.error("Auth Fail:", e);
+            if (e.code === 'auth/unauthorized-domain') {
+                setError("Domain not authorized in Firebase Console. Please add this domain.");
+            } else {
+                setError(e.message || 'Google sign-in failed');
+            }
             audio.playError();
         } finally {
             setIsLoading(false);
@@ -180,6 +186,9 @@ export const AuthScreen = () => {
     // --- RENDER: MAIN LANDING ---
     return (
         <div className="h-[100dvh] w-full bg-[#050505] flex flex-col relative overflow-hidden font-sans select-none touch-none">
+            {/* INVISIBLE RECAPTCHA CONTAINER */}
+            <div id="recaptcha-container"></div>
+
             {/* AMBIENCE */}
             <Scanlines />
             <Vignette color="#000000" />
@@ -244,10 +253,15 @@ export const AuthScreen = () => {
                     <div className="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(0,0,0,0.1)_10px,rgba(0,0,0,0.1)_20px)] opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 </button>
 
+                {/* Value Proposition Section */}
+                <div className="hidden md:block w-full animate-in fade-in slide-in-from-bottom duration-1000 delay-500">
+                    <ValueProposition t={t} />
+                </div>
+
                 {/* Version Tag */}
                 <div className="absolute bottom-6 left-6 md:bottom-8 md:left-8 font-mono text-[9px] md:text-[10px] text-gray-600 flex flex-col items-start pb-safe">
                     <span className="text-white font-bold">SYS.VER.9.5.0</span>
-                    <span className="opacity-50">SECURE_CHANNEL: MOCK_SIGNAL</span>
+                    <span className="opacity-50">SECURE_CHANNEL: LIVE</span>
                     <span className="opacity-50 uppercase tracking-tighter">Mobile-First Optimized</span>
                 </div>
             </div>

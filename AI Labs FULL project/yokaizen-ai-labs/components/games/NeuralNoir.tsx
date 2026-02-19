@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Float, Edges, PerspectiveCamera, Stars, MeshDistortMaterial } from '@react-three/drei';
-import { Bloom, EffectComposer, Vignette as PostVignette, Noise, ChromaticAberration } from '@react-three/postprocessing';
+import { Float, Edges, Stars, MeshDistortMaterial, Icosahedron, SpotLight, useDepthBuffer } from '@react-three/drei';
+import { Bloom, EffectComposer, Vignette as PostVignette, Noise, ChromaticAberration, GodRays } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import { Button } from '../ui/Button';
 import { analyzeCaseDeduction } from '../../services/geminiService';
-import { Search, Box, ArrowLeft, CheckCircle2, Fingerprint, Eye, MapPin, Zap, Info, Skull } from 'lucide-react';
+import { Box as BoxIcon, ArrowLeft, CheckCircle2, Fingerprint, MapPin, Zap } from 'lucide-react';
 import { Language } from '../../types';
 import { Scanlines, Vignette } from '../ui/Visuals';
 import { audio } from '../../services/audioService';
@@ -18,39 +18,116 @@ interface NeuralNoirProps {
 
 // --- 3D COMPONENTS ---
 
-const EvidenceCore = ({ rotation }: { rotation: { x: number, y: number } }) => {
+const EvidenceCore = () => {
     const meshRef = useRef<THREE.Mesh>(null);
+    const particlesRef = useRef<THREE.Points>(null);
 
     useFrame((state) => {
         if (meshRef.current) {
-            meshRef.current.rotation.x = THREE.MathUtils.lerp(meshRef.current.rotation.x, rotation.x * (Math.PI / 180), 0.1);
-            meshRef.current.rotation.y = THREE.MathUtils.lerp(meshRef.current.rotation.y, rotation.y * (Math.PI / 180), 0.1);
+            meshRef.current.rotation.x = state.clock.elapsedTime * 0.2;
+            meshRef.current.rotation.y = state.clock.elapsedTime * 0.3;
+        }
+        if (particlesRef.current) {
+            particlesRef.current.rotation.y = -state.clock.elapsedTime * 0.1;
         }
     });
 
+    const particles = useMemo(() => {
+        const count = 200;
+        const pos = new Float32Array(count * 3);
+        const sizes = new Float32Array(count);
+        for (let i = 0; i < count; i++) {
+            const r = 2.5 + Math.random() * 2;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos((Math.random() * 2) - 1);
+            pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+            pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+            pos[i * 3 + 2] = r * Math.cos(phi);
+            sizes[i] = Math.random();
+        }
+        return { pos, sizes };
+    }, []);
+
     return (
         <group>
-            <Float speed={1.5} rotationIntensity={0.2} floatIntensity={0.5}>
-                <mesh ref={meshRef} castShadow>
-                    <boxGeometry args={[2, 2, 2]} />
+            <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
+                {/* Main Crystal */}
+                <Icosahedron args={[1.5, 0]} ref={meshRef}>
                     <MeshDistortMaterial
                         color="#06b6d4"
-                        speed={2}
-                        distort={0.1}
+                        speed={3}
+                        distort={0.4}
                         radius={1}
+                        roughness={0}
+                        metalness={1}
                         emissive="#06b6d4"
-                        emissiveIntensity={0.5}
+                        emissiveIntensity={0.8}
                         transparent
-                        opacity={0.8}
+                        opacity={0.6}
+                        wireframe
                     />
-                    <Edges color="#06b6d4" />
-                </mesh>
+                </Icosahedron>
+
+                {/* Inner Core */}
+                <Icosahedron args={[0.8, 2]}>
+                    <meshStandardMaterial color="#ffffff" emissive="#00ffff" emissiveIntensity={2} toneMapped={false} />
+                </Icosahedron>
             </Float>
+
+            {/* Orbiting Data Particles */}
+            <points ref={particlesRef}>
+                <bufferGeometry>
+                    <bufferAttribute attach="attributes-position" count={particles.pos.length / 3} array={particles.pos} itemSize={3} />
+                    <bufferAttribute attach="attributes-size" count={particles.sizes.length} array={particles.sizes} itemSize={1} />
+                </bufferGeometry>
+                <pointsMaterial size={0.05} color="#00ffff" transparent opacity={0.5} blending={THREE.AdditiveBlending} />
+            </points>
+
             <pointLight position={[2, 2, 2]} intensity={2} color="#06b6d4" />
             <pointLight position={[-2, -2, -2]} intensity={1} color="#ec4899" />
         </group>
     );
 };
+
+// Volumetric God Rays Source
+const GodRaysSource = React.forwardRef<THREE.Mesh, any>((props, ref) => {
+    return (
+        <mesh ref={ref} position={[0, 5, -5]}>
+            <sphereGeometry args={[1, 32, 32]} />
+            <meshBasicMaterial color="#ffffff" transparent opacity={1} />
+        </mesh>
+    )
+})
+
+const InspectScene = ({ rotation }: { rotation: { x: number, y: number } }) => {
+    const lightRef = useRef<THREE.Mesh>(null);
+
+    return (
+        <>
+            <color attach="background" args={['#020202']} />
+            <fog attach="fog" args={['#020202', 2, 20]} />
+
+            <group rotation={[rotation.x * 0.01, rotation.y * 0.01, 0]}>
+                <EvidenceCore />
+            </group>
+
+            <GodRaysSource ref={lightRef} />
+
+            <Stars radius={100} depth={50} count={3000} factor={4} saturation={0} fade speed={1} />
+
+            <EffectComposer disableNormalPass>
+                <GodRays sun={lightRef} blendFunction={THREE.AdditiveBlending} samples={60} density={0.96} decay={0.9} weight={0.3} exposure={0.6} clampMax={1} width={Resizer.AUTO_SIZE} height={Resizer.AUTO_SIZE} kernelSize={KernelSize.SMALL} blur />
+                <Bloom luminanceThreshold={0.5} intensity={2} mipmapBlur />
+                <ChromaticAberration offset={new THREE.Vector2(0.002, 0.002)} />
+                <Noise opacity={0.3} />
+                <PostVignette darkness={1.2} />
+            </EffectComposer>
+        </>
+    )
+}
+
+// To fix import issues with PostProcessing enums if needed, though they usually work fine.
+import { BlendFunction, Resizer, KernelSize } from 'postprocessing'
 
 // --- MAIN COMPONENT ---
 
@@ -109,15 +186,20 @@ export const NeuralNoir: React.FC<NeuralNoirProps> = ({ onComplete, t }) => {
             onMouseMove={handleMouseMove}
         >
             {/* --- GLOBAL NOIR OVERLAYS --- */}
-            <div className="absolute inset-0 pointer-events-none z-50 opacity-30 mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
+            <div className="absolute inset-0 pointer-events-none z-50 opacity-15 mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
             <Scanlines />
             <Vignette color="#000" />
 
-            {/* Rain Effect */}
-            <div className="absolute inset-0 z-40 pointer-events-none opacity-20 bg-[url('https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExOHY5MmZ2czN5emV5emV5emV5emV5emV5emV5emV5emV5emV5emV5ZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LwsCiZPppcH39p7nm/giphy.gif')] bg-repeat"></div>
+            {/* R3F Overlay for Rain/Atmosphere (Global) */}
+            <div className="absolute inset-0 z-30 pointer-events-none">
+                <Canvas camera={{ position: [0, 0, 10] }} gl={{ alpha: true }}>
+                    <ambientLight intensity={0.5} />
+                    <PointsRain />
+                </Canvas>
+            </div>
 
             {/* Noir-esque Color Grading Filter */}
-            <div className="absolute inset-0 pointer-events-none z-[45] backdrop-contrast-125 backdrop-brightness-75 mix-blend-multiply bg-indigo-900/10"></div>
+            <div className="absolute inset-0 pointer-events-none z-[45] backdrop-contrast-125 backdrop-brightness-75 mix-blend-multiply bg-indigo-900/20"></div>
 
             {/* --- MODE: SCENE --- */}
             {mode === 'SCENE' && (
@@ -144,8 +226,8 @@ export const NeuralNoir: React.FC<NeuralNoirProps> = ({ onComplete, t }) => {
                             className="absolute top-1/4 left-1/3 w-32 h-32 cursor-pointer group flex flex-col items-center justify-center"
                             onClick={() => { setMode('INSPECT'); findEvidence('ENCRYPTED_CORE'); }}
                         >
-                            <Box className="text-cyan-400 drop-shadow-[0_0_15px_#06b6d4] group-hover:scale-110 transition-transform" size={48} />
-                            <div className="mt-2 text-[10px] text-cyan-400 font-mono opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-widest">{t('noir.inspect_core')}</div>
+                            <BoxIcon className="text-cyan-400 drop-shadow-[0_0_15px_#06b6d4] group-hover:scale-110 transition-transform animate-pulse-slow" size={48} />
+                            <div className="mt-2 text-[10px] text-cyan-400 font-mono opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-widest bg-black/50 px-2 rounded backdrop-blur">{t('noir.inspect_core')}</div>
                         </div>
 
                         <div
@@ -164,7 +246,7 @@ export const NeuralNoir: React.FC<NeuralNoirProps> = ({ onComplete, t }) => {
                     <div
                         className="absolute inset-0 pointer-events-none z-30"
                         style={{
-                            background: `radial-gradient(circle 200px at ${(mousePos.x + 1) * 50}% ${(mousePos.y + 1) * 50}%, transparent 0%, rgba(0,0,0,0.95) 100%)`
+                            background: `radial-gradient(circle 250px at ${(mousePos.x + 1) * 50}% ${(mousePos.y + 1) * 50}%, transparent 0%, rgba(0,0,0,0.95) 100%)`
                         }}
                     ></div>
 
@@ -172,7 +254,7 @@ export const NeuralNoir: React.FC<NeuralNoirProps> = ({ onComplete, t }) => {
                     <div className="absolute top-8 left-8 flex flex-col space-y-4 z-40">
                         <div className="flex items-center space-x-3 text-white/40 font-mono tracking-tighter">
                             <MapPin size={16} />
-                            <span className="text-xs uppercase">Location: Neo-Tokyo Sector 7</span>
+                            <span className="text-xs uppercase">{t('games.neuralnoir.location_neo_tokyo_s')}</span>
                         </div>
                         <Button variant="secondary" onClick={() => setMode('DEDUCTION')} className="bg-black/80 border-white/20 hover:border-cyan-500 text-white/80 group">
                             <Fingerprint className="mr-2 group-hover:text-cyan-400" size={18} /> {t('noir.mind_palace')}
@@ -188,7 +270,7 @@ export const NeuralNoir: React.FC<NeuralNoirProps> = ({ onComplete, t }) => {
 
             {/* --- MODE: INSPECT (3D) --- */}
             {mode === 'INSPECT' && (
-                <div className="absolute inset-0 bg-neutral-950 flex flex-col items-center justify-center backdrop-blur-3xl">
+                <div className="absolute inset-0 bg-neutral-950 flex flex-col items-center justify-center backdrop-blur-3xl z-50">
                     <div className="absolute top-8 left-8 z-50">
                         <Button variant="ghost" onClick={() => setMode('SCENE')} className="text-white/40 hover:text-white">
                             <ArrowLeft className="mr-2" size={18} /> {t('noir.back_scene')}
@@ -203,27 +285,20 @@ export const NeuralNoir: React.FC<NeuralNoirProps> = ({ onComplete, t }) => {
                         onMouseLeave={() => isDragging.current = false}
                     >
                         <Canvas shadows camera={{ position: [0, 0, 5], fov: 45 }}>
-                            <color attach="background" args={['#050505']} />
-                            <fog attach="fog" args={['#050505', 5, 15]} />
-                            <EvidenceCore rotation={rotation} />
-                            <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
-
-                            <EffectComposer>
-                                <Bloom luminanceThreshold={0.5} intensity={2} />
-                                <ChromaticAberration offset={new THREE.Vector2(0.002, 0.002)} />
-                                <PostVignette darkness={1.2} />
-                            </EffectComposer>
+                            <InspectScene rotation={rotation} />
                         </Canvas>
                     </div>
 
-                    <div className="absolute bottom-16 left-1/2 -translate-x-1/2 flex flex-col items-center space-y-4">
-                        <div className="p-4 bg-black/80 border border-cyan-500/30 rounded backdrop-blur-md max-w-xs text-center">
-                            <div className="text-[10px] text-cyan-400 font-mono uppercase tracking-[0.2em] mb-2">Encrypted Core Analysis</div>
-                            <p className="text-xs text-white/60 font-serif leading-relaxed italic">"The core pulses with high-frequency encryption. Drifting signatures suggest a forced override at 02:44."</p>
+                    <div className="absolute bottom-16 left-1/2 -translate-x-1/2 flex flex-col items-center space-y-4 pointer-events-none">
+                        <div className="p-4 bg-black/80 border border-cyan-500/30 rounded backdrop-blur-md max-w-xs text-center shadow-[0_0_30px_rgba(6,182,212,0.2)]">
+                            <div className="text-[10px] text-cyan-400 font-mono uppercase tracking-[0.2em] mb-2 animate-pulse">{t('games.neuralnoir.encrypted_core_analy')}</div>
+                            <p className="text-xs text-white/60 font-serif leading-relaxed italic">{t('games.neuralnoir.the_core_pulses_with')}</p>
                         </div>
-                        <Button variant="primary" onClick={() => { findEvidence('TIMESTAMP'); setMode('SCENE'); }} className="bg-cyan-500 text-black font-bold h-12 px-10">
-                            {t('noir.log_timestamp')}
-                        </Button>
+                        <div className="pointer-events-auto">
+                            <Button variant="primary" onClick={() => { findEvidence('TIMESTAMP'); setMode('SCENE'); }} className="bg-cyan-500 text-black font-bold h-12 px-10 shadow-[0_0_20px_cyan]">
+                                {t('noir.log_timestamp')}
+                            </Button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -234,7 +309,7 @@ export const NeuralNoir: React.FC<NeuralNoirProps> = ({ onComplete, t }) => {
                     <div className="flex justify-between items-center mb-12 border-b border-white/10 pb-6">
                         <div>
                             <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase">{t('noir.investigation_board')}</h1>
-                            <p className="text-xs text-white/30 font-mono uppercase tracking-widest mt-1">Status: Connecting Threads...</p>
+                            <p className="text-xs text-white/30 font-mono uppercase tracking-widest mt-1">{t('games.neuralnoir.status_connecting_th')}</p>
                         </div>
                         <Button variant="ghost" onClick={() => setMode('SCENE')} className="text-white/40 hover:text-white border border-white/10">
                             <ArrowLeft className="mr-2" size={18} /> {t('ui.exit')}
@@ -246,7 +321,7 @@ export const NeuralNoir: React.FC<NeuralNoirProps> = ({ onComplete, t }) => {
                         <div className="space-y-6">
                             <div className="flex items-center space-x-2 text-white/20 uppercase text-[10px] font-mono tracking-widest pb-2 border-b border-white/5">
                                 <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse"></span>
-                                <span>Suspect Profiles</span>
+                                <span>{t('games.neuralnoir.suspect_profiles')}</span>
                             </div>
                             {['Alex (Systems Engineer)', 'Sarah (Cloud Manager)', 'Unkown AI'].map(opt => (
                                 <button
@@ -256,7 +331,7 @@ export const NeuralNoir: React.FC<NeuralNoirProps> = ({ onComplete, t }) => {
                                         }`}
                                 >
                                     <div className="font-serif text-lg">{opt}</div>
-                                    <div className="text-[10px] uppercase mt-2 opacity-50 font-mono tracking-tighter">View Data log</div>
+                                    <div className="text-[10px] uppercase mt-2 opacity-50 font-mono tracking-tighter">{t('games.neuralnoir.view_data_log')}</div>
                                     {deduction.suspect === opt && <Zap className="absolute top-4 right-4 text-cyan-500" size={16} />}
                                 </button>
                             ))}
@@ -266,7 +341,7 @@ export const NeuralNoir: React.FC<NeuralNoirProps> = ({ onComplete, t }) => {
                         <div className="space-y-6">
                             <div className="flex items-center space-x-2 text-white/20 uppercase text-[10px] font-mono tracking-widest pb-2 border-b border-white/5">
                                 <span className="w-2 h-2 rounded-full bg-pink-500 animate-pulse"></span>
-                                <span>Vector of Breach</span>
+                                <span>{t('games.neuralnoir.vector_of_breach')}</span>
                             </div>
                             {['Encryption Key', 'Privilege Escalation', 'Logic Bomb'].map(opt => (
                                 <button
@@ -276,7 +351,7 @@ export const NeuralNoir: React.FC<NeuralNoirProps> = ({ onComplete, t }) => {
                                         }`}
                                 >
                                     <div className="font-serif text-lg">{opt}</div>
-                                    <div className="text-[10px] uppercase mt-2 opacity-50 font-mono tracking-tighter">System Audit</div>
+                                    <div className="text-[10px] uppercase mt-2 opacity-50 font-mono tracking-tighter">{t('games.neuralnoir.system_audit')}</div>
                                     {deduction.weapon === opt && <Zap className="absolute top-4 right-4 text-pink-500" size={16} />}
                                 </button>
                             ))}
@@ -286,7 +361,7 @@ export const NeuralNoir: React.FC<NeuralNoirProps> = ({ onComplete, t }) => {
                         <div className="space-y-6">
                             <div className="flex items-center space-x-2 text-white/20 uppercase text-[10px] font-mono tracking-widest pb-2 border-b border-white/5">
                                 <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                                <span>Motive / Rationale</span>
+                                <span>{t('games.neuralnoir.motive_rationale')}</span>
                             </div>
                             {['Corporate Espionage', 'Personal Revenge', 'Accidental Corruption'].map(opt => (
                                 <button
@@ -296,7 +371,7 @@ export const NeuralNoir: React.FC<NeuralNoirProps> = ({ onComplete, t }) => {
                                         }`}
                                 >
                                     <div className="font-serif text-lg">{opt}</div>
-                                    <div className="text-[10px] uppercase mt-2 opacity-50 font-mono tracking-tighter">Behavioral Analysis</div>
+                                    <div className="text-[10px] uppercase mt-2 opacity-50 font-mono tracking-tighter">{t('games.neuralnoir.behavioral_analysis')}</div>
                                     {deduction.motive === opt && <Zap className="absolute top-4 right-4 text-amber-500" size={16} />}
                                 </button>
                             ))}
@@ -307,7 +382,7 @@ export const NeuralNoir: React.FC<NeuralNoirProps> = ({ onComplete, t }) => {
                     <div className="mt-16 max-w-2xl mx-auto w-full text-center space-y-8">
                         {feedback && (
                             <div className="p-8 bg-black border border-white/10 rounded-2xl shadow-2xl animate-in slide-in-from-bottom duration-500">
-                                <div className="text-[10px] text-white/30 uppercase tracking-[0.4em] mb-4">AI Analysis Result</div>
+                                <div className="text-[10px] text-white/30 uppercase tracking-[0.4em] mb-4">{t('games.neuralnoir.ai_analysis_result')}</div>
                                 <p className="text-xl font-serif text-gray-200 italic leading-relaxed">"{feedback}"</p>
                             </div>
                         )}
@@ -327,3 +402,39 @@ export const NeuralNoir: React.FC<NeuralNoirProps> = ({ onComplete, t }) => {
         </div>
     );
 };
+
+// Points Rain Component for 3D Overlay
+const PointsRain = () => {
+    const ref = useRef<THREE.Points>(null);
+    const count = 1000;
+    const [positions] = useState(() => {
+        const pos = new Float32Array(count * 3);
+        for (let i = 0; i < count; i++) {
+            pos[i * 3] = (Math.random() - 0.5) * 40;
+            pos[i * 3 + 1] = Math.random() * 20;
+            pos[i * 3 + 2] = (Math.random() - 0.5) * 20;
+        }
+        return pos;
+    });
+
+    useFrame((state, delta) => {
+        if (!ref.current) return;
+        const pos = ref.current.geometry.attributes.position.array as Float32Array;
+        for (let i = 0; i < count; i++) {
+            pos[i * 3 + 1] -= delta * 15;
+            if (pos[i * 3 + 1] < -10) {
+                pos[i * 3 + 1] = 10;
+            }
+        }
+        ref.current.geometry.attributes.position.needsUpdate = true;
+    });
+
+    return (
+        <points ref={ref}>
+            <bufferGeometry>
+                <bufferAttribute attach="attributes-position" count={count} array={positions} itemSize={3} />
+            </bufferGeometry>
+            <pointsMaterial size={0.05} color="#aaaaaa" transparent opacity={0.3} />
+        </points>
+    )
+}

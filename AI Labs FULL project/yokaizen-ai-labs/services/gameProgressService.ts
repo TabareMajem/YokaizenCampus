@@ -11,9 +11,16 @@ export interface GameProgress {
     stars?: number;
     achievements?: string[];
     customData?: Record<string, unknown>;
+    synced?: boolean;
 }
 
 const STORAGE_PREFIX = 'yokaizen_game_';
+const API_BASE = import.meta.env.PROD
+    ? 'https://ai.yokaizencampus.com/api/v1'
+    : 'http://localhost:7792/api/v1';
+
+// We need a circular dep prevention if importing authService directly if it uses this
+import { authService } from './authService';
 
 export const gameProgressService = {
     /**
@@ -38,6 +45,7 @@ export const gameProgressService = {
                 highScore: 0,
                 gamesPlayed: 0,
                 lastPlayed: new Date().toISOString(),
+                synced: false
             };
 
             const updated: GameProgress = {
@@ -46,9 +54,29 @@ export const gameProgressService = {
                 highScore: Math.max(existing.highScore, progress.highScore || 0),
                 gamesPlayed: (existing.gamesPlayed || 0) + 1,
                 lastPlayed: new Date().toISOString(),
+                synced: false,
             };
 
             localStorage.setItem(`${STORAGE_PREFIX}${gameId}`, JSON.stringify(updated));
+
+            // Sync with backend if logged in
+            const token = authService.getToken();
+            if (token) {
+                fetch(`${API_BASE}/user/games/${gameId}/progress`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ progress: updated })
+                }).then(res => {
+                    if (res.ok) {
+                        updated.synced = true;
+                        localStorage.setItem(`${STORAGE_PREFIX}${gameId}`, JSON.stringify(updated));
+                    }
+                }).catch(err => console.warn("Failed to sync game progress", err));
+            }
+
         } catch (error) {
             console.error(`Failed to save progress for ${gameId}:`, error);
         }

@@ -1,15 +1,15 @@
 import { Repository } from 'typeorm';
 import { AppDataSource } from '@config/database';
-import { 
-  redis, 
-  addToLeaderboard, 
-  getLeaderboard, 
-  getUserRank, 
-  cacheGet, 
-  cacheSet 
+import {
+  redis,
+  addToLeaderboard,
+  getLeaderboard,
+  getUserRank,
+  cacheGet,
+  cacheSet
 } from '@config/redis';
 import { logger } from '@config/logger';
-import { User } from '@entities/User';
+import { User, UserTier } from '@entities/User';
 import { Squad } from '@entities/Squad';
 import { GameHistory, GameType } from '@entities/GameHistory';
 import { LeaderboardEntry } from '@/types';
@@ -22,7 +22,7 @@ interface LeaderboardOptions {
 
 interface DetailedLeaderboardEntry extends LeaderboardEntry {
   avatarUrl?: string;
-  tier?: string;
+  tier?: UserTier;
   recentGames?: number;
 }
 
@@ -72,18 +72,18 @@ export class LeaderboardService {
     // Try cache first
     const cacheKey = `leaderboard_global_${limit}_${offset}`;
     const cached = await cacheGet<DetailedLeaderboardEntry[]>(cacheKey);
-    
+
     let entries: DetailedLeaderboardEntry[];
-    
+
     if (cached) {
       entries = cached;
     } else {
       // Get from Redis sorted set
       const leaderboardData = await getLeaderboard(this.GLOBAL_KEY, offset, offset + limit - 1);
-      
+
       // Enrich with user data
       entries = await this.enrichUserLeaderboard(leaderboardData);
-      
+
       // Cache for 5 minutes
       await cacheSet(cacheKey, entries, 300);
     }
@@ -132,7 +132,7 @@ export class LeaderboardService {
         entries.push({
           squadId: squad.id,
           name: squad.name,
-          iconUrl: squad.iconUrl,
+          iconUrl: squad.icon,
           tier: squad.tier,
           score,
           rank: offset + i + 1,
@@ -168,7 +168,7 @@ export class LeaderboardService {
     options: LeaderboardOptions = {}
   ): Promise<{ entries: DetailedLeaderboardEntry[]; total: number }> {
     const { limit = 50, offset = 0 } = options;
-    const key = difficulty 
+    const key = difficulty
       ? `${this.GAME_PREFIX}:${gameType}:${difficulty}`
       : `${this.GAME_PREFIX}:${gameType}`;
 
@@ -201,17 +201,17 @@ export class LeaderboardService {
 
     // Update all relevant leaderboards
     await Promise.all([
-      addToLeaderboard(this.GLOBAL_KEY, userId, totalXp),
-      addToLeaderboard(this.DAILY_KEY, userId, xpGained), // Daily tracks gains
-      addToLeaderboard(this.WEEKLY_KEY, userId, xpGained),
+      addToLeaderboard(this.GLOBAL_KEY, totalXp, userId),
+      addToLeaderboard(this.DAILY_KEY, xpGained, userId), // Daily tracks gains
+      addToLeaderboard(this.WEEKLY_KEY, xpGained, userId),
     ]);
 
     // Update regional if user has region set
     if (user.language) {
       await addToLeaderboard(
         `${this.REGIONAL_PREFIX}:${user.language.toLowerCase()}`,
-        userId,
-        totalXp
+        totalXp,
+        userId
       );
     }
 
@@ -222,7 +222,7 @@ export class LeaderboardService {
     const squad = await this.squadRepository.findOneBy({ id: squadId });
     if (!squad) return;
 
-    await addToLeaderboard(this.SQUADS_KEY, squadId, Number(squad.totalXp));
+    await addToLeaderboard(this.SQUADS_KEY, Number(squad.totalXp), squadId);
     logger.debug('Squad leaderboard updated', { squadId, totalXp: squad.totalXp });
   }
 
@@ -233,20 +233,20 @@ export class LeaderboardService {
     score: number
   ): Promise<boolean> {
     const key = `${this.GAME_PREFIX}:${gameType}:${difficulty}`;
-    
+
     // Get current high score
     const currentScore = await redis.zscore(key, userId);
-    
+
     // Only update if new score is higher
     if (!currentScore || score > Number(currentScore)) {
-      await addToLeaderboard(key, userId, score);
-      
+      await addToLeaderboard(key, score, userId);
+
       // Also update overall game leaderboard
-      await addToLeaderboard(`${this.GAME_PREFIX}:${gameType}`, userId, score);
-      
+      await addToLeaderboard(`${this.GAME_PREFIX}:${gameType}`, score, userId);
+
       return true; // New high score!
     }
-    
+
     return false;
   }
 
@@ -267,7 +267,7 @@ export class LeaderboardService {
     regional: { rank: number; score: number; region: string } | null;
   }> {
     const user = await this.userRepository.findOneBy({ id: userId });
-    
+
     const getStats = async (key: string) => {
       const rank = await getUserRank(key, userId);
       if (rank === null) return null;
@@ -321,7 +321,7 @@ export class LeaderboardService {
 
     for (const user of users) {
       pipeline.zadd(this.GLOBAL_KEY, Number(user.xp), user.id);
-      
+
       if (user.language) {
         const regionalKey = `${this.REGIONAL_PREFIX}:${user.language.toLowerCase()}`;
         pipeline.zadd(regionalKey, Number(user.xp), user.id);

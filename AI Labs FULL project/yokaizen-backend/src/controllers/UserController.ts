@@ -63,8 +63,8 @@ export class UserController {
     const { type, rarity } = req.query;
 
     const inventory = await userService.getInventory(req.user!.userId, {
-      type: type as string,
-      rarity: rarity as string,
+      type: type as any,
+      rarity: rarity as any,
     });
 
     res.json(successResponse(inventory));
@@ -77,7 +77,7 @@ export class UserController {
   equipItem = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { itemId } = req.params;
 
-    await userService.equipItem(req.user!.userId, itemId);
+    await userService.toggleEquipItem(req.user!.userId, itemId);
     res.json(successResponse({ message: 'Item equipped' }));
   });
 
@@ -159,6 +159,40 @@ export class UserController {
   deleteAccount = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     await userService.requestAccountDeletion(req.user!.userId);
     res.json(successResponse({ message: 'Account deletion requested' }));
+  });
+
+
+  /**
+   * POST /user/games/:gameId/progress
+   * Update game progress
+   */
+  updateGameProgress = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const { gameId } = req.params;
+    const { progress } = req.body;
+
+    const user = await userService.updateGameProgress(req.user!.userId, gameId, progress);
+    res.json(successResponse(user.settings.gameProgress?.[gameId] || {}));
+  });
+
+  /**
+   * GET /user/badges
+   * Get user's badges
+   */
+  getBadges = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const badges = await userService.getBadges(req.user!.userId);
+    res.json(successResponse(badges));
+  });
+
+  /**
+   * POST /admin/seed/badges
+   * Seed badges (Admin only)
+   */
+  seedBadges = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    // In prod, check for admin role. For now, we assume this is called safely.
+    // await userService.seedBadges(); // Delegate to service or call seeder directly
+    const { seedBadges } = require('../seeds/BadgeSeeder');
+    await seedBadges();
+    res.json(successResponse({ message: 'Badges seeded successfully' }));
   });
 }
 

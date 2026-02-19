@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { classroomService } from '../services/ClassroomService';
+import { getSocketGateway } from '../sockets/gateway';
 import { asyncHandler, ValidationError, ForbiddenError } from '../middleware/errorHandler';
 
 // Validation schemas
@@ -212,12 +213,19 @@ export class ClassroomController {
    */
   raiseHand = asyncHandler(async (req: Request, res: Response) => {
     const { message } = req.body;
-    
+
     await classroomService.raiseHand(
       req.user!.id,
       req.params.id,
       message
     );
+
+    // Notify teachers via Socket
+    getSocketGateway().io.to(`class:${req.params.id}`).emit('hand_raised', {
+      studentId: req.user!.id,
+      message: message || 'Needs help',
+      timestamp: new Date().toISOString()
+    });
 
     res.json({
       success: true,
@@ -231,6 +239,12 @@ export class ClassroomController {
    */
   lowerHand = asyncHandler(async (req: Request, res: Response) => {
     await classroomService.lowerHand(req.user!.id, req.params.id);
+
+    // Notify classroom via Socket
+    getSocketGateway().io.to(`class:${req.params.id}`).emit('hand_lowered', {
+      studentId: req.user!.id,
+      timestamp: new Date().toISOString()
+    });
 
     res.json({
       success: true,
@@ -255,6 +269,15 @@ export class ClassroomController {
       validation.data.studentIds
     );
 
+    // Notify students via Socket
+    result.students.forEach(studentId => {
+      getSocketGateway().io.to(`user:${studentId}`).emit('grant_credits', {
+        amount: validation.data.amount,
+        from: req.user!.id,
+        timestamp: new Date().toISOString()
+      });
+    });
+
     res.json({
       success: true,
       message: `Granted ${result.granted} credits to ${result.students.length} students`,
@@ -275,7 +298,7 @@ export class ClassroomController {
     // This will be handled by the socket gateway
     // Store the broadcast in DB for history
     const { prisma } = await import('../utils/prisma');
-    
+
     const broadcast = await prisma.broadcast.create({
       data: {
         classroomId: req.params.id,
@@ -283,6 +306,14 @@ export class ClassroomController {
         message: validation.data.message,
         type: validation.data.type
       }
+    });
+
+    // Emit to all students via Socket
+    getSocketGateway().io.to(`class:${req.params.id}`).emit('teacher_broadcast', {
+      message: validation.data.message,
+      type: validation.data.type,
+      teacherId: req.user!.id,
+      timestamp: new Date().toISOString()
     });
 
     res.json({
@@ -303,7 +334,7 @@ export class ClassroomController {
     }
 
     const { prisma } = await import('../utils/prisma');
-    
+
     const chaosEvent = await prisma.chaosEvent.create({
       data: {
         classroomId: req.params.id,
@@ -313,6 +344,23 @@ export class ClassroomController {
         intensity: validation.data.intensity
       }
     });
+
+    // Emit Chaos Event via Socket
+    getSocketGateway().io.to(`class:${req.params.id}`).emit('chaos_event', {
+      id: chaosEvent.id,
+      eventType: validation.data.eventType,
+      duration: validation.data.duration,
+      intensity: validation.data.intensity,
+      timestamp: new Date().toISOString()
+    });
+
+    // Schedule End
+    setTimeout(() => {
+      getSocketGateway().io.to(`class:${req.params.id}`).emit('chaos_event_end', {
+        id: chaosEvent.id,
+        eventType: validation.data.eventType
+      });
+    }, validation.data.duration * 1000);
 
     res.json({
       success: true,
@@ -327,7 +375,7 @@ export class ClassroomController {
    */
   changePhilosophy = asyncHandler(async (req: Request, res: Response) => {
     const { philosophy } = req.body;
-    
+
     if (!['FINLAND', 'KOREA', 'JAPAN'].includes(philosophy)) {
       throw new ValidationError('Invalid philosophy mode');
     }
@@ -337,6 +385,12 @@ export class ClassroomController {
       req.user!.id,
       { currentPhilosophy: philosophy }
     );
+
+    // Broadcast Philosophy Change via Socket
+    getSocketGateway().io.to(`class:${req.params.id}`).emit('philosophy_change', {
+      philosophy: philosophy,
+      timestamp: new Date().toISOString()
+    });
 
     res.json({
       success: true,

@@ -245,7 +245,7 @@ export class AIController {
       isPublic: isPublic ?? false,
       category,
       creator: { id: req.user!.userId },
-    });
+    } as any);
 
     await this.agentRepository.save(agent);
 

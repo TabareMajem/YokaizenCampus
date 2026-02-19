@@ -138,7 +138,7 @@ export const CausalConservatory: React.FC<CausalConservatoryProps> = ({ onComple
             </div>
 
             <div className="h-16 overflow-y-auto bg-black/50 rounded-lg p-2 mb-4 border border-white/10 font-mono text-[10px] text-green-200">
-                {logs.length === 0 ? t('causal.awaiting') : logs.map((l, i) => <div key={i}>&gt; {l}</div>)}
+                {logs.length === 0 ? t('causal.awaiting') : logs.map((l, i) => <div key={i}>{t('games.causalconservatory.gt')}{l}</div>)}
             </div>
 
             <div className="grid grid-cols-3 gap-3 mb-4">

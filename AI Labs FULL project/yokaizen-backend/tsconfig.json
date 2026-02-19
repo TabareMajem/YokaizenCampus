@@ -60,6 +60,30 @@
       ],
       "@jobs/*": [
         "jobs/*"
+      ],
+      "@config": [
+        "config/index"
+      ],
+      "@entities": [
+        "entities/index"
+      ],
+      "@services": [
+        "services/index"
+      ],
+      "@controllers": [
+        "controllers/index"
+      ],
+      "@middleware": [
+        "middleware/index"
+      ],
+      "@routes": [
+        "routes/index"
+      ],
+      "@utils": [
+        "utils/index"
+      ],
+      "@types": [
+        "types/index"
       ]
     }
   },

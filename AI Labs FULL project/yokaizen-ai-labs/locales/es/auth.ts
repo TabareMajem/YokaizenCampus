@@ -1,0 +1,18 @@
+export const AUTH = {
+    'auth.initialize': 'INICIALIZAR',
+    'auth.secure_uplink': 'UPLINK_SEGURO',
+    'auth.transmit_id': 'TRANSMITIR ID',
+    'auth.verify_signal': 'VERIFICAR SEÑAL',
+    'auth.phone_freq': 'Frecuencia (Num. Teléfono)',
+    'auth.enc_key': 'Clave Encriptación (OTP)',
+    'auth.send_token': 'ENVIAR TOKEN',
+    'auth.access_system': 'ACCEDER SISTEMA',
+    'auth.wrong_number': '¿Número incorrecto?',
+    'auth.establishing': 'ESTABLECIENDO ENLACE...',
+    'auth.decrypting': 'DESCIFRANDO...',
+    'auth.connection_failed': 'Conexión fallida.',
+    'auth.invalid_code': 'CÓDIGO_INVÁLIDO',
+    'auth.slogan_1': 'Espíritu',
+    'auth.slogan_2': 'Máquina',
+    'auth.slogan_3': 'Mente',
+};

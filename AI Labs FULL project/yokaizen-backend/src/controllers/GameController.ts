@@ -15,7 +15,7 @@ export class GameController {
       req.user!.userId,
       gameType,
       difficulty
-    );
+    ) as any;
 
     res.json(successResponse({
       sessionToken: session.token,
@@ -46,21 +46,21 @@ export class GameController {
    * Get user's game history
    */
   getHistory = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const { 
-      gameType, 
-      page = '1', 
+    const {
+      gameType,
+      page = '1',
       limit = '20',
       startDate,
-      endDate 
+      endDate
     } = req.query;
 
     const history = await gameService.getHistory(req.user!.userId, {
-      gameType: gameType as string,
+      gameType: gameType as any,
       page: parseInt(page as string),
       limit: parseInt(limit as string),
       startDate: startDate ? new Date(startDate as string) : undefined,
       endDate: endDate ? new Date(endDate as string) : undefined,
-    });
+    } as any);
 
     res.json(successResponse(history));
   });
@@ -133,11 +133,11 @@ export class GameController {
    * Get list of generated games (public + user's own)
    */
   getGeneratedGames = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const { 
-      page = '1', 
+    const {
+      page = '1',
       limit = '20',
       search,
-      creatorId 
+      creatorId
     } = req.query;
 
     const games = await gameService.getGeneratedGames({

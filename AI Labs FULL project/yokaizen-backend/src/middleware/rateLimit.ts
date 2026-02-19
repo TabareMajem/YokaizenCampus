@@ -22,9 +22,9 @@ interface RateLimitInfo {
 
 // Tier-based rate limits (requests per minute)
 const TIER_LIMITS: Record<string, number> = {
-  [UserTier.FREE]: config.rateLimit.freeTier,
-  [UserTier.OPERATIVE]: config.rateLimit.operativeTier,
-  [UserTier.PRO_CREATOR]: config.rateLimit.proTier,
+  [UserTier.FREE]: config.rateLimit.maxFree,
+  [UserTier.OPERATIVE]: config.rateLimit.maxOperative,
+  [UserTier.PRO_CREATOR]: config.rateLimit.maxPro,
   default: 10,
 };
 
@@ -279,13 +279,13 @@ export const slidingWindowRateLimit = (
       if (count >= maxRequests) {
         // Get oldest entry to calculate reset time
         const oldest = await redis.zrange(key, 0, 0, 'WITHSCORES');
-        const resetTime = oldest.length > 1 
-          ? parseInt(oldest[1]) + windowMs 
+        const resetTime = oldest.length > 1
+          ? parseInt(oldest[1]) + windowMs
           : now + windowMs;
 
         const retryAfter = Math.ceil((resetTime - now) / 1000);
         res.setHeader('Retry-After', retryAfter);
-        
+
         next(ApiError.rateLimitExceeded(
           `Rate limit exceeded. Try again in ${retryAfter} seconds.`
         ));
@@ -315,7 +315,7 @@ export const getRateLimitStatus = async (
   endpoint: string = 'general'
 ): Promise<RateLimitInfo> => {
   const key = `rate_limit:${endpoint}:${userId}`;
-  
+
   const [current, ttl] = await Promise.all([
     redis.get(key),
     redis.ttl(key),

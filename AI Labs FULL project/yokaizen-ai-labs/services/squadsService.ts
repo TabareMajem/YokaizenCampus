@@ -154,9 +154,6 @@ export const squadsService = {
         }
     },
 
-    /**
-     * Get user's current squad
-     */
     async getMySquad(): Promise<Squad | null> {
         const token = authService.getToken();
 
@@ -182,4 +179,32 @@ export const squadsService = {
             return null;
         }
     },
+
+    /**
+     * Attack the Squad Boss
+     */
+    async attackBoss(squadId: string): Promise<{
+        damage: number;
+        rewards: { xp: number; credits: number };
+        boss: { hp: number; maxHp: number; level: number };
+    } | null> {
+        const token = authService.getToken();
+        if (!token) throw new Error('Not authenticated');
+
+        try {
+            const response = await fetch(`${API_BASE}/squads/${squadId}/attack`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) return null;
+            const data = await response.json();
+            return data.data;
+        } catch (e) {
+            console.error("Attack failed", e);
+            return null;
+        }
+    }
 };

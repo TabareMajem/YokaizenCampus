@@ -153,6 +153,26 @@ export const API = {
     }
   },
 
+  // --- USER MANGEMENT ---
+  user: {
+    updateProfile: async (updates: Partial<User>): Promise<User> => {
+      const res = await authFetch(`${API_BASE_URL}/user/me`, {
+        method: 'PATCH',
+        body: JSON.stringify(updates),
+      });
+      if (!res.ok) throw new Error('Failed to update profile');
+      return (await res.json()).data;
+    },
+
+    updateApiKeys: async (keys: { google?: string; openai?: string; anthropic?: string; deepseek?: string }): Promise<void> => {
+      const res = await authFetch(`${API_BASE_URL}/user/keys`, {
+        method: 'PATCH',
+        body: JSON.stringify(keys),
+      });
+      if (!res.ok) throw new Error('Failed to update API keys');
+    }
+  },
+
   // --- CLASSROOM MANAGEMENT (Teacher View) ---
   classroom: {
     getLiveStatus: async (classroomId?: string): Promise<ClassroomStudentSummary[]> => {

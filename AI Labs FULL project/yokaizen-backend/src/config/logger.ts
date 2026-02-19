@@ -173,5 +173,15 @@ export const securityLogger = {
   error: (error: Error, context?: object) => loggers.error(error, context),
 };
 
+export const dbLogger = {
+  debug: (message: string, context?: object) => logger.debug(`DB: ${message}`, context),
+  error: (error: Error, context?: object) => loggers.error(error, context),
+};
+
+export const perfLogger = {
+  info: (message: string, details?: object) => logger.info(`Perf: ${message}`, details),
+  warn: (message: string, details?: object) => logger.warn(`Perf: ${message}`, details),
+};
+
 export const httpLogger = logger;
 export default logger;

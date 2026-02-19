@@ -7,7 +7,7 @@ import { Inventory, ItemType, ItemRarity } from '@entities/Inventory';
 import { Skill, SkillCategory, SKILL_TREE } from '@entities/Skill';
 import { ApiError } from '@utils/errors';
 import { calculateLevel, calculateEnergyRegen } from '@utils/helpers';
-import { UserStatsResponse } from '@types';
+import { UserStatsResponse } from '../types';
 
 export class UserService {
   private userRepository: Repository<User>;
@@ -34,7 +34,7 @@ export class UserService {
     }
 
     // Calculate current energy with regeneration
-    const { currentEnergy, lastEnergyUpdate } = calculateEnergyRegen(
+    const { energy: currentEnergy, shouldUpdate } = calculateEnergyRegen(
       user.energy,
       user.maxEnergy,
       user.lastEnergyUpdate
@@ -43,7 +43,9 @@ export class UserService {
     // Update if energy changed
     if (currentEnergy !== user.energy) {
       user.energy = currentEnergy;
-      user.lastEnergyUpdate = lastEnergyUpdate;
+      if (shouldUpdate) {
+        user.lastEnergyUpdate = new Date();
+      }
       await this.userRepository.save(user);
     }
 
@@ -71,8 +73,11 @@ export class UserService {
       level,
       xpProgress: Math.round(xpProgress),
       xpToNextLevel: nextLevelXP - Number(user.xp),
-      energy: currentEnergy,
-      maxEnergy: user.maxEnergy,
+      energy: {
+        current: currentEnergy,
+        max: user.maxEnergy,
+        regenRate: 10,
+      },
       streak: user.streak,
       language: user.language,
       squad: user.squad ? {
@@ -92,17 +97,33 @@ export class UserService {
       })) || [],
       skills: user.skills?.map(skill => ({
         id: skill.id,
-        nodeId: skill.nodeId,
+        nodeId: skill.skillTreeNodeId,
         name: skill.name,
         category: skill.category,
         level: skill.level,
         unlockedAt: skill.unlockedAt,
       })) || [],
-      availableSkillPoints,
+      skillPoints: availableSkillPoints,
       activeItems: activeItems.map(item => item.itemId),
       settings: user.settings,
       createdAt: user.createdAt,
       lastLogin: user.lastLogin,
+      stats: user.stats || {
+        totalGamesPlayed: 0,
+        totalWins: 0,
+        totalLosses: 0,
+        highestScore: 0,
+        favoriteGame: "",
+        totalPlayTime: 0
+      },
+      rank: {
+        global: 0,
+        regional: 0
+      }, // Placeholder
+      subscriptionStatus: {
+        isActive: user.tier !== UserTier.FREE,
+        expiresAt: user.subscriptionExpiresAt || null
+      },
     };
   }
 
@@ -208,14 +229,14 @@ export class UserService {
     }
 
     // Check if already unlocked
-    const existingSkill = user.skills?.find(s => s.nodeId === nodeId);
+    const existingSkill = user.skills?.find(s => s.skillTreeNodeId === nodeId);
     if (existingSkill) {
       throw ApiError.conflict('Skill already unlocked');
     }
 
     // Check prerequisites
     if (skillDef.prerequisites && skillDef.prerequisites.length > 0) {
-      const unlockedNodeIds = user.skills?.map(s => s.nodeId) || [];
+      const unlockedNodeIds = user.skills?.map(s => s.skillTreeNodeId) || [];
       const missingPrereqs = skillDef.prerequisites.filter(
         prereq => !unlockedNodeIds.includes(prereq)
       );
@@ -237,7 +258,7 @@ export class UserService {
     // Create skill
     const skill = this.skillRepository.create({
       user,
-      nodeId,
+      skillTreeNodeId: nodeId,
       name: skillDef.name,
       description: skillDef.description,
       category: skillDef.category as SkillCategory,
@@ -346,6 +367,7 @@ export class UserService {
     const inventoryItem = this.inventoryRepository.create({
       user,
       ...item,
+      attributes: item.metadata,
     });
 
     await this.inventoryRepository.save(inventoryItem);
@@ -407,7 +429,7 @@ export class UserService {
 
     // Apply boost effect
     const user = item.user;
-    const effect = item.metadata?.effect || {};
+    const effect = item.attributes?.effect || {};
 
     if (effect.energy) {
       user.energy = Math.min(user.energy + effect.energy, user.maxEnergy);
@@ -416,7 +438,7 @@ export class UserService {
       user.credits += effect.credits;
     }
     if (effect.xp) {
-      user.xp = BigInt(Number(user.xp) + effect.xp);
+      user.xp = Number(user.xp) + effect.xp;
     }
 
     await this.userRepository.save(user);
@@ -481,7 +503,7 @@ export class UserService {
     }
 
     const oldLevel = calculateLevel(Number(user.xp));
-    user.xp = BigInt(Number(user.xp) + amount);
+    user.xp = Number(user.xp) + amount;
     const newLevel = calculateLevel(Number(user.xp));
 
     await this.userRepository.save(user);
@@ -505,7 +527,7 @@ export class UserService {
     }
 
     // Calculate current energy with regen
-    const { currentEnergy, lastEnergyUpdate } = calculateEnergyRegen(
+    const { energy: currentEnergy, shouldUpdate } = calculateEnergyRegen(
       user.energy,
       user.maxEnergy,
       user.lastEnergyUpdate
@@ -516,7 +538,10 @@ export class UserService {
     }
 
     user.energy = currentEnergy - amount;
-    user.lastEnergyUpdate = lastEnergyUpdate;
+    if (shouldUpdate) {
+      user.lastEnergyUpdate = new Date();
+    }
+
     await this.userRepository.save(user);
     await invalidateCache(`user:${userId}`);
 
@@ -536,7 +561,7 @@ export class UserService {
       throw ApiError.notFound('User not found');
     }
 
-    const unlockedNodeIds = user.skills?.map(s => s.nodeId) || [];
+    const unlockedNodeIds = user.skills?.map(s => s.skillTreeNodeId) || [];
     const level = calculateLevel(Number(user.xp));
     const usedPoints = user.skills?.length || 0;
     const availablePoints = level - usedPoints;
@@ -548,7 +573,7 @@ export class UserService {
         ...skill,
         unlocked: unlockedNodeIds.includes(skill.nodeId),
         canUnlock: this.canUnlockSkill(skill, unlockedNodeIds, availablePoints),
-        userLevel: user.skills?.find(s => s.nodeId === skill.nodeId)?.level || 0,
+        userLevel: user.skills?.find(s => s.skillTreeNodeId === skill.nodeId)?.level || 0,
       })),
     }));
 
@@ -639,7 +664,7 @@ export class UserService {
 
   async refreshEnergy(userId: string): Promise<number> {
     const stats = await this.getUserStats(userId);
-    return stats.energy;
+    return stats.energy.current;
   }
 
   async claimDailyStreak(userId: string): Promise<any> {
@@ -652,8 +677,64 @@ export class UserService {
     return [];
   }
 
+  async getBadges(userId: string): Promise<any[]> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['badges']
+    });
+    return user?.badges || [];
+  }
+
   async requestAccountDeletion(userId: string): Promise<void> {
     logger.info('Account deletion requested', { userId });
+  }
+
+  /**
+   * Update game progress in user settings
+   */
+  async updateGameProgress(userId: string, gameId: string, progress: any): Promise<User> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw ApiError.notFound('User not found');
+    }
+
+    // Initialize settings if null
+    if (!user.settings) {
+      user.settings = {
+        notifications: true,
+        soundEffects: true,
+        darkMode: true,
+        language: 'en',
+        timezone: 'UTC',
+        gameProgress: {}
+      };
+    }
+
+    // Initialize gameProgress if missing
+    if (!user.settings.gameProgress) {
+      user.settings.gameProgress = {};
+    }
+
+    // Merge progress
+    user.settings.gameProgress[gameId] = {
+      ...user.settings.gameProgress[gameId],
+      ...progress,
+      lastPlayed: new Date().toISOString()
+    };
+
+    // Update stats if high score improved
+    if (progress.highScore) {
+      if (!user.stats) user.stats = { totalGamesPlayed: 0, totalWins: 0, totalLosses: 0, highestScore: 0, favoriteGame: "", totalPlayTime: 0 };
+      user.stats.highestScore = Math.max(user.stats.highestScore, progress.highScore);
+    }
+
+    // Explicitly mark as modified for TypeORM jsonb
+    user.settings = { ...user.settings };
+
+    await this.userRepository.save(user);
+    await invalidateCache(`user:${userId}`);
+
+    return user;
   }
 }
 

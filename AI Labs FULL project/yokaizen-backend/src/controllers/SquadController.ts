@@ -199,6 +199,19 @@ export class SquadController {
   });
 
   /**
+   * POST /squads/:id/attack
+   * Attack the squad boss
+   */
+  attack = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const { id } = req.params;
+
+    // We can accept custom damage calc or just trigger attack
+    // For now, attack logic is in service
+    const result = await squadService.attackBoss(req.user!.userId, id);
+    res.json(successResponse(result));
+  });
+
+  /**
    * POST /squads/:id/missions/:missionId/join
    * Join an active mission
    */
@@ -256,9 +269,9 @@ export class SquadController {
     const { id } = req.params;
     const { timeframe = 'weekly' } = req.query;
 
-    const leaderboard = await squadService.getSquadLeaderboard(
+    const leaderboard = await squadService.getInternalSquadLeaderboard(
       id,
-      timeframe as string
+      timeframe as any
     );
 
     res.json(successResponse(leaderboard));

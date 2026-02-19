@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Button } from './Button';
+import { useToast } from '../../contexts/ToastContext';
 import { GAME_SKINS } from '../../constants';
 import { GameType, Skin, UserStats } from '../../types';
 import { ShoppingBag, Check, Lock } from 'lucide-react';
@@ -14,8 +15,9 @@ interface SkinShopProps {
 }
 
 export const SkinShop: React.FC<SkinShopProps> = ({ gameType, user, onUpdateUser, onClose }) => {
-    
+
     const availableSkins = GAME_SKINS.filter(s => s.gameId === gameType);
+    const { showToast } = useToast();
 
     const handleBuy = (skin: Skin) => {
         if (user.credits >= skin.cost) {
@@ -27,7 +29,7 @@ export const SkinShop: React.FC<SkinShopProps> = ({ gameType, user, onUpdateUser
             audio.playSuccess();
         } else {
             audio.playError();
-            alert("Insufficient Credits");
+            showToast("Insufficient Credits", 'error');
         }
     };
 
@@ -69,9 +71,9 @@ export const SkinShop: React.FC<SkinShopProps> = ({ gameType, user, onUpdateUser
                                 ) : (
                                     <img src={skin.assetUrl} className="w-full h-full object-contain drop-shadow-md" />
                                 )}
-                                {isEquipped && <div className="absolute -top-2 -right-2 bg-green-500 text-black rounded-full p-1"><Check size={12} strokeWidth={4}/></div>}
+                                {isEquipped && <div className="absolute -top-2 -right-2 bg-green-500 text-black rounded-full p-1"><Check size={12} strokeWidth={4} /></div>}
                             </div>
-                            
+
                             <div className="text-sm font-bold text-white mb-1">{skin.name}</div>
                             <div className={`text-[9px] font-bold uppercase mb-4 px-2 py-0.5 rounded ${skin.rarity === 'LEGENDARY' ? 'bg-amber-500/20 text-amber-400' : skin.rarity === 'RARE' ? 'bg-cyan-500/20 text-cyan-400' : 'bg-gray-700 text-gray-400'}`}>
                                 {skin.rarity} {skin.type === 'TRAIL' ? 'TRAIL' : 'SKIN'}

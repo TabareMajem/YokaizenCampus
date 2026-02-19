@@ -27,7 +27,7 @@ export const errorHandler = (
 ): void => {
   // Default to 500 internal error
   let statusCode = 500;
-  let response: ReturnType<typeof formatErrorResponse>;
+  let response: any;
 
   if (err instanceof ApiError) {
     // Known operational errors

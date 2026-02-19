@@ -1,3 +1,4 @@
+
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -8,10 +9,15 @@ import {
   OneToMany,
   Index,
   JoinColumn,
+  ManyToMany,
+  JoinTable,
 } from 'typeorm';
 import { Squad, SquadRole } from './Squad';
 import { Inventory } from './Inventory';
 import { Skill } from './Skill';
+import { GameHistory } from './GameHistory';
+// import { GameSession } from './GameSession'; // Removed as it seems to be a type, not an entity
+import { Badge } from './Badge';
 
 export enum UserRole {
   USER = 'USER',
@@ -127,6 +133,7 @@ export class User {
     darkMode: boolean;
     language: string;
     timezone: string;
+    gameProgress?: Record<string, any>;
   };
 
   @Column({ type: 'jsonb', nullable: true, name: 'api_keys' })
@@ -166,6 +173,16 @@ export class User {
 
   @Column({ type: 'timestamp', nullable: true, name: 'squad_joined_at' })
   squadJoinedAt: Date;
+
+  @Column({ default: 0 })
+  weeklyXp: number;
+
+  @ManyToMany(() => Badge, (badge) => badge.users)
+  @JoinTable()
+  badges: Badge[];
+
+  @OneToMany(() => GameHistory, (gameHistory) => gameHistory.user)
+  gameHistory: GameHistory[];
 
   @OneToMany(() => Inventory, inventory => inventory.user)
   inventory: Inventory[];

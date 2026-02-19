@@ -40,7 +40,7 @@ export class SquadMission {
   @JoinColumn({ name: 'squad_id' })
   squad: Squad;
 
-  @Column({ length: 200 })
+  @Column({ type: 'varchar', length: 200 })
   name: string;
 
   @Column({ type: 'text', nullable: true })

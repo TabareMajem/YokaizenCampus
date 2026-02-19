@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '../ui/Button';
+import { useToast } from '../../contexts/ToastContext';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 import { Camera, Mic, MicOff, Video, VideoOff, X, Zap, Activity, Share2, Scan, Crosshair, Cpu } from 'lucide-react';
 import { audio } from '../../services/audioService';
@@ -104,6 +105,7 @@ export const OmniSight: React.FC = () => {
   const { user } = useAuth();
   const lang: Language = user?.language || 'EN';
   const t = (key: string) => TRANSLATIONS[lang]?.[key] || TRANSLATIONS['EN']?.[key] || key;
+  const { showToast } = useToast();
 
   const [isConnected, setIsConnected] = useState(false);
   const [isMicOn, setIsMicOn] = useState(true);
@@ -447,7 +449,7 @@ export const OmniSight: React.FC = () => {
   const handleShare = () => {
     const url = window.location.href;
     navigator.clipboard.writeText(url);
-    alert("Comms link copied to clipboard.");
+    showToast("Comms link copied to clipboard.", 'success');
     audio.playSuccess();
   };
 

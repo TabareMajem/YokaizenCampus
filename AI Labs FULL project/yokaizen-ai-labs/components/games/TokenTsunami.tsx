@@ -1,397 +1,687 @@
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Text, Html, OrbitControls, Stars, Instance, Instances, Environment, PerspectiveCamera, Float } from '@react-three/drei';
+import { EffectComposer, Bloom, ChromaticAberration, Noise as DataNoise, Vignette } from '@react-three/postprocessing';
+import * as THREE from 'three';
 import { Button } from '../ui/Button';
 import { audio } from '../../services/audioService';
-import { Zap, Music, Timer, Flame, Trophy } from 'lucide-react';
-import { Scanlines, Noise } from '../ui/Visuals';
+import { Zap, Music, Timer, Trophy, Play } from 'lucide-react';
 import { Language } from '../../types';
 
+// --- TYPES ---
 interface TokenTsunamiProps {
     onComplete: (score: number) => void;
     t: (key: string) => string;
-    language?: Language;
 }
+
+type NoteType = 'SIGNAL' | 'NOISE' | 'GOLD';
 
 interface Note {
     id: number;
     lane: number; // 0-3
-    y: number; // 0-100
-    type: 'SIGNAL' | 'NOISE' | 'GOLD';
+    z: number;    // Starts at -100, hits at 0
+    type: NoteType;
     hit: boolean;
+    missed: boolean;
 }
 
-interface Feedback {
-    id: number;
-    lane: number;
-    text: string;
-    color: string;
-    y: number;
-}
-
+// --- CONSTANTS ---
 const LANES = 4;
-const HIT_ZONE = 85;
-const HIT_WINDOW = 15;
-const GAME_DURATION = 60;
+const LANE_WIDTH = 2.5;
+const SPAWN_Z = -80;
+const HIT_Z = 0;
+const DESPAWN_Z = 10;
+const HIT_WINDOW = 3;
+const GAME_DURATION = 90;
 const LANE_KEYS = ['D', 'F', 'J', 'K'];
 const LANE_COLORS = ['#06b6d4', '#a855f7', '#f59e0b', '#22c55e'];
 
+// --- 3D COMPONENTS ---
+
+const CyberGrid = ({ speed, combo }: { speed: number, combo: number }) => {
+    const mesh = useRef<THREE.Mesh>(null);
+    const { clock } = useThree();
+
+    // Data texture for "flow"
+    const uniforms = useMemo(() => ({
+        uTime: { value: 0 },
+        uSpeed: { value: speed },
+        uColor: { value: new THREE.Color('#06b6d4') },
+        uCombo: { value: 0 }
+    }), []);
+
+    useFrame((state) => {
+        if (mesh.current) {
+            uniforms.uTime.value = state.clock.getElapsedTime();
+            uniforms.uSpeed.value = THREE.MathUtils.lerp(uniforms.uSpeed.value, speed, 0.1);
+            uniforms.uCombo.value = THREE.MathUtils.lerp(uniforms.uCombo.value, combo, 0.1);
+        }
+    });
+
+    const shaderMaterial = useMemo(() => new THREE.ShaderMaterial({
+        uniforms,
+        vertexShader: `
+            uniform float uTime;
+            uniform float uSpeed;
+            varying vec2 vUv;
+            varying float vElevation;
+
+            void main() {
+                vUv = uv;
+                
+                vec3 pos = position;
+                
+                // Infinite scroll effect
+                float zOffset = uTime * uSpeed * 2.0;
+                
+                // Cyber wave deformation
+                float elevation = sin(pos.x * 0.5 + uTime) * sin(pos.z * 0.2 + uTime) * 1.5;
+                elevation += sin(pos.x * 2.0 - zOffset) * 0.5;
+                
+                pos.y += elevation;
+                pos.z = mod(pos.z + zOffset, 100.0) - 80.0;
+                
+                vElevation = elevation;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+            }
+        `,
+        fragmentShader: `
+            uniform vec3 uColor;
+            uniform float uCombo;
+            varying vec2 vUv;
+            varying float vElevation;
+
+            void main() {
+                // Grid pattern
+                float gridX = step(0.98, fract(vUv.x * 20.0));
+                float gridZ = step(0.98, fract(vUv.y * 20.0)); // UV is mapped to plane
+                
+                float grid = max(gridX, gridZ);
+                
+                // Pulse intensity based on combo
+                float pulse = 0.5 + sin(vElevation * 5.0) * 0.5;
+                float brightness = 0.2 + (uCombo * 0.01);
+                
+                // Distance fade
+                float alpha = smoothstep(0.0, 0.2, vUv.y) * smoothstep(1.0, 0.8, vUv.y);
+                
+                vec3 finalColor = uColor * (grid + pulse * 0.2) * (1.0 + brightness);
+                
+                gl_FragColor = vec4(finalColor, alpha * (grid > 0.5 ? 0.8 : 0.05));
+            }
+        `,
+        transparent: true,
+        side: THREE.DoubleSide
+    }), [uniforms]);
+
+    return (
+        <mesh ref={mesh} rotation={[-Math.PI / 2, 0, 0]} position={[0, -2, -20]}>
+            <planeGeometry args={[40, 100, 40, 40]} />
+            <primitive object={shaderMaterial} attach="material" />
+        </mesh>
+    );
+};
+
+const LaneStandard = ({ activeLane }: { activeLane: number | null }) => {
+    return (
+        <group position={[0, -0.9, 0]}>
+            {[-1.5, -0.5, 0.5, 1.5].map((x, i) => (
+                <group key={i} position={[x * LANE_WIDTH, 0, 0]}>
+                    {/* Hit Zone Ring */}
+                    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.1, HIT_Z]}>
+                        <ringGeometry args={[0.8, 1, 32]} />
+                        <meshBasicMaterial color={activeLane === i ? '#ffffff' : LANE_COLORS[i]} transparent opacity={activeLane === i ? 1 : 0.3} />
+                    </mesh>
+
+                    {/* Active Hit Flash */}
+                    {activeLane === i && (
+                        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, HIT_Z]}>
+                            <circleGeometry args={[0.8, 32]} />
+                            <meshBasicMaterial color="#ffffff" transparent opacity={0.5} />
+                        </mesh>
+                    )}
+
+                    {/* Laser Track Line */}
+                    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, -40]}>
+                        <planeGeometry args={[0.05, 100]} />
+                        <meshBasicMaterial color={LANE_COLORS[i]} opacity={0.4} />
+                    </mesh>
+                </group>
+            ))}
+        </group>
+    );
+};
+
+// Instanced Notes for Performance
+const NoteInstances = ({ notes }: { notes: Note[] }) => {
+    const signalData = useMemo(() => notes.filter(n => n.type === 'SIGNAL' && !n.hit), [notes]);
+    const noiseData = useMemo(() => notes.filter(n => n.type === 'NOISE' && !n.hit), [notes]);
+    const goldData = useMemo(() => notes.filter(n => n.type === 'GOLD' && !n.hit), [notes]);
+
+    return (
+        <group>
+            <Instances range={signalData.length}>
+                <boxGeometry args={[1.5, 0.2, 1.5]} />
+                <meshStandardMaterial color="#06b6d4" emissive="#06b6d4" emissiveIntensity={3} toneMapped={false} />
+                {signalData.map((note, i) => (
+                    <Instance
+                        key={note.id}
+                        position={[(note.lane - 1.5) * LANE_WIDTH, 0, note.z]}
+                        rotation={[0, 0, 0]}
+                    />
+                ))}
+            </Instances>
+
+            <Instances range={noiseData.length}>
+                <dodecahedronGeometry args={[0.8, 0]} />
+                <meshStandardMaterial color="#ef4444" emissive="#ef4444" emissiveIntensity={4} toneMapped={false} wireframe />
+                {noiseData.map((note, i) => (
+                    <Instance
+                        key={note.id}
+                        position={[(note.lane - 1.5) * LANE_WIDTH, 0.5, note.z]}
+                        rotation={[Date.now() * 0.002, Date.now() * 0.001, 0]}
+                    />
+                ))}
+            </Instances>
+
+            <Instances range={goldData.length}>
+                <octahedronGeometry args={[1, 0]} />
+                <meshStandardMaterial color="#f59e0b" emissive="#f59e0b" emissiveIntensity={8} toneMapped={false} />
+                {goldData.map((note, i) => (
+                    <Instance
+                        key={note.id}
+                        position={[(note.lane - 1.5) * LANE_WIDTH, 1, note.z]}
+                        rotation={[0, Date.now() * 0.005, 0]}
+                        scale={1.2}
+                    />
+                ))}
+            </Instances>
+        </group>
+    );
+};
+
+// High Performance Particle System
+const ParticleSystem = ({ explosions }: { explosions: { id: number, pos: [number, number, number], color: string }[] }) => {
+    // We pool particles. Each explosion uses ~20 particles.
+    const MAX_PARTICLES = 500;
+    const meshRef = useRef<THREE.InstancedMesh>(null);
+
+    // State to track active particles
+    const particlesRef = useRef<{
+        active: boolean;
+        pos: THREE.Vector3;
+        vel: THREE.Vector3;
+        life: number;
+        color: THREE.Color;
+        scale: number;
+    }[]>([]);
+
+    // Initialize pool
+    useMemo(() => {
+        particlesRef.current = new Array(MAX_PARTICLES).fill(0).map(() => ({
+            active: false,
+            pos: new THREE.Vector3(),
+            vel: new THREE.Vector3(),
+            life: 0,
+            color: new THREE.Color(),
+            scale: 0
+        }));
+    }, []);
+
+    // Sanitize color string for THREE.Color
+    const getColor = (c: string) => {
+        if (c === 'gold') return '#f59e0b';
+        if (c === 'red') return '#ef4444';
+        return '#06b6d4';
+    };
+
+    // Watch for new explosions
+    useEffect(() => {
+        explosions.forEach(exp => {
+            // Find ~20 inactive particles
+            let spawned = 0;
+            for (let i = 0; i < MAX_PARTICLES && spawned < 20; i++) {
+                if (!particlesRef.current[i].active) {
+                    const p = particlesRef.current[i];
+                    p.active = true;
+                    p.life = 1.0;
+                    p.pos.set(exp.pos[0], exp.pos[1], exp.pos[2]);
+                    // Random spherical velocity
+                    const theta = Math.random() * Math.PI * 2;
+                    const phi = Math.acos((Math.random() * 2) - 1);
+                    const speed = 5 + Math.random() * 10;
+                    p.vel.set(
+                        speed * Math.sin(phi) * Math.cos(theta),
+                        speed * Math.sin(phi) * Math.sin(theta) + 5, // Upward bias
+                        speed * Math.cos(phi)
+                    );
+                    p.color.set(getColor(exp.color));
+                    p.scale = Math.random() * 0.3 + 0.1;
+                    spawned++;
+                }
+            }
+        });
+    }, [explosions]);
+
+    // Update Frame
+    useFrame((_, delta) => {
+        if (!meshRef.current) return;
+
+        const dummy = new THREE.Object3D();
+        let activeCount = 0;
+
+        particlesRef.current.forEach((p, i) => {
+            if (p.active) {
+                p.life -= delta * 2; // Fade out speed
+                if (p.life <= 0) {
+                    p.active = false;
+                    p.scale = 0;
+                } else {
+                    // Physics
+                    p.vel.y -= 20 * delta; // Gravity
+                    p.pos.add(p.vel.clone().multiplyScalar(delta));
+
+                    dummy.position.copy(p.pos);
+                    dummy.scale.setScalar(p.scale * p.life);
+                    dummy.updateMatrix();
+                    meshRef.current!.setMatrixAt(i, dummy.matrix);
+                    meshRef.current!.setColorAt(i, p.color);
+                    activeCount++;
+                }
+            } else {
+                // Hide inactive
+                dummy.scale.setScalar(0);
+                dummy.updateMatrix();
+                meshRef.current!.setMatrixAt(i, dummy.matrix);
+            }
+        });
+
+        if (activeCount > 0) {
+            meshRef.current.instanceMatrix.needsUpdate = true;
+            if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
+        }
+    });
+
+    return (
+        <instancedMesh ref={meshRef} args={[undefined, undefined, MAX_PARTICLES]}>
+            <boxGeometry args={[1, 1, 1]} />
+            <meshBasicMaterial toneMapped={false} transparent />
+        </instancedMesh>
+    );
+};
+
+const FloatingDebris = () => {
+    // Background ambience particles
+    const count = 100;
+    return (
+        <Instances range={count}>
+            <tetrahedronGeometry args={[0.5, 0]} />
+            <meshBasicMaterial color="#ffffff" transparent opacity={0.2} />
+            {Array.from({ length: count }).map((_, i) => (
+                <FloatingElement key={i} />
+            ))}
+        </Instances>
+    );
+};
+
+const FloatingElement = () => {
+    const ref = useRef<THREE.Group>(null);
+    const [pos] = useState(() => [
+        (Math.random() - 0.5) * 100,
+        (Math.random() - 0.5) * 50 + 20,
+        (Math.random() - 0.5) * 100 - 50
+    ]);
+    const [rot] = useState(() => [Math.random() * Math.PI, Math.random() * Math.PI, 0]);
+
+    useFrame((state) => {
+        if (ref.current) {
+            ref.current.rotation.x += 0.01;
+            ref.current.rotation.y += 0.01;
+            ref.current.position.y += Math.sin(state.clock.elapsedTime + pos[0]) * 0.02;
+        }
+    });
+
+    return (
+        <group ref={ref} position={pos as [number, number, number]} rotation={rot as [number, number, number]}>
+            <Instance />
+        </group>
+    );
+};
+
+// --- GAME LOGIC COMPONENT ---
+const GameScene = ({
+    activeLane,
+    notes,
+    explosions,
+    combo
+}: {
+    activeLane: number | null,
+    notes: Note[],
+    explosions: { id: number, pos: [number, number, number], color: string }[],
+    combo: number
+}) => {
+    const { camera } = useThree();
+
+    // Dynamic Camera Shake on high combo / effects
+    useFrame((state) => {
+        // More subtle shake
+        const shake = Math.min(combo, 20) * 0.005;
+        camera.position.x = THREE.MathUtils.lerp(camera.position.x, (state.pointer.x * 2) + (Math.random() - 0.5) * shake, 0.1);
+        camera.position.y = THREE.MathUtils.lerp(camera.position.y, 6 + (Math.random() - 0.5) * shake, 0.1);
+        camera.lookAt(0, 0, -30);
+    });
+
+    return (
+        <>
+            <color attach="background" args={['#020617']} />
+            <fog attach="fog" args={['#020617', 20, 100]} />
+
+            <ambientLight intensity={0.2} />
+            <pointLight position={[0, 10, -10]} intensity={2} color="#06b6d4" />
+            <pointLight position={[0, 10, 10]} intensity={1} color="#a855f7" />
+
+            <Stars radius={150} depth={50} count={3000} factor={4} saturation={1} fade speed={0.5} />
+            <FloatingDebris />
+
+            <CyberGrid speed={2 + Math.min(combo * 0.05, 10)} combo={combo} />
+            <LaneStandard activeLane={activeLane} />
+            <NoteInstances notes={notes} />
+
+            <ParticleSystem explosions={explosions} />
+
+            <EffectComposer disableNormalPass>
+                <Bloom luminanceThreshold={1} mipmapBlur intensity={2.0} radius={0.6} />
+                <ChromaticAberration offset={[new THREE.Vector2(0.002 + (combo * 0.0001), 0.002)]} radialModulation={false} modulationOffset={0} />
+                <DataNoise opacity={0.05} />
+                <Vignette eskil={false} offset={0.1} darkness={1.1} />
+            </EffectComposer>
+        </>
+    );
+};
+
+// --- MAIN WRAPPER ---
 export const TokenTsunami: React.FC<TokenTsunamiProps> = ({ onComplete, t }) => {
+    // Game State
     const [gameState, setGameState] = useState<'MENU' | 'PLAYING' | 'END'>('MENU');
     const [score, setScore] = useState(0);
     const [combo, setCombo] = useState(0);
-    const [maxCombo, setMaxCombo] = useState(0);
     const [multiplier, setMultiplier] = useState(1);
     const [health, setHealth] = useState(100);
     const [timeLeft, setTimeLeft] = useState(GAME_DURATION);
-    const [beatPulse, setBeatPulse] = useState(false);
 
-    const [notes, setNotes] = useState<Note[]>([]);
-    const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
-    const [activeLane, setActiveLane] = useState<number | null>(null);
-
-    // Refs
+    // Logic Refs
     const notesRef = useRef<Note[]>([]);
     const reqRef = useRef<number>(0);
     const lastTimeRef = useRef(0);
     const spawnTimerRef = useRef(0);
-    const beatTimerRef = useRef(0);
+    const speedRef = useRef(40); // Units per second
     const gameTimeRef = useRef(0);
-    const speedRef = useRef(35);
 
-    // Audio Sync Mock
-    useEffect(() => {
-        if (gameState === 'PLAYING') {
-            audio.startAmbience('CYBER');
-        } else {
-            audio.stopAmbience();
-        }
-    }, [gameState]);
+    // React State for Render
+    const [renderNotes, setRenderNotes] = useState<Note[]>([]);
+    const [activeLane, setActiveLane] = useState<number | null>(null);
+    const [explosions, setExplosions] = useState<{ id: number, pos: [number, number, number], color: string }[]>([]);
 
-    // Keyboard controls
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (gameState !== 'PLAYING') return;
-            const key = e.key.toUpperCase();
-            const laneIndex = LANE_KEYS.indexOf(key);
-            if (laneIndex !== -1) {
-                handleHit(laneIndex);
-            }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [gameState]);
-
+    // --- LOOP ---
     const loop = (time: number) => {
-        const dt = (time - lastTimeRef.current) / 1000;
+        if (gameState !== 'PLAYING') return;
+
+        const dt = Math.min((time - lastTimeRef.current) / 1000, 0.1); // Cap dt
         lastTimeRef.current = time;
-
-        // Update game time
         gameTimeRef.current += dt;
-        const newTimeLeft = Math.max(0, GAME_DURATION - gameTimeRef.current);
-        setTimeLeft(newTimeLeft);
 
-        if (newTimeLeft <= 0) {
-            setGameState('END');
-            audio.playSuccess();
+        // Timer
+        const newTime = Math.max(0, GAME_DURATION - gameTimeRef.current);
+        setTimeLeft(newTime);
+        if (newTime <= 0 || health <= 0) {
+            endGame();
             return;
         }
 
-        // Beat pulse effect
-        beatTimerRef.current += dt;
-        if (beatTimerRef.current >= 0.5) {
-            beatTimerRef.current = 0;
-            setBeatPulse(true);
-            setTimeout(() => setBeatPulse(false), 100);
-        }
-
-        // Spawn
+        // Spawn Logic
         spawnTimerRef.current -= dt;
         if (spawnTimerRef.current <= 0) {
-            spawnTimerRef.current = Math.max(0.2, 0.5 - (score / 5000)); // Faster over time
+            // Spawn Rate increases with score
+            const spawnRate = Math.max(0.15, 0.5 - (score / 10000));
+            spawnTimerRef.current = spawnRate;
+
             const lane = Math.floor(Math.random() * LANES);
             const typeRoll = Math.random();
-            let type: Note['type'] = 'SIGNAL';
-            if (typeRoll > 0.8) type = 'NOISE';
-            if (typeRoll > 0.95) type = 'GOLD';
+            let type: NoteType = 'SIGNAL';
+            // Harder curve
+            if (score > 2000 && typeRoll > 0.8) type = 'NOISE';
+            else if (typeRoll > 0.85) type = 'NOISE';
+
+            if (typeRoll > 0.96) type = 'GOLD';
 
             notesRef.current.push({
                 id: Date.now() + Math.random(),
                 lane,
-                y: -10,
+                z: SPAWN_Z,
                 type,
-                hit: false
+                hit: false,
+                missed: false
             });
         }
 
-        // Move
+        // Move Notes
+        // Speed scaling
+        const currentSpeed = speedRef.current + (combo * 0.2) + (score * 0.001);
         notesRef.current.forEach(n => {
-            n.y += speedRef.current * dt;
+            n.z += currentSpeed * dt;
         });
 
-        // Miss Check
-        const missed = notesRef.current.filter(n => n.y > 110 && !n.hit);
-        if (missed.length > 0) {
-            missed.forEach(m => {
-                if (m.type === 'SIGNAL' || m.type === 'GOLD') {
+        // Check Misses
+        notesRef.current.forEach(n => {
+            if (n.z > DESPAWN_Z && !n.hit && !n.missed) {
+                n.missed = true;
+                if (n.type !== 'NOISE') {
                     setCombo(0);
                     setMultiplier(1);
                     setHealth(h => Math.max(0, h - 10));
-                    spawnFeedback(m.lane, "MISS", "text-red-500");
                 }
-            });
-            // Cleanup
-            notesRef.current = notesRef.current.filter(n => n.y <= 110);
-        }
+            }
+        });
 
-        setNotes([...notesRef.current]);
+        // Cleanup
+        notesRef.current = notesRef.current.filter(n => n.z <= DESPAWN_Z + 5);
 
-        if (health <= 0) {
-            setGameState('END');
-            audio.playError();
-        } else {
-            reqRef.current = requestAnimationFrame(loop);
-        }
+        // Sync to React State (limit frequency for perfs?)
+        // For 60fps React render, just set state
+        setRenderNotes([...notesRef.current]);
+
+        reqRef.current = requestAnimationFrame(loop);
     };
 
     const startGame = () => {
         setScore(0);
         setHealth(100);
         setCombo(0);
-        setMaxCombo(0);
         setMultiplier(1);
         setTimeLeft(GAME_DURATION);
-        gameTimeRef.current = 0;
         notesRef.current = [];
+        setExplosions([]);
+        gameTimeRef.current = 0;
         setGameState('PLAYING');
         lastTimeRef.current = performance.now();
         reqRef.current = requestAnimationFrame(loop);
+        audio.startAmbience('CYBER');
     };
 
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = Math.floor(seconds % 60);
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
-    };
-
-    useEffect(() => {
-        return () => cancelAnimationFrame(reqRef.current);
-    }, []);
-
-    const spawnFeedback = (lane: number, text: string, color: string) => {
-        const id = Date.now() + Math.random();
-        setFeedbacks(prev => [...prev, { id, lane, text, color, y: 70 }]);
-        setTimeout(() => {
-            setFeedbacks(prev => prev.filter(f => f.id !== id));
-        }, 600);
+    const endGame = () => {
+        setGameState('END');
+        cancelAnimationFrame(reqRef.current);
+        audio.stopAmbience();
+        if (score > 1000) audio.playSuccess();
+        else audio.playError();
     };
 
     const handleHit = (lane: number) => {
         if (gameState !== 'PLAYING') return;
-
         setActiveLane(lane);
-        setTimeout(() => setActiveLane(null), 150);
+        setTimeout(() => setActiveLane(null), 100);
 
-        // Find closest note in lane
-        const hits = notesRef.current.filter(n => n.lane === lane && Math.abs(n.y - HIT_ZONE) < HIT_WINDOW && !n.hit);
+        // Hit Detection
+        const candidates = notesRef.current
+            .filter(n => n.lane === lane && !n.hit && Math.abs(n.z - HIT_Z) < HIT_WINDOW)
+            .sort((a, b) => Math.abs(a.z) - Math.abs(b.z));
 
-        if (hits.length > 0) {
-            const target = hits[0]; // Earliest one
-            target.hit = true;
+        if (candidates.length > 0) {
+            const hitNote = candidates[0];
+            hitNote.hit = true;
 
-            if (target.type === 'NOISE') {
+            // Trigger Explosion
+            const id = Date.now() + Math.random();
+            setExplosions(prev => [...prev.slice(-15), {
+                id,
+                pos: [(hitNote.lane - 1.5) * LANE_WIDTH, 0, 0],
+                color: hitNote.type === 'GOLD' ? 'gold' : hitNote.type === 'NOISE' ? 'red' : 'cyan'
+            }]);
+            // Cleanup explosion trigger after delay (particles handle their own life, this is just for the hook)
+            setTimeout(() => setExplosions(prev => prev.filter(e => e.id !== id)), 100);
+
+            if (hitNote.type === 'NOISE') {
+                audio.playError();
                 setCombo(0);
                 setMultiplier(1);
-                setHealth(h => Math.max(0, h - 20));
-                audio.playError();
-                spawnFeedback(lane, "CORRUPT", "text-red-600");
-                audio.vibrate([50, 50]);
+                setHealth(h => Math.max(0, h - 15));
             } else {
-                // Accuracy check
-                const diff = Math.abs(target.y - HIT_ZONE);
-                let points = 100;
-                let label = "GOOD";
-                let color = "text-cyan-400";
-
-                if (diff < 5) { points = 300; label = "PERFECT!"; color = "text-yellow-400"; }
-                else if (diff < 10) { points = 200; label = "GREAT"; color = "text-green-400"; }
-
-                if (target.type === 'GOLD') { points *= 2; label = "JACKPOT"; color = "text-purple-400"; }
-
-                setScore(s => s + (points * multiplier));
-                setCombo(c => {
-                    const next = c + 1;
-                    setMaxCombo(mc => Math.max(mc, next));
-                    if (next === 10 || next === 20 || next === 30) { setMultiplier(m => Math.min(8, m * 2)); audio.playSuccess(); }
-                    return next;
-                });
-                setHealth(h => Math.min(100, h + 2));
                 audio.playClick();
-                spawnFeedback(lane, label, color);
-            }
+                const points = hitNote.type === 'GOLD' ? 500 : 100;
+                const newCombo = combo + 1;
+                setCombo(newCombo);
 
-            notesRef.current = notesRef.current.filter(n => n.id !== target.id);
-            setNotes([...notesRef.current]);
-        } else {
-            setCombo(0);
-            setMultiplier(1);
+                // Multiplier Logic
+                let newMult = 1;
+                if (newCombo > 50) newMult = 8;
+                else if (newCombo > 25) newMult = 4;
+                else if (newCombo > 10) newMult = 2;
+                setMultiplier(newMult);
+
+                setScore(s => s + (points * newMult));
+                setHealth(h => Math.min(100, h + 2));
+            }
         }
     };
 
+    // Keyboard Input
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            if (gameState !== 'PLAYING') return;
+            const k = e.key.toUpperCase();
+            const idx = LANE_KEYS.indexOf(k);
+            if (idx > -1) handleHit(idx);
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [gameState]);
+
     return (
-        <div className="h-full flex flex-col bg-[#050505] relative overflow-hidden font-mono select-none touch-none">
-            <Scanlines />
+        <div className="w-full h-full relative bg-black select-none font-sans overflow-hidden">
+            {/* 3D Canvas */}
+            <Canvas camera={{ position: [0, 6, 10], fov: 60 }} dpr={[1, 2]} gl={{ antialias: false, toneMapping: THREE.ACESFilmicToneMapping }}>
+                <Suspense fallback={null}>
+                    <GameScene
+                        activeLane={activeLane}
+                        notes={renderNotes}
+                        explosions={explosions}
+                        combo={combo}
+                    />
+                </Suspense>
+            </Canvas>
 
-            {/* --- PERSPECTIVE TRACK --- */}
-            <div className="flex-1 relative perspective-[600px] overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-b from-[#1a0b2e] to-black transform-style-3d">
-                    {/* Floor Grid */}
-                    <div className="absolute inset-0 origin-bottom transform rotate-x-60 bg-[linear-gradient(rgba(0,255,255,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(0,255,255,0.1)_1px,transparent_1px)] bg-[length:50px_50px] animate-pulse-slow"></div>
-
-                    {/* Lanes */}
-                    <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md flex transform-style-3d border-x border-white/10">
-                        {[0, 1, 2, 3].map(i => (
-                            <div key={i} className="flex-1 border-r border-white/5 relative group">
-                                {/* Track Glow on press */}
-                                <div className={`absolute inset-0 bg-gradient-to-t from-cyan-500/30 to-transparent transition-opacity duration-150 ${activeLane === i ? 'opacity-100' : 'opacity-0'}`}></div>
-
-                                {/* Hit Marker Line */}
-                                <div className={`absolute left-0 right-0 h-1 bg-cyan-500/50 blur-[2px] ${activeLane === i ? 'bg-white shadow-[0_0_15px_white]' : ''}`} style={{ top: `${HIT_ZONE}%` }}></div>
+            {/* HUD Overlay */}
+            <div className="absolute inset-0 pointer-events-none p-4 md:p-8 flex flex-col justify-between z-10">
+                {/* Top Bar */}
+                <div className="flex justify-between items-start">
+                    <div>
+                        <div className="text-4xl md:text-6xl font-black text-white italic tracking-tighter drop-shadow-[0_0_10px_rgba(6,182,212,0.8)]">
+                            {score.toLocaleString()}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className={`text-xl md:text-2xl font-bold ${multiplier >= 8 ? 'text-yellow-400 animate-pulse' : 'text-cyan-400'}`}>
+                                x{multiplier} MULTIPLIER
                             </div>
-                        ))}
+                        </div>
                     </div>
 
-                    {/* Notes */}
-                    {notes.map(note => {
-                        const scale = 0.5 + (note.y / 100);
-                        return (
-                            <div
-                                key={note.id}
-                                className={`absolute left-1/2 -translate-x-1/2 w-16 h-8 rounded-sm shadow-[0_0_15px_currentColor] flex items-center justify-center font-bold text-xs transition-transform will-change-transform
-                                ${note.type === 'GOLD' ? 'bg-yellow-400 text-black border-2 border-white' : note.type === 'NOISE' ? 'bg-red-600 text-white' : 'bg-cyan-500 text-black'}
-                            `}
-                                style={{
-                                    top: `${note.y}%`,
-                                    marginLeft: `${(note.lane - 1.5) * 25}%`, // Keeps note centered in respective lane
-                                    transform: `translate(-50%, -50%) scale(${scale})`,
-                                    zIndex: Math.floor(note.y),
-                                    opacity: note.y < 0 ? 0 : 1
-                                }}
-                            >
-                                {note.type === 'NOISE' ? 'ERR' : note.type === 'GOLD' ? '$$$' : 'DAT'}
-                            </div>
-                        );
-                    })}
+                    <div className="text-center">
+                        <div className={`text-3xl md:text-4xl font-mono font-bold flex items-center gap-2 ${timeLeft < 10 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
+                            <Timer /> {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+                        </div>
+                    </div>
+
+                    <div className="text-right">
+                        <div className="text-4xl font-black text-white">{combo}</div>
+                        <div className="text-sm font-bold text-gray-400 tracking-widest">COMBO</div>
+                    </div>
                 </div>
 
-                {/* Feedback Popups (Constrained to Track Width) */}
-                <div className="absolute inset-0 w-full max-w-md left-1/2 -translate-x-1/2 pointer-events-none z-30">
-                    {feedbacks.map(f => (
+                {/* Bottom Bar: Health */}
+                <div className="w-full max-w-2xl mx-auto mb-20 md:mb-0">
+                    <div className="h-4 bg-gray-900 rounded-full border border-gray-700 overflow-hidden relative">
                         <div
-                            key={f.id}
-                            className={`absolute font-black text-xl md:text-2xl animate-float-fast ${f.color} drop-shadow-[0_0_5px_rgba(0,0,0,0.8)] text-center w-1/4`}
-                            style={{
-                                top: `${f.y}%`,
-                                left: `${f.lane * 25}%`, // Position relative to the container
-                            }}
-                        >
-                            {f.text}
-                        </div>
+                            className={`h-full transition-all duration-200 ${health < 30 ? 'bg-red-500' : 'bg-gradient-to-r from-cyan-500 to-blue-600'}`}
+                            style={{ width: `${health}%` }}
+                        />
+                    </div>
+                </div>
+
+                {/* Touch Controls (Mobile) */}
+                <div className="grid grid-cols-4 gap-2 pointer-events-auto h-40 md:opacity-0 opacity-50 absolute bottom-0 left-0 right-0 p-4">
+                    {[0, 1, 2, 3].map(i => (
+                        <div
+                            key={i}
+                            onPointerDown={() => handleHit(i)}
+                            className="bg-white/5 border border-white/10 rounded-xl active:bg-cyan-500/50 transition-colors"
+                        />
                     ))}
                 </div>
             </div>
 
-            {/* --- HUD --- */}
-            <div className="absolute top-0 left-0 right-0 p-4 pt-16 flex justify-between items-start bg-gradient-to-b from-black via-black/80 to-transparent z-20 pointer-events-none">
-                <div className="pointer-events-auto">
-                    <div className="flex items-baseline gap-3 mb-2">
-                        <div className={`text-4xl font-black text-white italic tracking-tighter transition-all ${beatPulse ? 'scale-105' : ''}`} style={{ textShadow: '0 0 20px cyan' }}>{score.toLocaleString()}</div>
-                        <div className={`text-xl font-bold transition-all ${multiplier >= 8 ? 'text-yellow-400 animate-pulse' : multiplier >= 4 ? 'text-orange-400' : multiplier >= 2 ? 'text-green-400' : 'text-gray-400'}`}>x{multiplier}</div>
-                    </div>
-                    <div className="w-40 h-2 bg-gray-800/80 rounded-full overflow-hidden border border-gray-700 mb-3">
-                        <div className={`h-full transition-all duration-200 ${health < 30 ? 'bg-red-500 animate-pulse' : health < 50 ? 'bg-orange-500' : 'bg-gradient-to-r from-cyan-500 to-blue-500'}`} style={{ width: `${health}%` }}></div>
-                    </div>
-                    {/* Combo tier progress */}
-                    <div className="flex items-center gap-1">
-                        {[{ mult: 2, at: 10 }, { mult: 4, at: 20 }, { mult: 8, at: 30 }].map(tier => {
-                            const progress = multiplier >= tier.mult ? 100 : Math.min(100, (combo % 10) / 10 * 100);
-                            const isActive = multiplier >= tier.mult;
-                            const isNext = multiplier === tier.mult / 2;
-                            return (
-                                <div key={tier.mult} className="text-center">
-                                    <div className={`w-10 h-1.5 rounded-full overflow-hidden ${isActive ? 'bg-yellow-500/40' : 'bg-gray-800'}`}>
-                                        <div className={`h-full transition-all duration-150 ${isActive ? 'bg-yellow-400' : isNext ? 'bg-cyan-400' : 'bg-gray-600'}`} style={{ width: `${isActive ? 100 : isNext ? progress : 0}%` }} />
-                                    </div>
-                                    <div className={`text-[10px] font-bold mt-0.5 ${isActive ? 'text-yellow-400' : 'text-gray-600'}`}>x{tier.mult}</div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-                {/* Center: Timer */}
-                <div className="text-center">
-                    <div className={`text-2xl font-black font-mono ${timeLeft < 10 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
-                        <Timer className="inline w-5 h-5 mr-1" />
-                        {formatTime(timeLeft)}
-                    </div>
-                </div>
-                {/* Right: Combo */}
-                <div className="text-right">
-                    {combo > 3 && (
-                        <div>
-                            <div className={`text-4xl font-black italic transition-all ${combo >= 30 ? 'text-yellow-400' : combo >= 20 ? 'text-orange-400' : combo >= 10 ? 'text-green-400' : 'text-cyan-400'}`} style={{ textShadow: '0 4px 0 rgba(0,0,0,0.5), 0 0 20px currentColor' }}>{combo}</div>
-                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">COMBO</div>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* --- TOUCH CONTROLS --- */}
-            <div className="h-40 bg-black border-t-2 border-cyan-900 grid grid-cols-4 gap-1 p-2 z-30 shadow-[0_-10px_30px_rgba(0,0,0,0.5)] safe-area-pb">
-                {[0, 1, 2, 3].map(i => (
-                    <button
-                        key={i}
-                        onPointerDown={(e) => { e.preventDefault(); handleHit(i); }}
-                        className="rounded-xl bg-gray-900 border border-gray-700 active:bg-cyan-500 active:border-white transition-all relative overflow-hidden group touch-manipulation active:scale-95"
-                    >
-                        <div className="absolute inset-0 bg-gradient-to-t from-cyan-500/10 to-transparent opacity-0 group-active:opacity-100"></div>
-                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full border-2 border-gray-600 group-active:bg-white group-active:border-white transition-all flex items-center justify-center">
-                            <div className="w-2 h-2 bg-gray-600 rounded-full group-active:bg-cyan-500"></div>
-                        </div>
-                    </button>
-                ))}
-            </div>
-
-            {/* --- MENUS --- */}
+            {/* Menus */}
             {gameState === 'MENU' && (
-                <div className="absolute inset-0 bg-black/90 z-50 flex flex-col items-center justify-center p-8 text-center animate-in fade-in backdrop-blur-sm">
-                    <div className="relative mb-6">
-                        <Music size={80} className="text-cyan-500 animate-bounce relative z-10" />
-                        <div className="absolute inset-0 bg-cyan-500/30 blur-2xl animate-pulse"></div>
+                <div className="absolute inset-0 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center z-50 animate-in fade-in">
+                    <div className="w-24 h-24 bg-cyan-500/20 rounded-full flex items-center justify-center mb-6 animate-pulse">
+                        <Music size={48} className="text-cyan-400" />
                     </div>
-                    <h1 className="text-5xl font-black text-white mb-2 italic tracking-tighter">TOKEN <span className="text-cyan-500">TSUNAMI</span></h1>
-                    <p className="text-gray-400 mb-10 max-w-xs text-sm font-mono border-l-4 border-cyan-500 pl-4 text-left">
-                        {t('token.desc')}<br />
-                        <span className="text-cyan-400">TAP</span> to sync.<br />
-                        <span className="text-yellow-400">GOLD</span> gives 2x points.<br />
-                        <span className="text-red-500">RED</span> breaks combo.
+                    <h1 className="text-5xl md:text-8xl font-black text-white italic tracking-tighter mb-4 text-center">
+                        {t('tokentsunami.title_token')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600">{t('tokentsunami.title_tsunami')}</span>
+                    </h1>
+                    <p className="text-gray-400 max-w-md text-center mb-10 text-lg px-4">
+                        {t('tokentsunami.desc')}
                     </p>
-                    <Button size="lg" variant="primary" onClick={startGame} className="shadow-[0_0_40px_#06b6d4] h-16 w-48 text-lg font-bold">
-                        {t('token.start')}
+                    <Button onClick={startGame} className="px-12 py-6 text-xl font-bold rounded-full shadow-[0_0_30px_rgba(6,182,212,0.6)]">
+                        <Play className="mr-2" /> {t('tokentsunami.init_link')}
                     </Button>
                 </div>
             )}
 
             {gameState === 'END' && (
-                <div className="absolute inset-0 bg-black/95 z-50 flex flex-col items-center justify-center p-8 text-center animate-in zoom-in">
-                    <Trophy size={80} className="text-yellow-400 mb-4 animate-bounce" />
-                    <h2 className="text-3xl font-black text-white mb-6 uppercase italic">SYNC COMPLETE</h2>
-                    <div className="text-7xl font-black font-mono text-cyan-400 mb-2" style={{ textShadow: '0 0 30px cyan' }}>{score.toLocaleString()}</div>
-                    <div className="text-sm text-gray-500 mb-6">POINTS</div>
-                    <div className="flex gap-8 mb-8">
-                        <div className="text-center"><div className="text-2xl font-bold text-yellow-400">{maxCombo}</div><div className="text-xs text-gray-500">MAX COMBO</div></div>
-                        <div className="text-center"><div className="text-2xl font-bold text-green-400">x{multiplier}</div><div className="text-xs text-gray-500">FINAL MULT</div></div>
+                <div className="absolute inset-0 bg-black/90 backdrop-blur-lg flex flex-col items-center justify-center z-50 animate-in zoom-in">
+                    <Trophy size={64} className="text-yellow-400 mb-6" />
+                    <h2 className="text-4xl font-bold text-white mb-2">{t('tokentsunami.sync_complete')}</h2>
+                    <div className="text-7xl font-black text-cyan-400 mb-8">{score.toLocaleString()}</div>
+
+                    <div className="grid grid-cols-3 gap-8 mb-10 text-center">
+                        <div>
+                            <div className="text-gray-500 text-xs font-bold uppercase">{t('tokentsunami.max_combo')}</div>
+                            <div className="text-2xl font-bold text-white">{combo}</div>
+                        </div>
+                        <div>
+                            <div className="text-gray-500 text-xs font-bold uppercase">{t('tokentsunami.multiplier')}</div>
+                            <div className="text-2xl font-bold text-white">x{multiplier}</div>
+                        </div>
+                        <div>
+                            <div className="text-gray-500 text-xs font-bold uppercase">{t('tokentsunami.health')}</div>
+                            <div className="text-2xl font-bold text-white">{Math.round(health)}%</div>
+                        </div>
                     </div>
-                    <Button size="lg" variant="primary" onClick={() => onComplete(Math.min(100, score / 100))}>SUBMIT SCORE</Button>
+
+                    <Button onClick={() => onComplete(score)}>
+                        {t('tokentsunami.submit')}
+                    </Button>
                 </div>
             )}
         </div>

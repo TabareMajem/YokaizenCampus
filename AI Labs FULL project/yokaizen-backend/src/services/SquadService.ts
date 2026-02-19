@@ -111,16 +111,16 @@ export class SquadService {
       description: description || '',
       owner,
       tier: SquadTier.ROOKIE,
-      totalXp: BigInt(0),
-      weeklyXP: 0,
+      totalXp: 0,
+      weeklyXp: 0,
       treasury: 0,
-      warRating: 1000, // Starting ELO
-      warsWon: 0,
-      warsLost: 0,
+      isPublic: true,
+      minLevelRequirement: 1,
       settings: {
-        isPublic: true,
-        autoAccept: false,
-        minLevel: 1,
+        autoAcceptMembers: false,
+        requireApproval: false,
+        chatEnabled: true,
+        missionNotifications: true,
       },
     });
 
@@ -151,6 +151,7 @@ export class SquadService {
 
     return squad;
   }
+
 
   /**
    * Search squads
@@ -230,14 +231,14 @@ export class SquadService {
     }
 
     // Check if squad is public
-    if (!squad.settings?.isPublic) {
+    if (!squad.isPublic) {
       throw ApiError.forbidden('This squad is invite-only');
     }
 
     // Check minimum level requirement
     const userLevel = calculateLevel(Number(user.xp));
-    if (squad.settings?.minLevel && userLevel < squad.settings.minLevel) {
-      throw ApiError.forbidden(`You need to be level ${squad.settings.minLevel} to join`);
+    if (squad.minLevelRequirement && userLevel < squad.minLevelRequirement) {
+      throw ApiError.forbidden(`You need to be level ${squad.minLevelRequirement} to join`);
     }
 
     // Join squad
@@ -328,7 +329,7 @@ export class SquadService {
 
     // Create transaction
     const transaction = this.transactionRepository.create({
-      user,
+      userId: user.id,
       type: TransactionType.SQUAD_CONTRIBUTION,
       amount: -amount,
       description: `Contributed ${amount} credits to ${squad.name}`,
@@ -593,19 +594,101 @@ export class SquadService {
     if (settings.icon !== undefined) {
       squad.icon = settings.icon;
     }
-    if (settings.isPublic !== undefined || settings.autoAccept !== undefined || settings.minLevel !== undefined) {
+    if (settings.isPublic !== undefined) {
+      squad.isPublic = settings.isPublic;
+    }
+    if (settings.minLevel !== undefined) {
+      squad.minLevelRequirement = settings.minLevel;
+    }
+    if (settings.autoAccept !== undefined) {
       squad.settings = {
         ...squad.settings,
-        isPublic: settings.isPublic ?? squad.settings?.isPublic,
-        autoAccept: settings.autoAccept ?? squad.settings?.autoAccept,
-        minLevel: settings.minLevel ?? squad.settings?.minLevel,
+        autoAcceptMembers: settings.autoAccept
       };
     }
 
     await this.squadRepository.save(squad);
     await invalidateCache(`squad:${squad.id}`);
 
+    await this.squadRepository.save(squad);
+    await invalidateCache(`squad:${squad.id}`);
+
     return squad;
+  }
+
+  /**
+   * Attack Squad Boss (War Room)
+   */
+  async attackBoss(userId: string, squadId: string): Promise<{
+    damage: number;
+    rewards: { xp: number; credits: number };
+    boss: { hp: number; maxHp: number; level: number };
+  }> {
+    const user = await this.userRepository.findOne({ where: { id: userId }, relations: ['squad'] });
+    if (!user || user.squad?.id !== squadId) {
+      throw ApiError.forbidden('You are not a member of this squad');
+    }
+
+    const squad = await this.squadRepository.findOne({ where: { id: squadId } });
+    if (!squad) throw ApiError.notFound('Squad not found');
+
+    if (squad.bossHp <= 0) {
+      // Boss already dead, waiting for respawn or reset manually?
+      // For now, auto-reset if dead
+      squad.bossLevel += 1;
+      squad.maxBossHp = Math.floor(squad.maxBossHp * 1.1);
+      squad.bossHp = squad.maxBossHp;
+    }
+
+    // Calculate Damage (Randomized based on user level/tier)
+    // Base 1000 + Random 500 * (1 + (Level * 0.1))
+    const levelMultiplier = 1 + (user.level * 0.1);
+    const baseDmg = 1000 + Math.floor(Math.random() * 500);
+    const crit = Math.random() > 0.9 ? 2 : 1;
+    const damage = Math.floor(baseDmg * levelMultiplier * crit);
+
+    // Apply Damage
+    squad.bossHp = Math.max(0, squad.bossHp - damage);
+
+    // Rewards
+    const xpReward = 500;
+    const creditReward = 100;
+
+    user.xp = Number(user.xp) + xpReward;
+    user.credits += creditReward;
+
+    // Squad XP
+    squad.totalXp = Number(squad.totalXp) + xpReward;
+    squad.weeklyXp += xpReward;
+
+    await this.squadRepository.save(squad);
+    await this.userRepository.save(user);
+
+    // If boss died
+    if (squad.bossHp === 0) {
+      // Bonus rewards for kill shot?
+      // Reset Logic handled next hit or here immediately?
+      // Let's reset immediately for continuous play or leave it dead for a bit?
+      // For simple game loop: immediate reset + bonus
+      squad.bossLevel += 1;
+      squad.maxBossHp = Math.floor(squad.maxBossHp * 1.2);
+      squad.bossHp = squad.maxBossHp;
+      await this.squadRepository.save(squad);
+
+      await publishToChannel(`squad:${squad.id}`, {
+        type: 'boss_defeated',
+        killerId: userId,
+        newLevel: squad.bossLevel
+      });
+    }
+
+    await invalidateCache(`squad:${squad.id}`);
+
+    return {
+      damage,
+      rewards: { xp: xpReward, credits: creditReward },
+      boss: { hp: squad.bossHp, maxHp: squad.maxBossHp, level: squad.bossLevel }
+    };
   }
 
   /**
@@ -754,6 +837,88 @@ export class SquadService {
 
   // Private methods
 
+  async getSquadById(squadId: string): Promise<Squad> {
+    return this.getSquad(squadId);
+  }
+
+  async updateSquad(userId: string, squadId: string, updates: any): Promise<Squad> {
+    const squad = await this.getSquad(squadId);
+    if (squad.owner.id !== userId) {
+      throw ApiError.forbidden('Only owner can update squad');
+    }
+    return this.updateSettings(userId, updates);
+  }
+
+  async deleteSquad(userId: string, squadId: string): Promise<void> {
+    const squad = await this.getSquad(squadId);
+    if (squad.owner.id !== userId) {
+      throw ApiError.forbidden('Only owner can delete squad');
+    }
+    return this.disbandSquad(userId);
+  }
+
+  async contributeToSquad(userId: string, amount: number): Promise<{ squad: Squad; transaction: Transaction }> {
+    return this.contribute(userId, amount);
+  }
+
+  async getSquadMembers(squadId: string): Promise<User[]> {
+    const squad = await this.squadRepository.findOne({
+      where: { id: squadId },
+      relations: ['members'],
+    });
+    if (!squad) throw ApiError.notFound('Squad not found');
+    return squad.members;
+  }
+
+  async getSquadMissions(squadId: string, status?: string): Promise<SquadMission[]> {
+    const where: any = { squad: { id: squadId } };
+    if (status) where.status = status;
+    return this.missionRepository.find({ where });
+  }
+
+  async joinMission(squadId: string, missionId: string, userId: string): Promise<SquadMission> {
+    const mission = await this.missionRepository.findOne({ where: { id: missionId }, relations: ['squad'] });
+    if (!mission) throw ApiError.notFound('Mission not found');
+    if (mission.squad.id !== squadId) throw ApiError.badRequest('Mission not in this squad');
+
+    if (!mission.participantIds.includes(userId)) {
+      mission.participantIds.push(userId);
+      await this.missionRepository.save(mission);
+    }
+    return mission;
+  }
+
+  async contributeMission(squadId: string, missionId: string, userId: string, contribution: number, metadata: any): Promise<SquadMission> {
+    const mission = await this.missionRepository.findOne({ where: { id: missionId }, relations: ['objectives'] });
+    if (mission) {
+      const objId = mission.objectives?.[0]?.id || 'default';
+      return this.updateMissionProgress(userId, missionId, objId, contribution);
+    }
+    throw ApiError.notFound('Mission not found');
+  }
+
+  async getChatHistory(squadId: string, userId: string, options: any): Promise<any[]> {
+    return [];
+  }
+
+  async getSquadStats(squadId: string): Promise<any> {
+    const squad = await this.getSquad(squadId);
+    return {
+      totalXp: squad.totalXp,
+      members: squad.members.length,
+      wins: squad.warWins,
+    };
+  }
+
+  async getInternalSquadLeaderboard(squadId: string, type: 'xp' | 'contributions'): Promise<User[]> {
+    const orderBy = type === 'contributions' ? { squadContributions: 'DESC' } : { weeklyXp: 'DESC' };
+    return this.userRepository.find({
+      where: { squad: { id: squadId } },
+      order: orderBy as any,
+      take: 50
+    });
+  }
+
   private getMissionDuration(type: MissionType): number {
     const durations = {
       [MissionType.DAILY]: 24 * 60 * 60 * 1000, // 24 hours
@@ -772,7 +937,7 @@ export class SquadService {
     for (const participantId of mission.participantIds) {
       const user = await this.userRepository.findOne({ where: { id: participantId } });
       if (user) {
-        user.xp = BigInt(Number(user.xp) + xpPerParticipant);
+        user.xp = Number(user.xp) + xpPerParticipant;
         user.credits += creditsPerParticipant;
         await this.userRepository.save(user);
       }

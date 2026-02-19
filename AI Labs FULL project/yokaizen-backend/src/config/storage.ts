@@ -37,6 +37,8 @@ export interface UploadResult {
   provider: 'S3' | 'GCS';
 }
 
+export type StorageProvider = 'S3' | 'GCS';
+
 export interface UploadOptions {
   folder?: string;
   contentType?: string;

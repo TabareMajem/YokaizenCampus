@@ -1,0 +1,19 @@
+
+> yokaizen-ai-labs@0.0.0 build
+> vite build
+
+vite v6.4.1 building for production...
+transforming...
+✓ 3025 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/assets/manifest-m7fMsN-y.json      0.57 kB │ gzip:   0.28 kB
+dist/index.html                         1.91 kB │ gzip:   0.72 kB
+dist/assets/index-tOd0Geg-.css        180.21 kB │ gzip:  21.38 kB
+dist/assets/index-B30_i1E0.js       2,674.56 kB │ gzip: 703.98 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 22.71s

@@ -7,9 +7,10 @@ import { audio } from '../../services/audioService';
 interface AIGeneratedGameProps {
   gameData: any;
   onClose: () => void;
+    t: (key: string) => string;
 }
 
-export const AIGeneratedGame: React.FC<AIGeneratedGameProps> = ({ gameData, onClose }) => {
+export const AIGeneratedGame: React.FC<AIGeneratedGameProps> = ({ gameData, onClose , t = (k: any) => k }) => {
   const [currentSceneId, setCurrentSceneId] = useState<string>('start');
   const [history, setHistory] = useState<string[]>(gameData.intro ? [gameData.intro] : []);
   const [gameOver, setGameOver] = useState(false);
@@ -40,9 +41,9 @@ export const AIGeneratedGame: React.FC<AIGeneratedGameProps> = ({ gameData, onCl
       return (
           <div className="h-full flex flex-col bg-black items-center justify-center p-8 text-center">
               <AlertTriangle size={48} className="text-red-500 mb-4" />
-              <h2 className="text-xl font-bold text-white mb-2">Corrupted Game Data</h2>
-              <p className="text-gray-400 mb-6">This simulation fragment is empty or damaged.</p>
-              <Button onClick={onClose} variant="secondary">Exit Simulation</Button>
+              <h2 className="text-xl font-bold text-white mb-2">{t('games.aigeneratedgame.corrupted_game_data')}</h2>
+              <p className="text-gray-400 mb-6">{t('games.aigeneratedgame.this_simulation_frag')}</p>
+              <Button onClick={onClose} variant="secondary">{t('games.aigeneratedgame.exit_simulation')}</Button>
           </div>
       );
   }
@@ -51,7 +52,7 @@ export const AIGeneratedGame: React.FC<AIGeneratedGameProps> = ({ gameData, onCl
     <div className="h-full flex flex-col bg-black font-mono text-green-500 p-4 border border-green-900/50 shadow-[inset_0_0_50px_rgba(0,20,0,0.5)]">
         <div className="flex justify-between items-center border-b border-green-900 pb-2 mb-4">
             <h2 className="text-lg font-bold flex items-center"><Terminal size={18} className="mr-2"/> {gameData.title}</h2>
-            <button onClick={onClose} className="text-xs hover:text-white">[EXIT]</button>
+            <button onClick={onClose} className="text-xs hover:text-white">{t('games.aigeneratedgame.exit')}</button>
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-4 mb-4 custom-scrollbar">
@@ -68,7 +69,7 @@ export const AIGeneratedGame: React.FC<AIGeneratedGameProps> = ({ gameData, onCl
             {gameOver && (
                 <div className="text-center py-8">
                     <Trophy size={48} className="mx-auto mb-4 text-yellow-500"/>
-                    <h3 className="text-2xl font-bold text-white">GAME OVER</h3>
+                    <h3 className="text-2xl font-bold text-white">{t('games.aigeneratedgame.game_over')}</h3>
                 </div>
             )}
         </div>
@@ -84,7 +85,7 @@ export const AIGeneratedGame: React.FC<AIGeneratedGameProps> = ({ gameData, onCl
                 </button>
             ))}
             {gameOver && (
-                <Button fullWidth variant="primary" onClick={onClose}>Return to Reality</Button>
+                <Button fullWidth variant="primary" onClick={onClose}>{t('games.aigeneratedgame.return_to_reality')}</Button>
             )}
         </div>
     </div>

@@ -80,16 +80,16 @@ export interface Reward {
   id: string;
   name: string;
   type: 'BADGE' | 'TOOL' | 'SKIN' | 'CONSUMABLE' | 'REAL_PRIZE';
-  icon: string; 
-  description: string; 
-  criteria?: string; 
+  icon: string;
+  description: string;
+  criteria?: string;
   rarity: 'COMMON' | 'RARE' | 'LEGENDARY' | 'MYTHIC';
-  cost?: number; 
-  stock?: number; 
-  unlockedAt?: string; 
-  code?: string; 
-  link?: string; 
-  imageUrl?: string; 
+  cost?: number;
+  stock?: number;
+  unlockedAt?: string;
+  code?: string;
+  link?: string;
+  imageUrl?: string;
 }
 
 export interface Agent {
@@ -100,7 +100,45 @@ export interface Agent {
   knowledgeBase?: string;
   avatar: string;
   creatorId: string;
-  model?: AIModel; 
+  modelPref?: AIModel; // Backend compatible
+  category?: 'COACH' | 'COMPANION' | 'TUTOR' | 'THERAPIST' | 'MENTOR' | 'ASSISTANT' | 'CREATIVE' | 'GAMING' | 'CUSTOM';
+  isPublic?: boolean;
+  isActive?: boolean;
+  rating?: number;
+  totalConversations?: number;
+  hasKnowledgeBase?: boolean;
+  conversationStarters?: string[];
+  tags?: string[];
+  capabilities?: {
+    canUseTools: boolean;
+    customTools: string[];
+  };
+  skills?: AgentSkill[];
+  schedules?: AgentSchedule[];
+}
+
+export interface AgentSkill {
+  id: string;
+  name: string;
+  key: string;
+  description: string;
+  icon: string;
+  category: 'SEARCH' | 'DATA' | 'UTILITY' | 'SOCIAL' | 'CREATIVE';
+  isEnabled: boolean;
+  isPremium: boolean;
+}
+
+export interface AgentTask {
+  id: string;
+  agentId: string;
+  type: 'MANUAL' | 'SCHEDULED' | 'REACTIVE';
+  status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+  name: string;
+  input?: any;
+  output?: any;
+  error?: string;
+  executionTimeMs: number;
+  createdAt: string;
 }
 
 export type GameStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -113,8 +151,8 @@ export interface CreatorGame {
   creatorId: string;
   plays: number;
   prompt: string;
-  scenes?: any[]; 
-  intro?: string; 
+  scenes?: any[];
+  intro?: string;
   winCondition?: string;
 }
 
@@ -132,7 +170,7 @@ export interface SkillNode {
   description: string;
   cost: number;
   parentId?: string;
-  effect: string; 
+  effect: string;
   branch: 'PROMPTING' | 'SAFETY' | 'ETHICS';
 }
 
@@ -148,33 +186,33 @@ export interface Skin {
 
 export interface UserStats {
   id: string;
-  email: string; 
+  email: string;
   name: string;
   avatar: string;
   title: string;
   level: number;
   xp: number;
-  credits: number; 
-  skillPoints: number; 
-  unlockedSkills: string[]; 
+  credits: number;
+  skillPoints: number;
+  unlockedSkills: string[];
   streak: number;
   streakShields: number;
-  lastLoginDate: string; 
+  lastLoginDate: string;
   skills: Record<SkillType, number>;
   unlockedTools: string[];
   completedNodes: string[];
   isPro: boolean;
-  isCreator: boolean; 
-  createdGames: CreatorGame[]; 
+  isCreator: boolean;
+  createdGames: CreatorGame[];
   squadId?: string;
   gameScores: Record<string, number>;
-  completedDifficulties: Record<string, Difficulty[]>; 
+  completedDifficulties: Record<string, Difficulty[]>;
   subscriptionTier: 'free' | 'operative' | 'pro_creator';
   subscriptionStatus?: 'active' | 'canceled' | 'past_due';
   role: 'user' | 'admin';
   inventory: Reward[];
-  agents: Agent[]; 
-  enteredCompetitions: string[]; 
+  agents: Agent[];
+  enteredCompetitions: string[];
   isBanned?: boolean;
   language?: Language;
   // Meta-Progression
@@ -193,9 +231,9 @@ export interface GameDef {
   difficulty: Difficulty;
   imageGradient?: string;
   isPremium?: boolean;
-  assetIcon?: string; 
-  assetBanner?: string; 
-  visualPrompt?: string; 
+  assetIcon?: string;
+  assetBanner?: string;
+  visualPrompt?: string;
 }
 
 export interface TutorialContent {
@@ -224,23 +262,23 @@ export interface PathNode {
   rewardToolId?: string;
   x: number;
   y: number;
-  assetImage?: string; 
+  assetImage?: string;
 }
 
 export interface SquadMember {
-  id: string; 
-  name: string; 
-  avatar: string; 
+  id: string;
+  name: string;
+  avatar: string;
   role: 'member' | 'leader';
-  status?: 'PENDING' | 'READY' | 'OFFLINE'; 
+  status?: 'PENDING' | 'READY' | 'OFFLINE';
 }
 
 export interface SquadTask {
-    id: string;
-    description: string;
-    target: number;
-    current: number;
-    type: 'INDIVIDUAL' | 'COLLECTIVE';
+  id: string;
+  description: string;
+  target: number;
+  current: number;
+  type: 'INDIVIDUAL' | 'COLLECTIVE';
 }
 
 export interface Squad {
@@ -252,7 +290,7 @@ export interface Squad {
   totalXp: number;
   weeklyQuestTarget: number;
   weeklyQuestProgress: number;
-  trend?: 'UP' | 'DOWN' | 'SAME'; 
+  trend?: 'UP' | 'DOWN' | 'SAME';
 }
 
 export enum AppTab {
@@ -268,11 +306,11 @@ export enum AppTab {
 export interface ToolDef {
   id: string;
   name: string;
-  icon: string; 
+  icon: string;
   description: string;
-  unlockCondition: string; 
-  requiredBadgeId?: string; 
-  capabilities: string[]; 
+  unlockCondition: string;
+  requiredBadgeId?: string;
+  capabilities: string[];
   type: 'AGENT_BUILDER' | 'IMAGE_GEN' | 'AUDIO' | 'CHAT' | 'VISION' | 'GAME_CREATOR' | 'JARVIS' | 'CODE_OPT' | 'WORKFLOW';
 }
 
@@ -292,7 +330,7 @@ export interface Competition {
   minLevel: number;
   participants: number;
   image: string;
-  tasks: string[]; 
+  tasks: string[];
 }
 
 export interface Notification {
@@ -303,8 +341,17 @@ export interface Notification {
 }
 
 export interface CyberRainState {
-    rainIntensity: number; 
-    lightColor: string;
-    fogDensity: number;
-    neonColor: string;
+  rainIntensity: number;
+  lightColor: string;
+  fogDensity: number;
+  neonColor: string;
+}
+export interface AgentSchedule {
+  id: string;
+  agentId: string;
+  cronExpression: string;
+  description: string;
+  isActive: boolean;
+  input?: any;
+  createdAt: string;
 }

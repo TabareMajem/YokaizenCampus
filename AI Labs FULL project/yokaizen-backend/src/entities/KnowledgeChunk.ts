@@ -70,6 +70,8 @@ export class KnowledgeChunk {
     title?: string;
     author?: string;
     url?: string;
+    source?: string;
+    fileName?: string;
     language?: string;
     keywords?: string[];
     customFields?: Record<string, string>;

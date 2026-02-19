@@ -85,7 +85,10 @@ export interface UserStatsResponse {
   credits: number;
   xp: number;
   level: number;
+  xpProgress: number;
+  xpToNextLevel: number;
   streak: number;
+  language: string;
   skillPoints: number;
   energy: {
     current: number;
@@ -96,7 +99,35 @@ export interface UserStatsResponse {
     id: string;
     name: string;
     tier: string;
+    icon?: string;
   } | null;
+  inventory?: {
+    id: string;
+    itemId: string;
+    name: string;
+    type: string;
+    rarity: string;
+    isEquipped: boolean;
+    acquiredAt: Date;
+  }[];
+  skills?: {
+    id: string;
+    nodeId: string;
+    name: string;
+    category: string;
+    level: number;
+    unlockedAt: Date;
+  }[];
+  activeItems: string[];
+  settings?: {
+    notifications: boolean;
+    soundEffects: boolean;
+    darkMode: boolean;
+    language: string;
+    timezone: string;
+  };
+  createdAt: Date;
+  lastLogin: Date;
   stats: {
     totalGamesPlayed: number;
     totalWins: number;

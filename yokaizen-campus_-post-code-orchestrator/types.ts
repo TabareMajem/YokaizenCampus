@@ -66,6 +66,12 @@ export interface User {
   isOnboarded?: boolean;
   tier?: SubscriptionTier;
   provider?: AIProvider;
+  apiKeys?: {
+    google?: string;
+    openai?: string;
+    anthropic?: string;
+    deepseek?: string;
+  };
 }
 
 export interface SkillStats {

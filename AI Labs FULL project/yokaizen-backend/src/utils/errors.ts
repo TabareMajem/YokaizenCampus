@@ -25,7 +25,16 @@ export class ApiError extends Error {
     Error.captureStackTrace(this, this.constructor);
   }
 
+  // Getter for code compatibility
+  get code(): string {
+    return this.errorCode;
+  }
+
   // Factory methods for common errors
+  static validation(message: string, details?: unknown): ApiError {
+    return new ApiError(message, StatusCodes.BAD_REQUEST, ErrorCodes.INVALID_INPUT, details);
+  }
+
   static badRequest(message: string, details?: unknown): ApiError {
     return new ApiError(message, StatusCodes.BAD_REQUEST, ErrorCodes.INVALID_INPUT, details);
   }

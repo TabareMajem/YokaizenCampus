@@ -18,6 +18,7 @@ export const StripeConfig = {
 export const PlanConfig = {
   FREE: {
     name: 'Free',
+    price: 0,
     tier: 'FREE' as const,
     credits: 100,
     aiRequestsPerMinute: 5,
@@ -29,6 +30,7 @@ export const PlanConfig = {
   },
   OPERATIVE: {
     name: 'Operative',
+    price: 490, // $4.90
     tier: 'OPERATIVE' as const,
     priceId: config.stripe.operativePriceId,
     credits: 1000,
@@ -43,6 +45,7 @@ export const PlanConfig = {
   },
   PRO_CREATOR: {
     name: 'Pro Creator',
+    price: 990, // $9.90
     tier: 'PRO_CREATOR' as const,
     priceId: config.stripe.proPriceId,
     credits: 5000,

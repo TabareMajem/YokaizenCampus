@@ -36,10 +36,9 @@ const SocialScannerOverlay = ({ isScanning, progress, targetName, t }: { isScann
             <rect x="35" y="145" width={230 * (progress / 100)} height="4" fill="#00FF94" />
             
             <text x="220" y="40" fill="#00FF94" fontFamily="monospace" fontSize="6" opacity="0.7">
-                BIO_METRICS: MATCH
-            </text>
+                {t('games.cognitivecity.bio_metrics_match')}</text>
             <text x="220" y="50" fill="#00FF94" fontFamily="monospace" fontSize="6" opacity="0.7">
-                PUPIL_DILATION: {Math.random().toFixed(2)}
+                {t('games.cognitivecity.pupil_dilation')}{Math.random().toFixed(2)}
             </text>
         </>
     )}
@@ -57,12 +56,12 @@ const MapView = ({ onTravel, t }: { onTravel: (loc: string) => void, t: (key: st
             <div className="w-16 h-16 bg-purple-900/50 border-2 border-purple-500 rounded-full flex items-center justify-center animate-pulse group-hover:scale-110 transition-transform">
                 <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
             </div>
-            <div className="mt-2 bg-black/80 px-2 py-1 border border-purple-500 text-purple-400 text-xs font-bold">MAYOR SANTOS</div>
+            <div className="mt-2 bg-black/80 px-2 py-1 border border-purple-500 text-purple-400 text-xs font-bold">{t('games.cognitivecity.mayor_santos')}</div>
         </button>
 
         <div className="absolute bottom-8 left-8 bg-black/80 border border-green-500 p-4 rounded-lg max-w-xs">
             <div className="text-green-500 text-xs mb-1">{t('city.location')}</div>
-            <div className="text-white font-bold flex items-center"><MapPin size={14} className="mr-1"/> SAFEHOUSE</div>
+            <div className="text-white font-bold flex items-center"><MapPin size={14} className="mr-1"/> {t('games.cognitivecity.safehouse')}</div>
             <div className="h-px w-full bg-green-500/30 my-2"></div>
             <div className="text-[10px] text-gray-400"> {t('city.mission')}</div>
         </div>
@@ -187,7 +186,7 @@ export const CognitiveCity: React.FC<CognitiveCityProps> = ({ onComplete, t }) =
                                 ? 'bg-blue-600/80 border-blue-400 text-white rounded-br-none' 
                                 : 'bg-gray-900/90 border-red-500/30 text-gray-200 rounded-bl-none font-serif'
                             }`}>
-                                {m.role === 'model' && <div className="text-[10px] text-red-400 uppercase font-bold mb-1">Mayor Santos</div>}
+                                {m.role === 'model' && <div className="text-[10px] text-red-400 uppercase font-bold mb-1">{t('games.cognitivecity.mayor_santos')}</div>}
                                 {m.content}
                             </div>
                         </div>

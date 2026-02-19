@@ -1,10 +1,11 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '../ui/Button';
 import { audio } from '../../services/audioService';
 import { Play, RotateCcw, ArrowUp, ArrowLeft, ArrowRight, Cpu, Zap, Flag, Flame, CheckCircle, ShoppingBag, Map, Star, Lock, ChevronLeft } from 'lucide-react';
 import { Difficulty, Language, GameType, UserStats } from '../../types';
-import { Scanlines, Vignette } from '../ui/Visuals';
+import { consultTheOracle, analyzeDriftCode } from '../../services/geminiService';
+import { gameProgressService } from '../../services/gameProgressService';
+import { Scanlines, Vignette, Noise } from '../ui/Visuals';
 import { SkinShop } from '../ui/SkinShop';
 import { GAME_SKINS } from '../../constants';
 
@@ -104,21 +105,15 @@ const LEVELS: LevelDef[] = [
 ];
 
 // Progress persistence
-const STORAGE_KEY = 'neondrift_progress';
 interface LevelProgress {
-    [levelId: number]: { completed: boolean; bestMoves: number; stars: number };
+    [levelId: number]: {
+        completed: boolean;
+        bestMoves: number;
+        stars: number;
+    };
 }
 
-const loadProgress = (): LevelProgress => {
-    try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        return saved ? JSON.parse(saved) : {};
-    } catch { return {}; }
-};
-
-const saveProgress = (progress: LevelProgress) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
-};
+type GameState = 'MENU' | 'LEVEL_SELECT' | 'PLAYING' | 'RUNNING' | 'CRASHED' | 'WIN' | 'VICTORY';
 
 export const NeonDrift: React.FC<NeonDriftProps> = ({ onComplete, difficulty = 'Pro', t, user, onUpdateUser }) => {
     const [commands, setCommands] = useState<Command[]>([]);
@@ -128,8 +123,39 @@ export const NeonDrift: React.FC<NeonDriftProps> = ({ onComplete, difficulty = '
     const [showShop, setShowShop] = useState(false);
     const [showLevelSelect, setShowLevelSelect] = useState(true);
     const [currentLevel, setCurrentLevel] = useState<LevelDef | null>(null);
-    const [progress, setProgress] = useState<LevelProgress>(loadProgress);
     const [trackMap, setTrackMap] = useState<number[][]>([]);
+
+    // Game State
+    const [gameState, setGameState] = useState<GameState>('MENU');
+    const [currentLevelId, setCurrentLevelId] = useState(1);
+    const [code, setCode] = useState<string[]>([]);
+    // ... other state ...
+
+    // Progress State
+    const [progress, setProgress] = useState<LevelProgress>({});
+
+    // Load progress
+    useEffect(() => {
+        const saved = gameProgressService.load('neondrift');
+        if (saved && saved.customData) {
+            setProgress(saved.customData as LevelProgress);
+        } else {
+            // Default progress
+            const defaultProgress = {
+                1: { completed: false, bestMoves: 0, stars: 0 }
+            };
+            setProgress(defaultProgress);
+        }
+    }, []);
+
+    const saveProgressToService = (newProgress: LevelProgress) => {
+        // Calc total stars
+        const totalStars = Object.values(newProgress).reduce((acc, l) => acc + l.stars, 0);
+        gameProgressService.save('neondrift', {
+            highScore: totalStars,
+            customData: newProgress
+        });
+    };
 
     const commandLimit = currentLevel?.moveLimit || 12;
     const gridSize = currentLevel?.grid.length || 7;
@@ -180,14 +206,32 @@ export const NeonDrift: React.FC<NeonDriftProps> = ({ onComplete, difficulty = '
         const stars = calculateStars(movesUsed);
         const prev = progress[currentLevel.id];
 
-        if (!prev || movesUsed < prev.bestMoves) {
-            const newProgress = {
-                ...progress,
-                [currentLevel.id]: { completed: true, bestMoves: movesUsed, stars: Math.max(stars, prev?.stars || 0) }
-            };
-            setProgress(newProgress);
-            saveProgress(newProgress);
+        // Update progress
+        const newProgress = { ...progress };
+        const currentBest = newProgress[currentLevel.id]?.bestMoves || Infinity;
+
+        newProgress[currentLevel.id] = {
+            completed: true,
+            bestMoves: Math.min(currentBest, movesUsed),
+            stars: Math.max(newProgress[currentLevel.id]?.stars || 0, stars)
+        };
+
+        // Unlock next level
+        if (currentLevel.id < LEVELS.length) {
+            const nextId = currentLevel.id + 1;
+            if (!newProgress[nextId]) {
+                newProgress[nextId] = { completed: false, bestMoves: 0, stars: 0 };
+            }
         }
+
+        setProgress(newProgress);
+        saveProgressToService(newProgress);
+
+        setTimeout(() => {
+            const isFinalLevel = currentLevel.id === LEVELS.length;
+            setGameState(isFinalLevel ? 'VICTORY' : 'LEVEL_SELECT');
+            // ... logic
+        }, 2000);
     };
 
     // --- PROCEDURAL GENERATION (Legacy for random mode) ---
@@ -394,6 +438,31 @@ export const NeonDrift: React.FC<NeonDriftProps> = ({ onComplete, difficulty = '
         }
     };
 
+    // --- VISUAL LOGIC ---
+    const getRoadClass = (x: number, y: number) => {
+        if (!trackMap[y] || trackMap[y][x] === 4) return '';
+
+        // Check neighbors
+        const n = (trackMap[y - 1] && trackMap[y - 1][x] !== 4);
+        const s = (trackMap[y + 1] && trackMap[y + 1][x] !== 4);
+        const w = (trackMap[y][x - 1] !== 4);
+        const e = (trackMap[y][x + 1] !== 4);
+
+        // CSS class for connections
+        const classes = ['bg-slate-800/80'];
+        if (n) classes.push('border-t-2 border-slate-600');
+        if (s) classes.push('border-b-2 border-slate-600');
+        if (w) classes.push('border-l-2 border-slate-600');
+        if (e) classes.push('border-r-2 border-slate-600');
+
+        // If it's a specific type, override
+        if (trackMap[y][x] === 2) return 'bg-cyan-900/50 border-2 border-cyan-500 shadow-[inset_0_0_10px_#06b6d4]';
+        if (trackMap[y][x] === 3) return 'bg-purple-900/50 border-2 border-purple-500 shadow-[inset_0_0_10px_#a855f7]';
+        if (trackMap[y][x] === 5) return 'bg-amber-900/50 border-2 border-amber-500 shadow-[inset_0_0_10px_#f59e0b]';
+
+        return classes.join(' ');
+    };
+
     return (
         <div className="h-full flex flex-col p-4 relative overflow-hidden bg-slate-950 font-mono select-none">
             <Scanlines />
@@ -414,11 +483,11 @@ export const NeonDrift: React.FC<NeonDriftProps> = ({ onComplete, difficulty = '
                 <div className="absolute inset-0 z-40 bg-slate-950/95 backdrop-blur-sm flex flex-col p-6 animate-in fade-in">
                     <div className="flex items-center justify-between mb-6">
                         <div>
-                            <h2 className="text-2xl font-black text-white">SELECT TRACK</h2>
-                            <p className="text-xs text-slate-500 font-mono">Complete levels to unlock more</p>
+                            <h2 className="text-2xl font-black text-white">{t('neondrift.select_track')}</h2>
+                            <p className="text-xs text-slate-500 font-mono">{t('neondrift.unlock_more')}</p>
                         </div>
                         <Button variant="ghost" size="sm" onClick={() => onComplete(0)}>
-                            EXIT
+                            {t('neondrift.exit')}
                         </Button>
                     </div>
 
@@ -447,7 +516,7 @@ export const NeonDrift: React.FC<NeonDriftProps> = ({ onComplete, difficulty = '
                                             <div>
                                                 <div className="font-bold text-white text-sm">{level.name}</div>
                                                 <div className="text-[10px] text-slate-500 font-mono">
-                                                    {level.moveLimit} MOVES MAX • {level.grid.length}x{level.grid.length} GRID
+                                                    {level.moveLimit} {t('neondrift.moves_max')} • {level.grid.length}x{level.grid.length} {t('neondrift.grid')}
                                                 </div>
                                             </div>
                                         </div>
@@ -465,7 +534,7 @@ export const NeonDrift: React.FC<NeonDriftProps> = ({ onComplete, difficulty = '
 
                                     {levelProgress?.completed && (
                                         <div className="mt-2 text-[10px] text-cyan-400 font-mono">
-                                            ✓ BEST: {levelProgress.bestMoves} moves
+                                            ✓ {t('neondrift.best')}: {levelProgress.bestMoves} {t('neondrift.moves')}
                                         </div>
                                     )}
                                 </button>
@@ -479,50 +548,53 @@ export const NeonDrift: React.FC<NeonDriftProps> = ({ onComplete, difficulty = '
                             variant="secondary"
                             onClick={() => { setCurrentLevel(null); setShowLevelSelect(false); generateTrack(); }}
                         >
-                            <Zap size={16} className="mr-2" /> RANDOM MODE
+                            <Zap size={16} className="mr-2" /> {t('neondrift.random_mode')}
                         </Button>
                     </div>
                 </div>
             )}
 
             {/* --- VISUALIZER --- */}
-            <div className="flex-1 bg-[#0a0a0a] rounded-xl border-2 border-slate-800 relative overflow-hidden flex items-center justify-center mb-4 shadow-[0_0_30px_rgba(0,0,0,0.5)] perspective-[800px]">
-                {/* Grid Floor with animation */}
+            <div className="flex-1 bg-[#050510] rounded-xl border-2 border-slate-800/80 relative overflow-hidden flex items-center justify-center mb-4 shadow-[inset_0_0_100px_rgba(6,182,212,0.1),0_0_30px_rgba(0,0,0,0.8)] perspective-[1200px]">
+                {/* Space Grid Floor with animation */}
                 <div
-                    className="absolute inset-0 transform scale-150 opacity-40"
+                    className="absolute inset-0 transform scale-[2] opacity-30 origin-bottom"
                     style={{
-                        background: 'linear-gradient(rgba(6,182,212,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(6,182,212,0.15) 1px, transparent 1px)',
-                        backgroundSize: '50px 50px',
-                        animation: 'gridFlow 3s linear infinite'
+                        background: 'linear-gradient(rgba(34,211,238,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(34,211,238,0.2) 1px, transparent 1px)',
+                        backgroundSize: '40px 40px',
+                        transform: 'rotateX(60deg) translateY(100px)',
+                        animation: 'gridFlow 2s linear infinite'
                     }}
                 ></div>
                 {/* Horizon glow */}
-                <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-purple-900/20 to-transparent pointer-events-none"></div>
+                <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-cyan-900/30 via-purple-900/10 to-transparent pointer-events-none"></div>
 
                 <div className="absolute top-4 left-4 z-30">
-                    <Button size="sm" variant="ghost" onClick={() => { setShowLevelSelect(true); setCommands([]); setStatus('IDLE'); }}>
-                        <ChevronLeft size={16} className="mr-1" /> LEVELS
+                    <Button size="sm" variant="ghost" onClick={() => { setShowLevelSelect(true); setCommands([]); setStatus('IDLE'); }} className="backdrop-blur bg-black/30 border border-white/10 hover:border-cyan-500 text-cyan-400">
+                        <ChevronLeft size={16} className="mr-1" /> {t('neondrift.levels')}
                     </Button>
                 </div>
 
                 <div className="absolute top-4 right-4 z-30">
-                    <Button size="sm" variant="ghost" onClick={() => { generateTrack(); setCommands([]); setStatus('IDLE'); }}>
-                        <Map size={16} className="mr-2" /> GEN
+                    <Button size="sm" variant="ghost" onClick={() => { generateTrack(); setCommands([]); setStatus('IDLE'); }} className="backdrop-blur bg-black/30 border border-white/10 hover:border-cyan-500 text-cyan-400">
+                        <Map size={16} className="mr-2" /> {t('neondrift.gen')}
                     </Button>
                 </div>
 
-                <div className="relative transform rotate-x-30 transition-transform duration-500 scale-90">
-                    <div className="grid gap-1 p-4" style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}>
+                <div className="relative transform rotate-x-[55deg] rotate-z-[-20deg] scale-90 translate-y-10 shadow-[0_50px_100px_rgba(6,182,212,0.3)] transition-transform duration-700 hover:rotate-z-[-10deg] hover:rotate-x-[45deg] preserve-3d">
+                    <div className="grid gap-1.5 p-6 bg-slate-900/40 rounded-3xl border border-cyan-500/30 backdrop-blur-md" style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}>
                         {trackMap.flat().map((cell, i) => {
+                            const y = Math.floor(i / gridSize);
+                            const x = i % gridSize;
                             return (
-                                <div key={i} className={`w-12 h-12 rounded-md flex items-center justify-center relative ${cell === 4 ? 'bg-transparent' :
-                                    cell === 2 ? 'bg-cyan-900/50 border-2 border-cyan-500' :
-                                        cell === 3 ? 'bg-purple-900/50 border-2 border-purple-500' :
-                                            cell === 5 ? 'bg-amber-900/50 border-2 border-amber-500' :
-                                                'bg-slate-800/80 border border-slate-700 shadow-inner'
-                                    }`}>
-                                    {cell === 1 && <div className="w-1 h-1 bg-white/20 rounded-full"></div>}
-                                    {cell === 3 && <Flag className="text-purple-400 w-6 h-6 animate-bounce drop-shadow-[0_0_5px_#C45FFF]" />}
+                                <div key={i} className={`w-14 h-14 rounded-md flex items-center justify-center relative transition-all duration-300 ${cell === 4 ? 'opacity-0 scale-50' : getRoadClass(x, y)} translate-z-10`}>
+                                    {/* Connection Lines (Glow) */}
+                                    {cell !== 4 && (
+                                        <div className="absolute inset-0 opacity-20 bg-blue-500/10"></div>
+                                    )}
+
+                                    {cell === 1 && <div className="w-1.5 h-1.5 bg-slate-600 rounded-full opacity-50"></div>}
+                                    {cell === 3 && <Flag className="text-purple-400 w-6 h-6 animate-bounce drop-shadow-[0_0_10px_#C45FFF]" />}
                                     {cell === 5 && <div className="text-amber-500 font-bold text-[10px] animate-pulse">&gt;&gt;&gt;</div>}
                                 </div>
                             );
@@ -540,13 +612,23 @@ export const NeonDrift: React.FC<NeonDriftProps> = ({ onComplete, difficulty = '
                         ))}
                     </div>
 
-                    {/* THE CAR (SPRITE) */}
+                    {/* THE CAR (SPRITE) with Motion Blur */}
                     <div
-                        className="absolute top-4 left-4 w-12 h-12 flex items-center justify-center z-20 transition-none"
+                        className="absolute top-6 left-6 w-14 h-14 flex items-center justify-center z-20 transition-none will-change-transform translate-z-20 drop-shadow-[0_20px_30px_rgba(0,0,0,0.8)]"
                         style={{
-                            transform: `translate(${carPos.x * 52}px, ${carPos.y * 52}px)`
+                            transform: `translate(${carPos.x * 62}px, ${carPos.y * 62}px)`
                         }}
                     >
+                        {/* Ghost Trail (Fake Motion Blur) */}
+                        {status === 'RUNNING' && (
+                            <div className="absolute inset-0 opacity-40 blur-sm scale-95"
+                                style={{
+                                    transform: `translate(${-Math.sin(carPos.rotation * Math.PI / 180) * 10}px, ${Math.cos(carPos.rotation * Math.PI / 180) * 10}px) rotate(${carPos.rotation}deg)`
+                                }}>
+                                <div className="w-10 h-10 bg-cyan-400 rounded-lg"></div>
+                            </div>
+                        )}
+
                         <div
                             className="w-10 h-10 relative flex items-center justify-center"
                             style={{ transform: `rotate(${carPos.rotation}deg)` }}
@@ -582,7 +664,7 @@ export const NeonDrift: React.FC<NeonDriftProps> = ({ onComplete, difficulty = '
                     <div className="absolute inset-0 bg-gradient-to-b from-red-950/90 to-black/95 flex flex-col items-center justify-center backdrop-blur-sm animate-shake z-30">
                         <Flame size={64} className="text-red-500 mb-4 animate-bounce" />
                         <h2 className="text-4xl font-black text-white tracking-widest" style={{ textShadow: '0 0 20px #ef4444' }}>{t('neondrift.crashed')}</h2>
-                        <p className="text-red-400/70 text-sm mt-2 font-mono">COLLISION DETECTED</p>
+                        <p className="text-red-400/70 text-sm mt-2 font-mono">{t('neondrift.collision')}</p>
                     </div>
                 )}
                 {status === 'WIN' && (
@@ -601,8 +683,8 @@ export const NeonDrift: React.FC<NeonDriftProps> = ({ onComplete, difficulty = '
                                         />
                                     ))}
                                 </div>
-                                <div className="text-lg text-cyan-400 font-mono">{commands.length} MOVES</div>
-                                <div className="text-sm text-slate-500">Best for 3★: {currentLevel.stars.three}</div>
+                                <div className="text-lg text-cyan-400 font-mono">{commands.length} {t('neondrift.moves')}</div>
+                                <div className="text-sm text-slate-500">{t('neondrift.best_for_3')} {currentLevel.stars.three}</div>
                             </>
                         )}
                     </div>
@@ -615,8 +697,8 @@ export const NeonDrift: React.FC<NeonDriftProps> = ({ onComplete, difficulty = '
                     <span className="text-[10px] font-mono text-cyan-400 uppercase flex items-center"><Cpu size={10} className="mr-1" /> {t('neondrift.logic_buffer')}</span>
                     <div className="flex items-center space-x-3">
                         {user && onUpdateUser && (
-                            <button onClick={() => setShowShop(true)} className="text-xs font-bold text-amber-400 flex items-center hover:text-white">
-                                <ShoppingBag size={12} className="mr-1" /> Loadout
+                            <button onClick={() => setShowShop(true)} className="text-xs font-bold text-amber-400 flex items-center hover:text-white transition-colors p-1 bg-amber-900/20 rounded">
+                                <ShoppingBag size={12} className="mr-1" /> {t('neondrift.loadout')}
                             </button>
                         )}
                         <span className={`text-[10px] font-mono ${commands.length > commandLimit ? 'text-red-500 animate-pulse' : 'text-gray-500'}`}>
