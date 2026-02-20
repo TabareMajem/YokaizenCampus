@@ -75,7 +75,7 @@ deploy_component() {
     # Install dependencies & Build (if needed, but ideally we deploy built artifacts)
     echo "   Installing dependencies..."
     cd "$DEST_DIR"
-    npm install --production --silent
+    npm install --production --silent --legacy-peer-deps
     
     # If dist doesn't exist or we want to ensure fresh build on server:
     # npm run build 
