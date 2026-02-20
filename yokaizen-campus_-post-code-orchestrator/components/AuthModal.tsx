@@ -13,6 +13,9 @@ interface AuthModalProps {
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, language, setLanguage }) => {
   const [isLogin, setIsLogin] = useState(true);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -29,6 +32,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, language,
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (isForgotPassword) {
+      if (!email) {
+        setError('Email is required');
+        return;
+      }
+      setLoading(true);
+      try {
+        // Mock password reset API call
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        setResetSent(true);
+      } catch (err: any) {
+        setError(err.message || 'Reset failed');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
 
     // Validation
     if (!email || !password) {
@@ -86,116 +107,187 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, language,
               <ShieldCheck className="w-8 h-8 text-neon-blue" />
             </div>
             <h2 className="text-2xl font-bold text-white tracking-widest">
-              {isLogin ? T.SECURITY_CLEARANCE : T.REGISTRATION}
+              {isForgotPassword ? (T.RESET_PASSWORD || 'RESET PASSWORD') : (isLogin ? T.SECURITY_CLEARANCE : T.REGISTRATION)}
             </h2>
             <p className="text-slate-400 text-xs mt-2 uppercase tracking-wide">
-              {T.SUBTITLE}
+              {isForgotPassword ? (T.RESET_SUBTITLE || 'Recover Access') : T.SUBTITLE}
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
-              <div>
-                <label className="block text-xs font-bold text-slate-400 mb-1 uppercase">{T.NAME}</label>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white focus:border-neon-blue focus:outline-none transition-colors"
-                  placeholder="e.g. Maverick"
-                />
-              </div>
-            )}
-
-            <div>
-              <label className="block text-xs font-bold text-slate-400 mb-1 uppercase">{T.EMAIL}</label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white focus:border-neon-blue focus:outline-none transition-colors"
-                placeholder="cadet@bridge.edu"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-400 mb-1 uppercase">
-                {T.PASSWORD || 'Password'}
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded p-3 pr-10 text-white focus:border-neon-blue focus:outline-none transition-colors"
-                  placeholder="••••••••"
-                  minLength={8}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              {!isLogin && (
-                <p className="text-xs text-slate-500 mt-1">Minimum 8 characters</p>
-              )}
-            </div>
-
-            {!isLogin && (
-              <div>
-                <label className="block text-xs font-bold text-slate-400 mb-1 uppercase">Clearance Level</label>
-                <div className="grid grid-cols-2 gap-2">
+            {isForgotPassword ? (
+              // Forgot Password Flow
+              resetSent ? (
+                <div className="text-center p-4">
+                  <div className="w-12 h-12 bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/50">
+                    <ShieldCheck className="w-6 h-6 text-emerald-400" />
+                  </div>
+                  <h3 className="text-white font-bold mb-2">{T.RESET_SENT || 'Reset Link Sent'}</h3>
+                  <p className="text-slate-400 text-xs leading-relaxed">{T.RESET_DESC || 'If an account exists for this email, you will receive instructions to reset your password.'}</p>
                   <button
                     type="button"
-                    onClick={() => setRole(UserRole.STUDENT)}
-                    className={`p-3 rounded text-xs font-bold border transition-all ${role === UserRole.STUDENT ? 'bg-neon-blue/20 border-neon-blue text-white' : 'bg-slate-950 border-slate-700 text-slate-500 hover:border-slate-500'}`}
+                    onClick={() => { setIsForgotPassword(false); setResetSent(false); }}
+                    className="mt-6 w-full py-3 bg-slate-800 hover:bg-slate-700 text-white rounded text-sm font-bold transition-colors"
                   >
-                    STUDENT
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRole(UserRole.TEACHER)}
-                    className={`p-3 rounded text-xs font-bold border transition-all ${role === UserRole.TEACHER ? 'bg-neon-purple/20 border-neon-purple text-white' : 'bg-slate-950 border-slate-700 text-slate-500 hover:border-slate-500'}`}
-                  >
-                    TEACHER
+                    {T.BACK_TO_LOGIN || 'Back to Login'}
                   </button>
                 </div>
-              </div>
-            )}
-
-            {error && (
-              <div className="p-3 bg-rose-900/20 border border-rose-500/50 rounded text-rose-400 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4" /> {error}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-white text-black font-bold rounded hover:bg-slate-200 transition-colors flex items-center justify-center gap-2 mt-6"
-            >
-              {loading ? (
-                <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"></div>
               ) : (
-                isLogin ? <><LogIn className="w-4 h-4" /> {T.ACCESS_SYSTEM}</> : <><UserPlus className="w-4 h-4" /> {T.REGISTER}</>
-              )}
-            </button>
-          </form>
+                <div>
+                  <p className="text-slate-400 text-xs mb-4 text-center">{T.RESET_INST || 'Enter your email to receive a password reset link.'}</p>
+                  <label className="block text-xs font-bold text-slate-400 mb-1 uppercase">{T.EMAIL}</label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white focus:border-neon-blue focus:outline-none transition-colors"
+                    placeholder="cadet@bridge.edu"
+                  />
 
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => { setIsLogin(!isLogin); setError(''); setPassword(''); }}
-              className="text-slate-500 text-xs hover:text-white transition-colors underline decoration-slate-700 underline-offset-4"
-            >
-              {isLogin ? T.SWITCH_REGISTER : T.SWITCH_LOGIN}
-            </button>
-          </div>
+                  {error && (
+                    <div className="mt-4 p-3 bg-rose-900/20 border border-rose-500/50 rounded text-rose-400 text-xs flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4" /> {error}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-3 bg-white text-black font-bold rounded hover:bg-slate-200 transition-colors flex items-center justify-center gap-2 mt-6"
+                  >
+                    {loading ? <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"></div> : (T.SEND_RESET || 'Send Reset Link')}
+                  </button>
+
+                  <div className="mt-6 text-center">
+                    <button
+                      type="button"
+                      onClick={() => { setIsForgotPassword(false); setError(''); }}
+                      className="text-slate-500 text-xs hover:text-white transition-colors underline decoration-slate-700 underline-offset-4"
+                    >
+                      {T.BACK_TO_LOGIN || 'Back to Login'}
+                    </button>
+                  </div>
+                </div>
+              )
+            ) : (
+              // Login / Register Flow
+              <>
+                {!isLogin && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 mb-1 uppercase">{T.NAME}</label>
+                    <input
+                      type="text"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white focus:border-neon-blue focus:outline-none transition-colors"
+                      placeholder="e.g. Maverick"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 mb-1 uppercase">{T.EMAIL}</label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white focus:border-neon-blue focus:outline-none transition-colors"
+                    placeholder="cadet@bridge.edu"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-xs font-bold text-slate-400 uppercase">
+                      {T.PASSWORD || 'Password'}
+                    </label>
+                    {isLogin && (
+                      <button
+                        type="button"
+                        onClick={() => { setIsForgotPassword(true); setError(''); }}
+                        className="text-[10px] text-neon-blue hover:text-white transition-colors"
+                      >
+                        {T.FORGOT_PASSWORD || 'Forgot Password?'}
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded p-3 pr-10 text-white focus:border-neon-blue focus:outline-none transition-colors"
+                      placeholder="••••••••"
+                      minLength={8}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {!isLogin && (
+                    <p className="text-xs text-slate-500 mt-1">Minimum 8 characters</p>
+                  )}
+                </div>
+
+                {!isLogin && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 mb-1 uppercase">Clearance Level</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setRole(UserRole.STUDENT)}
+                        className={`p-3 rounded text-xs font-bold border transition-all ${role === UserRole.STUDENT ? 'bg-neon-blue/20 border-neon-blue text-white' : 'bg-slate-950 border-slate-700 text-slate-500 hover:border-slate-500'}`}
+                      >
+                        STUDENT
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRole(UserRole.TEACHER)}
+                        className={`p-3 rounded text-xs font-bold border transition-all ${role === UserRole.TEACHER ? 'bg-neon-purple/20 border-neon-purple text-white' : 'bg-slate-950 border-slate-700 text-slate-500 hover:border-slate-500'}`}
+                      >
+                        TEACHER
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {error && (
+                  <div className="p-3 bg-rose-900/20 border border-rose-500/50 rounded text-rose-400 text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4" /> {error}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3 bg-white text-black font-bold rounded hover:bg-slate-200 transition-colors flex items-center justify-center gap-2 mt-6"
+                >
+                  {loading ? (
+                    <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"></div>
+                  ) : (
+                    isLogin ? <><LogIn className="w-4 h-4" /> {T.ACCESS_SYSTEM}</> : <><UserPlus className="w-4 h-4" /> {T.REGISTER}</>
+                  )}
+                </button>
+
+                <div className="mt-6 text-center">
+                  <button
+                    onClick={() => { setIsLogin(!isLogin); setError(''); setPassword(''); }}
+                    className="text-slate-500 text-xs hover:text-white transition-colors underline decoration-slate-700 underline-offset-4"
+                  >
+                    {isLogin ? T.SWITCH_REGISTER : T.SWITCH_LOGIN}
+                  </button>
+                </div>
+              </>
+            )}
+          </form>
         </div>
       </div>
     </div>

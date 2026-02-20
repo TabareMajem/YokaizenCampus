@@ -10,14 +10,18 @@ import { SettingsModal } from './SettingsModal';
 import { SubscriptionModal } from './SubscriptionModal';
 import { Language } from '../types';
 import { TERMS } from '../translations';
+import { Canvas } from '@react-three/fiber';
+import { Stars, Float, Sparkles } from '@react-three/drei';
+import { CyberpunkEffects } from './CyberpunkEffects';
 
 interface LandingPageProps {
    onLoginClick: () => void;
+   onGuideClick: () => void;
    language: Language;
    setLanguage: (lang: Language) => void;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, language, setLanguage }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onGuideClick, language, setLanguage }) => {
    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
    const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
    const [isSubModalOpen, setIsSubModalOpen] = useState(false);
@@ -67,6 +71,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, language
             <div className="hidden lg:flex items-center gap-8 text-sm font-medium text-slate-400">
                <button onClick={() => scrollToSection('vision')} className="hover:text-white transition-colors">{T.VISION}</button>
                <button onClick={() => scrollToSection('features')} className="hover:text-white transition-colors">{T.FEATURES}</button>
+               <button onClick={onGuideClick} className="hover:text-neon-blue transition-colors text-white font-bold tracking-widest uppercase">User Guide</button>
                <button onClick={() => scrollToSection('pricing')} className="hover:text-white transition-colors">{T.PRICING}</button>
             </div>
 
@@ -111,56 +116,85 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, language
 
          {/* HERO SECTION */}
          <header className="relative min-h-screen flex flex-col items-center justify-center p-6 text-center overflow-hidden">
-            {/* Animated Background */}
-            <div className="absolute inset-0 grid-bg opacity-30 pointer-events-none animate-scan"></div>
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#030712_80%)] pointer-events-none"></div>
+            {/* 3D WebGL Background */}
+            <div className="absolute inset-0 z-0 opacity-80">
+               <Canvas camera={{ position: [0, 0, 10], fov: 60 }}>
+                  <ambientLight intensity={0.5} />
+                  <pointLight position={[5, 0, 5]} intensity={5} color="#00f3ff" />
+                  <pointLight position={[-5, 0, 5]} intensity={5} color="#a855f7" />
+
+                  <Stars radius={50} depth={50} count={3000} factor={4} saturation={0} fade speed={1} />
+                  <Sparkles count={200} scale={12} size={2} speed={0.4} opacity={0.3} color="#ffffff" />
+
+                  <Float speed={2} rotationIntensity={0.5} floatIntensity={2}>
+                     <mesh position={[0, 0, -5]}>
+                        <torusGeometry args={[8, 0.02, 16, 100]} />
+                        <meshBasicMaterial color="#00f3ff" transparent opacity={0.2} />
+                     </mesh>
+                     <mesh position={[0, 0, -5]} rotation={[Math.PI / 2, 0, 0]}>
+                        <torusGeometry args={[6, 0.02, 16, 100]} />
+                        <meshBasicMaterial color="#a855f7" transparent opacity={0.2} />
+                     </mesh>
+                  </Float>
+
+                  <CyberpunkEffects
+                     bloomIntensity={2}
+                     glitchFactor={0}
+                     noiseOpacity={0.15}
+                     bloomLuminanceThreshold={0.4}
+                  />
+               </Canvas>
+            </div>
+
+            {/* Gradient Overlay */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#030712_100%)] pointer-events-none z-[1]"></div>
 
             {/* Orbs */}
-            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-neon-blue/20 rounded-full blur-[120px] animate-pulse-slow"></div>
-            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-neon-purple/20 rounded-full blur-[120px] animate-pulse-slow"></div>
+            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-neon-blue/20 rounded-full blur-[120px] animate-pulse-slow z-[1]"></div>
+            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-neon-purple/20 rounded-full blur-[120px] animate-pulse-slow z-[1]"></div>
 
             <div className="relative z-10 max-w-6xl space-y-8 mt-20 animate-in fade-in zoom-in duration-1000">
 
-               <div className="inline-flex items-center gap-2 border border-white/10 bg-white/5 backdrop-blur px-4 py-1.5 rounded-full text-slate-300 text-xs font-bold tracking-widest uppercase mb-4 hover:bg-white/10 transition-colors cursor-default">
+               <div className="inline-flex items-center gap-2 border border-white/20 bg-black/40 backdrop-blur-md px-4 py-1.5 rounded-full text-slate-300 text-xs font-bold tracking-widest uppercase mb-4 hover:bg-white/10 transition-colors shadow-[0_0_15px_rgba(0,243,255,0.2)]">
                   <Zap className="w-3 h-3 text-neon-blue" /> {T.BADGE_V3}
                </div>
 
-               <h1 className="text-5xl md:text-8xl font-black tracking-tighter leading-[0.9] text-white">
+               <h1 className="text-5xl md:text-8xl font-black tracking-tighter leading-[0.9] text-white drop-shadow-2xl">
                   {T.HERO_TITLE}<br />
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-neon-blue to-neon-purple">{T.HERO_SUBTITLE}</span>
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-neon-blue via-purple-500 to-neon-purple drop-shadow-[0_0_20px_rgba(168,85,247,0.4)]">{T.HERO_SUBTITLE}</span>
                </h1>
 
-               <p className="text-xl md:text-2xl text-slate-400 max-w-3xl mx-auto font-light leading-relaxed mt-6">
+               <p className="text-xl md:text-2xl text-slate-300 max-w-3xl mx-auto font-light leading-relaxed mt-6 drop-shadow-md">
                   {T.HERO_DESC}
                </p>
 
                <div className="flex flex-col md:flex-row items-center justify-center gap-6 mt-12">
                   <button
                      onClick={onLoginClick}
-                     className="px-10 py-5 bg-white text-black text-lg font-black tracking-wide rounded-full hover:bg-neon-blue hover:text-white transition-all flex items-center gap-3 group shadow-[0_0_40px_rgba(255,255,255,0.3)]"
+                     className="px-10 py-5 bg-white text-black text-lg font-black tracking-widest uppercase rounded-full hover:bg-neon-blue hover:text-white transition-all flex items-center gap-3 group shadow-[0_0_40px_rgba(255,255,255,0.4)] hover:scale-105"
                   >
                      {T.CTA_START} <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </button>
                   <button
                      onClick={() => scrollToSection('features')}
-                     className="px-8 py-5 border border-white/20 text-white text-lg font-bold rounded-full hover:bg-white/5 transition-all flex items-center gap-3"
+                     className="px-8 py-5 border-2 border-white/20 text-white text-lg font-bold rounded-full hover:bg-white/10 hover:border-white/50 transition-all flex items-center gap-3 backdrop-blur-sm"
                   >
                      <Play className="w-5 h-5 fill-current" /> {T.CTA_DEMO}
                   </button>
                </div>
 
-               <div className="mt-12 flex flex-wrap items-center justify-center gap-8 opacity-40 grayscale hover:grayscale-0 transition-all duration-700">
-                  <div className="flex items-center gap-2 font-mono text-xs"><ShieldCheck className="w-4 h-4" /> {T.FEATURE_DATA}</div>
-                  <div className="flex items-center gap-2 font-mono text-xs"><Globe className="w-4 h-4" /> {T.FEATURE_LANG}</div>
-                  <div className="flex items-center gap-2 font-mono text-xs"><Users className="w-4 h-4" /> {T.FEATURE_CLASS}</div>
+               <div className="mt-16 flex flex-wrap items-center justify-center gap-8 opacity-60 grayscale hover:grayscale-0 transition-all duration-700 bg-black/20 backdrop-blur-md py-4 px-8 rounded-full border border-white/5">
+                  <div className="flex items-center gap-2 font-mono text-xs"><ShieldCheck className="w-4 h-4 text-neon-blue" /> {T.FEATURE_DATA}</div>
+                  <div className="flex items-center gap-2 font-mono text-xs"><Globe className="w-4 h-4 text-purple-400" /> {T.FEATURE_LANG}</div>
+                  <div className="flex items-center gap-2 font-mono text-xs"><Users className="w-4 h-4 text-emerald-400" /> {T.FEATURE_CLASS}</div>
                </div>
             </div>
 
             <button
                onClick={() => scrollToSection('vision')}
-               className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce opacity-50 hover:opacity-100 transition-opacity p-2"
+               className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce opacity-80 hover:opacity-100 hover:text-neon-blue transition-colors p-2 z-10 drop-shadow-[0_0_10px_white]"
             >
-               <ChevronDown className="w-6 h-6" />
+               <ChevronDown className="w-8 h-8" />
             </button>
          </header>
 
@@ -218,6 +252,61 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, language
                         <div className="text-slate-400">{'>'} {TC.GEN_SCHEMATIC} <span className="text-green-500">OK</span></div>
                         <div className="text-slate-400">{'>'} {TC.AUDIT_STRUCT} <span className="text-red-500 animate-pulse">{TC.WARN_HALLUCINATION}</span></div>
                      </div>
+                  </div>
+               </div>
+            </div>
+         </section>
+
+         {/* THE MENTAL DOJO / 5 PILLARS */}
+         <section id="dojo" className="py-24 bg-black relative border-t border-white/5 overflow-hidden">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-neon-blue/5 rounded-full blur-[150px] pointer-events-none"></div>
+
+            <div className="max-w-7xl mx-auto px-6 relative z-10">
+               <div className="text-center mb-20 max-w-3xl mx-auto">
+                  <h2 className="text-sm font-bold text-neon-blue uppercase tracking-widest mb-4">{T.PARADIGM_SECTION?.TITLE || "The Mental Dojo"}</h2>
+                  <h3 className="text-3xl md:text-5xl font-bold mb-6">{T.PARADIGM_SECTION?.SUBTITLE || "Training for the AGI Era"}</h3>
+                  <p className="text-lg text-slate-400 leading-relaxed">{T.PARADIGM_SECTION?.DESC || "Yokaizen Campus is not a school. It is a Mental Dojo designed to forge cognitive resilience, curate taste, and defend epistemic truth in a world where AI executes 90% of tasks."}</p>
+               </div>
+
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  <div className="p-8 bg-slate-900 rounded-3xl border border-slate-800 hover:border-neon-blue/50 transition-all flex flex-col items-center text-center group shadow-xl">
+                     <div className="w-16 h-16 rounded-full bg-neon-blue/10 flex items-center justify-center mb-6 border border-neon-blue/30 group-hover:scale-110 transition-transform">
+                        <BrainCircuit className="w-8 h-8 text-neon-blue" />
+                     </div>
+                     <h4 className="text-xl font-bold mb-3">{T.PARADIGM_SECTION?.PILLAR_1_TITLE || "Orchestration & Taste"}</h4>
+                     <p className="text-slate-400 text-sm leading-relaxed text-balance">{T.PARADIGM_SECTION?.PILLAR_1_DESC || "Becoming Directors, not Doers. Mastering specialized AI Squads."}</p>
+                  </div>
+
+                  <div className="p-8 bg-slate-900 rounded-3xl border border-slate-800 hover:border-red-500/50 transition-all flex flex-col items-center text-center group shadow-xl">
+                     <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-6 border border-red-500/30 group-hover:scale-110 transition-transform">
+                        <Activity className="w-8 h-8 text-red-500" />
+                     </div>
+                     <h4 className="text-xl font-bold mb-3">{T.PARADIGM_SECTION?.PILLAR_2_TITLE || "Cognitive Resilience"}</h4>
+                     <p className="text-slate-400 text-sm leading-relaxed text-balance">{T.PARADIGM_SECTION?.PILLAR_2_DESC || "Training focus & frustration tolerance through engineered friction."}</p>
+                  </div>
+
+                  <div className="p-8 bg-slate-900 rounded-3xl border border-slate-800 hover:border-purple-500/50 transition-all flex flex-col items-center text-center group shadow-xl">
+                     <div className="w-16 h-16 rounded-full bg-purple-500/10 flex items-center justify-center mb-6 border border-purple-500/30 group-hover:scale-110 transition-transform">
+                        <ShieldCheck className="w-8 h-8 text-purple-500" />
+                     </div>
+                     <h4 className="text-xl font-bold mb-3">{T.PARADIGM_SECTION?.PILLAR_3_TITLE || "Epistemic Hygiene"}</h4>
+                     <p className="text-slate-400 text-sm leading-relaxed text-balance">{T.PARADIGM_SECTION?.PILLAR_3_DESC || "Surviving 'Reality Collapse' by hunting deepfakes and truth."}</p>
+                  </div>
+
+                  <div className="p-8 bg-slate-900 rounded-3xl border border-slate-800 hover:border-emerald-500/50 transition-all flex flex-col items-center text-center group lg:col-start-1 lg:col-end-auto md:col-span-1 shadow-xl">
+                     <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 border border-emerald-500/30 group-hover:scale-110 transition-transform">
+                        <HeartHandshake className="w-8 h-8 text-emerald-500" />
+                     </div>
+                     <h4 className="text-xl font-bold mb-3">{T.PARADIGM_SECTION?.PILLAR_4_TITLE || "Deep Empathy"}</h4>
+                     <p className="text-slate-400 text-sm leading-relaxed text-balance">{T.PARADIGM_SECTION?.PILLAR_4_DESC || "Enhancing human-to-human negotiation where logic AI fails."}</p>
+                  </div>
+
+                  <div className="p-8 bg-slate-900 rounded-3xl border border-slate-800 hover:border-pink-500/50 transition-all flex flex-col items-center text-center group md:col-span-2 lg:col-span-2 shadow-xl">
+                     <div className="w-16 h-16 rounded-full bg-pink-500/10 flex items-center justify-center mb-6 border border-pink-500/30 group-hover:scale-110 transition-transform">
+                        <Layout className="w-8 h-8 text-pink-500" />
+                     </div>
+                     <h4 className="text-xl font-bold mb-3">{T.PARADIGM_SECTION?.PILLAR_5_TITLE || "Philosophical Grounding"}</h4>
+                     <p className="text-slate-400 text-sm leading-relaxed text-balance max-w-lg">{T.PARADIGM_SECTION?.PILLAR_5_DESC || "Discovering meaning beyond automated labor via Existentialism."}</p>
                   </div>
                </div>
             </div>

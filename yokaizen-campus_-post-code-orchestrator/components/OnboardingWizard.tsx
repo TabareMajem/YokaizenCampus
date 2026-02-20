@@ -31,7 +31,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, onComp
    // Check for key presence
    React.useEffect(() => {
       const checkKey = async () => {
-         const key = localStorage.getItem('gemini_api_key'); // Deprecated but check for migration
          const school = localStorage.getItem('school_mode');
 
          // Try checking profile if logged in
@@ -46,9 +45,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, onComp
             // Not logged in or error
          }
 
-         if (key || school === 'true') {
+         if (school === 'true') {
             setHasKey(true);
-            if (key) setApiKeyInput(key);
          }
       };
       checkKey();
@@ -61,8 +59,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, onComp
             // Save to user profile securely
             await API.user.updateApiKeys({ google: apiKeyInput.trim() });
 
-            // Keep local backup for fallback logic if needed, but primary is DB
-            localStorage.setItem('gemini_api_key', apiKeyInput.trim());
             localStorage.setItem('school_mode', 'false');
 
             setHasKey(true);

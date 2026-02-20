@@ -1,6 +1,7 @@
 
 
 import React, { useState, useEffect } from 'react';
+import { io } from 'socket.io-client';
 import { PhilosophyMode, Language, User, AuditLogEntry, ClassroomStudentSummary } from '../types';
 import { TERMS } from '../translations';
 import { generateLessonPlan } from '../services/gemini';
@@ -55,6 +56,7 @@ export const TeacherView: React.FC<TeacherViewProps> = ({ currentMode, onModeCha
   const TC = TERMS[language].COMMON;
 
   useEffect(() => {
+    // Initial data fetch
     const fetchStatus = async () => {
       try {
         const data = await API.classroom.getLiveStatus();
@@ -63,10 +65,29 @@ export const TeacherView: React.FC<TeacherViewProps> = ({ currentMode, onModeCha
         console.error("Failed to fetch classroom status");
       }
     };
-
     fetchStatus();
-    const interval = setInterval(fetchStatus, 5000);
-    return () => clearInterval(interval);
+
+    // Connect WebSocket for real-time grid updates
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    // Clean up trailing /api/v1 if it exists in env, since socket.io typically binds to the root URL
+    const socketUrl = apiUrl.replace(/\/api\/v1\/?$/, '');
+
+    const socket = io(socketUrl, {
+      transports: ['websocket'],
+      auth: { token: localStorage.getItem('access_token') }
+    });
+
+    socket.on('connect', () => console.log('Live Grid WS Connected'));
+
+    socket.on('classroom_status_update', (data: ClassroomStudentSummary[]) => {
+      setStudents(data);
+    });
+
+    socket.on('disconnect', () => console.log('Live Grid WS Disconnected'));
+
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
   const studentHistory: AuditLogEntry[] = JSON.parse(localStorage.getItem('last_student_history') || '[]');
@@ -94,16 +115,24 @@ export const TeacherView: React.FC<TeacherViewProps> = ({ currentMode, onModeCha
     }
   };
 
-  const handleDeploy = () => {
+  const handleDeploy = async () => {
     if (!generatedLesson) return;
-    showToast(TC.DEPLOYED_MSG);
-    // In real app, push to API
+    try {
+      await API.graph.create(undefined, generatedLesson.title);
+      showToast(TC.DEPLOYED_MSG);
+    } catch (e) {
+      showToast("Deploy failed", "error");
+    }
   };
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     if (!generatedLesson) return;
-    showToast(TC.DRAFT_SAVED);
-    // In real app, save to DB
+    try {
+      await API.graph.create(undefined, `${generatedLesson.title} (Draft)`);
+      showToast(TC.DRAFT_SAVED);
+    } catch (e) {
+      showToast("Save draft failed", "error");
+    }
   };
 
   const getLocalizedAction = (action: string) => {

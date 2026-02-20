@@ -5,21 +5,24 @@ import { AdminView } from './components/AdminView';
 import { LandingPage } from './components/LandingPage';
 import { AuthModal } from './components/AuthModal';
 import { OnboardingWizard } from './components/OnboardingWizard';
+import { EpicOnboarding } from './components/EpicOnboarding';
+import { UserGuide } from './components/UserGuide';
 import { PhilosophyMode, Language, UserRole } from './types';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 const AppContent: React.FC = () => {
   const { user, isLoading, logout } = useAuth();
   const [philosophyMode, setPhilosophyMode] = useState<PhilosophyMode>(PhilosophyMode.JAPAN);
-  
+
   // Initialize language from local storage or default to English
   const [language, setLanguage] = useState<Language>(() => {
     return (localStorage.getItem('app_language') as Language) || Language.EN;
   });
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [forcedView, setForcedView] = useState<'STUDENT' | 'TEACHER' | 'ADMIN' | null>(null);
+  const [forcedView, setForcedView] = useState<'STUDENT' | 'TEACHER' | 'ADMIN' | 'GUIDE' | null>(null);
   const [isOnboarding, setIsOnboarding] = useState(false);
+  const [showEpicOnboarding, setShowEpicOnboarding] = useState(false);
 
   // Persist language changes
   const handleLanguageChange = (lang: Language) => {
@@ -34,7 +37,10 @@ const AppContent: React.FC = () => {
       setIsOnboarding(false);
     } else {
       if (!user.isOnboarded && !localStorage.getItem(`onboarded_${user.id}`)) {
-         setIsOnboarding(true);
+        setIsOnboarding(true);
+      }
+      if (!localStorage.getItem(`campus_epic_onboarding_${user.id}`)) {
+        setShowEpicOnboarding(true);
       }
     }
   }, [user]);
@@ -46,31 +52,48 @@ const AppContent: React.FC = () => {
     }
   };
 
+  const handleEpicComplete = (detectedLang: Language) => {
+    handleLanguageChange(detectedLang);
+    if (user) {
+      localStorage.setItem(`campus_epic_onboarding_${user.id}`, 'true');
+    }
+    setShowEpicOnboarding(false);
+  };
+
   if (isLoading) {
     return <div className="min-h-screen bg-black flex items-center justify-center text-slate-500 font-mono">Initializing System...</div>;
   }
 
   // Determine which view to show
-  const activeView = forcedView 
-    ? forcedView 
+  const activeView = forcedView
+    ? forcedView
     : (user?.role === UserRole.ADMIN ? 'ADMIN' : user?.role === UserRole.TEACHER ? 'TEACHER' : 'STUDENT');
 
-  if (!user) {
+  if (!user && forcedView !== 'GUIDE') {
     return (
       <>
-        <LandingPage 
-          onLoginClick={() => setIsAuthModalOpen(true)} 
+        <LandingPage
+          onLoginClick={() => setIsAuthModalOpen(true)}
+          onGuideClick={() => setForcedView('GUIDE')}
           language={language}
           setLanguage={handleLanguageChange}
         />
-        <AuthModal 
-          isOpen={isAuthModalOpen} 
-          onClose={() => setIsAuthModalOpen(false)} 
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
           language={language}
           setLanguage={handleLanguageChange}
         />
       </>
     );
+  }
+
+  if (forcedView === 'GUIDE') {
+    return <UserGuide language={language} onBack={() => setForcedView(null)} setLanguage={handleLanguageChange} />;
+  }
+
+  if (showEpicOnboarding) {
+    return <EpicOnboarding onComplete={handleEpicComplete} />;
   }
 
   if (isOnboarding) {
@@ -84,20 +107,20 @@ const AppContent: React.FC = () => {
   return (
     <>
       {activeView === 'STUDENT' ? (
-        <StudentView 
-          mode={philosophyMode} 
+        <StudentView
+          mode={philosophyMode}
           language={language}
           user={user}
           onLogout={logout}
           onSwitchToTeacher={
-            (user.role === UserRole.TEACHER || user.role === UserRole.ADMIN) 
-              ? () => setForcedView('TEACHER') 
+            (user.role === UserRole.TEACHER || user.role === UserRole.ADMIN)
+              ? () => setForcedView('TEACHER')
               : undefined
-          } 
+          }
         />
       ) : (
-        <TeacherView 
-          currentMode={philosophyMode} 
+        <TeacherView
+          currentMode={philosophyMode}
           language={language}
           user={user}
           onLogout={logout}

@@ -12,6 +12,7 @@ import { ChaosOverlay } from './ChaosOverlay';
 import { AgentNode, Connection, NodeStatus, AgentType, PhilosophyMode, Language, SkillStats, User, CollapseEvent, AuditLogEntry } from '../types';
 import { TERMS } from '../translations';
 import { decomposeCommand, simulateAgentTask, generateChaosEvent, SimulationResult } from '../services/gemini';
+import { API } from '../services/api';
 import { ScanEye, Play, RefreshCw, Zap, ArrowLeft, Hexagon, LogOut, HelpCircle, Settings, Siren, Sparkles, ArrowRight, ZapOff, Coins, GitCommit } from 'lucide-react';
 
 interface StudentViewProps {
@@ -42,10 +43,23 @@ export const StudentView: React.FC<StudentViewProps> = ({ mode, onSwitchToTeache
   const [showProfile, setShowProfile] = useState(false);
   const [showCareer, setShowCareer] = useState(false);
   const [stats, setStats] = useState<SkillStats>(DEFAULT_STATS);
-  const [showTutorial, setShowTutorial] = useState(false); 
+  const [showTutorial, setShowTutorial] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [credits, setCredits] = useState(500); // Gamified Budget
-  
+  const [credits, setCreditsState] = useState(() => {
+    const local = localStorage.getItem('student_credits');
+    if (local) return parseInt(local, 10);
+    return user.credits !== undefined ? user.credits : 500;
+  }); // Gamified Budget
+
+  const setCredits = (valueOrFn: number | ((prev: number) => number)) => {
+    setCreditsState(prev => {
+      const newVal = typeof valueOrFn === 'function' ? valueOrFn(prev) : valueOrFn;
+      localStorage.setItem('student_credits', newVal.toString());
+      API.user.updateProfile({ credits: newVal }).catch(e => console.error("Failed to sync credits", e));
+      return newVal;
+    });
+  };
+
   const [auditHistory, setAuditHistory] = useState<AuditLogEntry[]>([]);
   const [chaosEvent, setChaosEvent] = useState<CollapseEvent | null>(null);
 
@@ -86,14 +100,14 @@ export const StudentView: React.FC<StudentViewProps> = ({ mode, onSwitchToTeache
     setCredits(prev => Math.max(0, prev - 25)); // Deduct cost
 
     setStats(prev => ({
-        ...prev,
-        creativity: Math.min(100, prev.creativity + 2),
-        orchestration: Math.min(100, prev.orchestration + 1)
+      ...prev,
+      creativity: Math.min(100, prev.creativity + 2),
+      orchestration: Math.min(100, prev.orchestration + 1)
     }));
 
     try {
       const graphData = await decomposeCommand(text, mode, language);
-      
+
       const newNodes: AgentNode[] = graphData.nodes.map((n: any, i: number) => ({
         id: `node-${Date.now()}-${i}`,
         type: mapStringToAgentType(n.type),
@@ -119,7 +133,7 @@ export const StudentView: React.FC<StudentViewProps> = ({ mode, onSwitchToTeache
     } catch (err: any) {
       addLog(`${T.LOGS.ERR}: ${err}`);
       if (err.message === 'API_KEY_MISSING') {
-         setIsSettingsOpen(true);
+        setIsSettingsOpen(true);
       }
     } finally {
       setIsProcessing(false);
@@ -129,36 +143,36 @@ export const StudentView: React.FC<StudentViewProps> = ({ mode, onSwitchToTeache
   const executeSimulation = async () => {
     if (nodes.length === 0) return;
     if (credits < (nodes.length * 5)) {
-       addLog(`${T.LOGS.ERR}: ${T.BUDGET.EMPTY}`);
-       return;
+      addLog(`${T.LOGS.ERR}: ${T.BUDGET.EMPTY}`);
+      return;
     }
 
     setIsProcessing(true);
     setHasWarning(false);
     logAction('EXECUTE_GRAPH', T.LOGS.SIM_START);
-    
+
     const updatedNodes = [...nodes];
     let previousOutput = currentQuest.context;
 
     for (let i = 0; i < updatedNodes.length; i++) {
       const node = updatedNodes[i];
-      
+
       if (node.status === NodeStatus.OFFLINE) continue;
 
       setCredits(prev => Math.max(0, prev - 5)); // Cost per node execution
 
       node.status = NodeStatus.THINKING;
       setNodes([...updatedNodes]);
-      
+
       await new Promise(r => setTimeout(r, 800));
 
       let result: SimulationResult = { text: "", confidence: 0 };
       let newStatus = NodeStatus.COMPLETE;
 
       if (chaosEvent && chaosEvent.affectedNodeTypes.includes(node.type)) {
-         result.text = `SYSTEM ERROR: ${chaosEvent.message}`;
-         result.confidence = 0;
-         newStatus = NodeStatus.OFFLINE;
+        result.text = `SYSTEM ERROR: ${chaosEvent.message}`;
+        result.confidence = 0;
+        newStatus = NodeStatus.OFFLINE;
       } else if (node.type === AgentType.HISTORIAN && Math.random() > 0.8) {
         result.text = T.LOGS.CORRUPTION_MSG;
         result.confidence = 35;
@@ -188,21 +202,21 @@ export const StudentView: React.FC<StudentViewProps> = ({ mode, onSwitchToTeache
     const event = await generateChaosEvent("Random Failure", language);
     setChaosEvent(event);
     logAction('CHAOS_TRIGGERED', `Event: ${event.type}`);
-    
+
     setStats(prev => ({ ...prev, resilience: Math.max(0, prev.resilience - 10) }));
-    
+
     setNodes(prev => prev.map(n => {
-       if (event.affectedNodeTypes.includes(n.type)) {
-         return { ...n, status: NodeStatus.OFFLINE, confidence: 0 };
-       }
-       return n;
+      if (event.affectedNodeTypes.includes(n.type)) {
+        return { ...n, status: NodeStatus.OFFLINE, confidence: 0 };
+      }
+      return n;
     }));
   };
 
   const resolveChaos = () => {
     setChaosEvent(null);
     setNodes(prev => prev.map(n => n.status === NodeStatus.OFFLINE ? { ...n, status: NodeStatus.IDLE } : n));
-    setStats(prev => ({ ...prev, resilience: Math.min(100, prev.resilience + 15) })); 
+    setStats(prev => ({ ...prev, resilience: Math.min(100, prev.resilience + 15) }));
   };
 
   const handleFixNode = (nodeId: string) => {
@@ -212,7 +226,7 @@ export const StudentView: React.FC<StudentViewProps> = ({ mode, onSwitchToTeache
           ...n,
           status: NodeStatus.COMPLETE,
           output: T.LOGS.REPAIRED_MSG,
-          confidence: 100 
+          confidence: 100
         };
       }
       return n;
@@ -221,11 +235,11 @@ export const StudentView: React.FC<StudentViewProps> = ({ mode, onSwitchToTeache
     logAction('AUDIT_FIX', `Fixed node ${nodeId}`);
     addLog(`${T.LOGS.REPAIR}: ${nodeId}`);
     setCredits(prev => Math.min(1000, prev + 50)); // Reward for fixing
-    
+
     setStats(prev => ({
-        ...prev,
-        auditing: Math.min(100, prev.auditing + 15),
-        resilience: Math.min(100, prev.resilience + 5)
+      ...prev,
+      auditing: Math.min(100, prev.auditing + 15),
+      resilience: Math.min(100, prev.resilience + 5)
     }));
   };
 
@@ -264,28 +278,28 @@ export const StudentView: React.FC<StudentViewProps> = ({ mode, onSwitchToTeache
 
   return (
     <div className={`flex h-screen w-screen text-white overflow-hidden relative transition-all duration-700 ${getContainerClass()}`}>
-      
+
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} language={language} />
       <ChaosOverlay event={chaosEvent} onResolve={resolveChaos} language={language} />
       {showTutorial && <TutorialOverlay onComplete={() => setShowTutorial(false)} mode={mode} language={language} />}
-      
+
       <Silica mode={mode} isProcessing={isProcessing} hasWarning={hasWarning} language={language} />
 
       {showProfile && (
-        <CentaurProfile 
-            stats={stats} 
-            mode={mode} 
-            language={language} 
-            onClose={() => setShowProfile(false)} 
+        <CentaurProfile
+          stats={stats}
+          mode={mode}
+          language={language}
+          onClose={() => setShowProfile(false)}
         />
       )}
 
       {showCareer && (
         <CareerTree
-            level={user.level}
-            mode={mode}
-            language={language}
-            onClose={() => setShowCareer(false)}
+          level={user.level}
+          mode={mode}
+          language={language}
+          onClose={() => setShowCareer(false)}
         />
       )}
 
@@ -304,7 +318,7 @@ export const StudentView: React.FC<StudentViewProps> = ({ mode, onSwitchToTeache
             </h1>
             <div className="flex items-center gap-2 mt-1">
               {onSwitchToTeacher ? (
-                 <button onClick={onSwitchToTeacher} className="flex items-center gap-1 text-[10px] opacity-50 hover:opacity-100 hover:text-white transition-colors">
+                <button onClick={onSwitchToTeacher} className="flex items-center gap-1 text-[10px] opacity-50 hover:opacity-100 hover:text-white transition-colors">
                   <ArrowLeft className="w-3 h-3" /> {TC.BACK}
                 </button>
               ) : (
@@ -312,82 +326,82 @@ export const StudentView: React.FC<StudentViewProps> = ({ mode, onSwitchToTeache
               )}
             </div>
           </div>
-          
+
           <div className="flex items-center gap-4">
-             {/* Token/Budget Display */}
-             <div className={`flex items-center gap-2 px-3 py-1.5 rounded border transition-all ${credits < 100 ? 'bg-red-900/50 border-red-500 text-red-500 animate-pulse' : 'bg-black/40 border-white/10'}`}>
-                <Coins className="w-4 h-4" />
-                <div className="flex flex-col items-end leading-none">
-                    <span className="font-mono text-xs font-bold">{credits}</span>
-                    <span className="text-[8px] opacity-50">{T.BUDGET.LABEL}</span>
-                </div>
-             </div>
+            {/* Token/Budget Display */}
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded border transition-all ${credits < 100 ? 'bg-red-900/50 border-red-500 text-red-500 animate-pulse' : 'bg-black/40 border-white/10'}`}>
+              <Coins className="w-4 h-4" />
+              <div className="flex flex-col items-end leading-none">
+                <span className="font-mono text-xs font-bold">{credits}</span>
+                <span className="text-[8px] opacity-50">{T.BUDGET.LABEL}</span>
+              </div>
+            </div>
 
-             <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded bg-black/20 border border-white/5 text-[10px] font-mono opacity-60">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                {T.MODEL_INDICATOR || "GEMINI-2.5-FLASH"}
-             </div>
+            <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded bg-black/20 border border-white/5 text-[10px] font-mono opacity-60">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+              {T.MODEL_INDICATOR || "GEMINI-2.5-FLASH"}
+            </div>
 
-             <button 
-                onClick={triggerChaos} 
-                className="p-2 rounded text-red-500 hover:bg-red-500/20" 
-                title="Trigger System Collapse (Sim)"
-             >
-                <Siren className="w-5 h-5" />
-             </button>
+            <button
+              onClick={triggerChaos}
+              className="p-2 rounded text-red-500 hover:bg-red-500/20"
+              title="Trigger System Collapse (Sim)"
+            >
+              <Siren className="w-5 h-5" />
+            </button>
 
-            <button 
+            <button
               onClick={() => setShowCareer(true)}
               className={`p-2 rounded hover:bg-white/10 transition-colors ${mode === PhilosophyMode.KOREA ? 'text-red-500' : 'text-white'}`}
               title="Career Path"
             >
-               <GitCommit className="w-5 h-5 rotate-90" />
+              <GitCommit className="w-5 h-5 rotate-90" />
             </button>
 
-            <button 
+            <button
               onClick={() => setShowProfile(true)}
               className={`p-2 rounded hover:bg-white/10 transition-colors ${mode === PhilosophyMode.KOREA ? 'text-red-500' : 'text-white'}`}
               title="View Skill Tree"
             >
-               <Hexagon className="w-5 h-5" />
-            </button>
-            
-            <button
-               onClick={() => setShowTutorial(true)}
-               className={`p-2 rounded hover:bg-white/10 transition-colors ${mode === PhilosophyMode.KOREA ? 'text-red-500' : 'text-white'}`}
-               title="Help / Tutorial"
-            >
-                <HelpCircle className="w-5 h-5" />
+              <Hexagon className="w-5 h-5" />
             </button>
 
             <button
-               onClick={() => setIsSettingsOpen(true)}
-               className={`p-2 rounded hover:bg-white/10 transition-colors ${mode === PhilosophyMode.KOREA ? 'text-red-500' : 'text-white'}`}
-               title="Settings"
+              onClick={() => setShowTutorial(true)}
+              className={`p-2 rounded hover:bg-white/10 transition-colors ${mode === PhilosophyMode.KOREA ? 'text-red-500' : 'text-white'}`}
+              title="Help / Tutorial"
             >
-                <Settings className="w-5 h-5" />
+              <HelpCircle className="w-5 h-5" />
+            </button>
+
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className={`p-2 rounded hover:bg-white/10 transition-colors ${mode === PhilosophyMode.KOREA ? 'text-red-500' : 'text-white'}`}
+              title="Settings"
+            >
+              <Settings className="w-5 h-5" />
             </button>
 
             <div className="h-6 w-px bg-white/20 mx-2"></div>
 
-            <button 
+            <button
               onClick={() => setIsAuditing(!isAuditing)}
               className={`flex items-center gap-2 px-4 py-2 rounded transition-all text-xs font-bold
-                ${isAuditing 
-                  ? 'bg-emerald-500/20 border border-emerald-500 text-emerald-400' 
+                ${isAuditing
+                  ? 'bg-emerald-500/20 border border-emerald-500 text-emerald-400'
                   : 'border border-transparent bg-white/5 text-gray-400 hover:bg-white/10'}`}
             >
               <ScanEye className="w-4 h-4" /> {isAuditing ? T.LENS_ACTIVE : T.LENS_INACTIVE}
             </button>
 
-            <button 
+            <button
               onClick={executeSimulation}
               disabled={isProcessing || nodes.length === 0}
               className={`flex items-center gap-2 px-6 py-2 text-black font-bold rounded transition-colors text-xs
-                ${mode === PhilosophyMode.KOREA 
-                  ? 'bg-red-600 hover:bg-red-500 text-white shadow-[0_0_15px_rgba(220,38,38,0.5)]' 
-                  : mode === PhilosophyMode.FINLAND 
-                    ? 'bg-amber-200 hover:bg-white text-stone-900' 
+                ${mode === PhilosophyMode.KOREA
+                  ? 'bg-red-600 hover:bg-red-500 text-white shadow-[0_0_15px_rgba(220,38,38,0.5)]'
+                  : mode === PhilosophyMode.FINLAND
+                    ? 'bg-amber-200 hover:bg-white text-stone-900'
                     : 'bg-neon-blue hover:bg-cyan-300'}`}
             >
               {isProcessing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
@@ -402,43 +416,43 @@ export const StudentView: React.FC<StudentViewProps> = ({ mode, onSwitchToTeache
 
         {/* Empty State Overlay */}
         {nodes.length === 0 && !isProcessing && (
-           <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
-              <div className="text-center max-w-lg pointer-events-auto animate-in fade-in zoom-in duration-700">
-                 <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-6 border-2 
+          <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
+            <div className="text-center max-w-lg pointer-events-auto animate-in fade-in zoom-in duration-700">
+              <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-6 border-2 
                     ${mode === PhilosophyMode.KOREA ? 'border-red-600 bg-red-900/20 text-red-500 shadow-[0_0_30px_rgba(220,38,38,0.3)]' : 'border-slate-600 bg-slate-800/50 text-slate-400'}
                  `}>
-                    <ZapOff className="w-8 h-8" />
-                 </div>
-                 <h2 className={`text-2xl font-bold mb-3 tracking-widest uppercase ${mode === PhilosophyMode.KOREA ? 'text-red-500' : 'text-white'}`}>
-                    {T.HINTS.STUDENT_EMPTY_TITLE}
-                 </h2>
-                 <p className="text-slate-400 mb-8 leading-relaxed">
-                    {T.HINTS.STUDENT_EMPTY_DESC}
-                 </p>
-                 
-                 <div className="grid grid-cols-1 gap-3">
-                    {suggestions.map((suggestion: string, idx: number) => (
-                       <button
-                         key={idx}
-                         onClick={() => handleCommandSubmit(suggestion)}
-                         className={`group p-4 rounded-lg border text-left transition-all hover:scale-[1.02] flex items-center justify-between
-                            ${mode === PhilosophyMode.KOREA 
-                               ? 'bg-black border-red-900 text-red-500 hover:bg-red-900/20' 
-                               : 'bg-slate-900/80 border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-neon-blue hover:text-white'}
-                         `}
-                       >
-                          <span className="font-mono text-sm">{suggestion}</span>
-                          <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity -translate-x-2 group-hover:translate-x-0" />
-                       </button>
-                    ))}
-                 </div>
+                <ZapOff className="w-8 h-8" />
               </div>
-           </div>
+              <h2 className={`text-2xl font-bold mb-3 tracking-widest uppercase ${mode === PhilosophyMode.KOREA ? 'text-red-500' : 'text-white'}`}>
+                {T.HINTS.STUDENT_EMPTY_TITLE}
+              </h2>
+              <p className="text-slate-400 mb-8 leading-relaxed">
+                {T.HINTS.STUDENT_EMPTY_DESC}
+              </p>
+
+              <div className="grid grid-cols-1 gap-3">
+                {suggestions.map((suggestion: string, idx: number) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleCommandSubmit(suggestion)}
+                    className={`group p-4 rounded-lg border text-left transition-all hover:scale-[1.02] flex items-center justify-between
+                            ${mode === PhilosophyMode.KOREA
+                        ? 'bg-black border-red-900 text-red-500 hover:bg-red-900/20'
+                        : 'bg-slate-900/80 border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-neon-blue hover:text-white'}
+                         `}
+                  >
+                    <span className="font-mono text-sm">{suggestion}</span>
+                    <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity -translate-x-2 group-hover:translate-x-0" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         )}
 
-        <NodeCanvas 
-          nodes={nodes} 
-          connections={connections} 
+        <NodeCanvas
+          nodes={nodes}
+          connections={connections}
           onNodeSelect={setSelectedNodeId}
           onNodeMove={handleNodeMove}
           selectedNodeId={selectedNodeId}
@@ -453,21 +467,21 @@ export const StudentView: React.FC<StudentViewProps> = ({ mode, onSwitchToTeache
 
       {/* Right Panel */}
       <div className="w-80 z-20 relative transition-all duration-300 hidden xl:block">
-        <OutputStream 
-          logs={logs} 
-          nodes={nodes} 
+        <OutputStream
+          logs={logs}
+          nodes={nodes}
           isAuditing={isAuditing}
           onFixApplied={handleFixNode}
           mode={mode}
           language={language}
         />
       </div>
-      
+
       {/* Visual Effects for Modes */}
       {mode === PhilosophyMode.KOREA && (
         <div className="absolute inset-0 pointer-events-none opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] z-[60] bg-[length:100%_2px,3px_100%]"></div>
       )}
-      
+
     </div>
   );
 };

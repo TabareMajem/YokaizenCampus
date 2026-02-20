@@ -63,6 +63,7 @@ export interface User {
   role: UserRole;
   avatar?: string;
   level: number; // For gamification
+  credits?: number; // Gamified budget
   isOnboarded?: boolean;
   tier?: SubscriptionTier;
   provider?: AIProvider;
