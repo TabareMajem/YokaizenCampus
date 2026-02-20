@@ -117,10 +117,10 @@ export const App: React.FC = () => {
 
     // Initial Epic Onboarding Check
     useEffect(() => {
-        if (isAuthenticated && user && !localStorage.getItem('ai_labs_epic_onboarding_done')) {
+        if (!localStorage.getItem('ai_labs_epic_onboarding_done')) {
             setShowEpicOnboarding(true);
         }
-    }, [isAuthenticated, user?.id]);
+    }, []);
 
     // Squad State
     const [squads, setSquads] = useState<Squad[]>([]);
@@ -376,6 +376,21 @@ export const App: React.FC = () => {
         return <Preloader assets={PRELOAD_ASSETS} onComplete={() => setIsPreloading(false)} />;
     }
 
+    if (showEpicOnboarding) {
+        return (
+            <div className="h-screen w-screen bg-black overflow-hidden relative z-50">
+                <EpicOnboarding
+                    onComplete={(lang) => {
+                        localStorage.setItem('preferred_language', lang);
+                        localStorage.setItem('ai_labs_epic_onboarding_done', 'true');
+                        setShowEpicOnboarding(false);
+                        if (user) updateUser({ ...user, language: lang });
+                    }}
+                />
+            </div>
+        );
+    }
+
     if (!isAuthenticated || !user) {
         return <AuthScreen />;
     }
@@ -432,16 +447,6 @@ export const App: React.FC = () => {
     return (
         <div className="flex h-screen bg-[#050505] text-white overflow-hidden font-sans selection:bg-electric/30">
             <Scanlines />
-
-            {showEpicOnboarding && (
-                <EpicOnboarding
-                    onComplete={(lang) => {
-                        updateUser({ ...user, language: lang });
-                        localStorage.setItem('ai_labs_epic_onboarding_done', 'true');
-                        setShowEpicOnboarding(false);
-                    }}
-                />
-            )}
 
             {/* GLOBAL TOAST - Handled by Context now */}
 
