@@ -1,130 +1,188 @@
-
-import React, { useState, useEffect, useRef } from 'react';
-import { Button } from '../ui/Button';
-import { analyzeVeritasEvidence } from '../../services/geminiService';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, Sphere, MeshDistortMaterial, Float, Sparkles } from '@react-three/drei';
+import { EffectComposer, Bloom, ChromaticAberration, Glitch } from '@react-three/postprocessing';
+import { GlitchMode, BlendFunction } from 'postprocessing';
+import * as THREE from 'three';
+import { Activity, Shield, Zap, AlertTriangle } from 'lucide-react';
 import { audio } from '../../services/audioService';
-import { Eye, Search, MapPin, Fingerprint, ShieldAlert, FileText, Video, UserCheck, ArrowLeft, Scan } from 'lucide-react';
-import { Scanlines, Vignette, Noise } from '../ui/Visuals';
-import { Language } from '../../types';
 
-interface VeritasFallsProps {
-    onComplete: (score: number) => void;
+export interface VeritasFallsProps {
+    onComplete: (score: number, metrics?: any) => void;
+    difficulty: string;
     t: (key: string) => string;
-    language?: Language;
 }
 
-type Phase = 'BRIEFING' | 'SCENE' | 'ANALYSIS' | 'RESULT';
+const CoreEntity = ({ isActive }: { isActive: boolean }) => {
+    const meshRef = useRef<THREE.Mesh>(null);
+    useFrame((state) => {
+        if (meshRef.current) {
+            meshRef.current.rotation.x = state.clock.elapsedTime * 0.4;
+            meshRef.current.rotation.y = state.clock.elapsedTime * 0.6;
+        }
+    });
 
-interface Evidence {
-    id: string;
-    name: string;
-    icon: React.ReactNode;
-    description: string;
-    isFake: boolean;
-    found: boolean;
-}
+    return (
+        <Float speed={isActive ? 4 : 1.5} floatIntensity={1.5} rotationIntensity={isActive ? 3 : 1}>
+            <Sphere ref={meshRef} args={[1.5, 64, 64]} scale={isActive ? 1.3 : 1}>
+                <MeshDistortMaterial
+                    color={new THREE.Color().setHSL(0.85, 0.9, isActive ? 0.7 : 0.4)}
+                    envMapIntensity={1.5}
+                    clearcoat={1}
+                    clearcoatRoughness={0.1}
+                    metalness={0.9}
+                    roughness={0.1}
+                    distort={isActive ? 0.5 : 0.2}
+                    speed={isActive ? 6 : 2}
+                />
+            </Sphere>
+        </Float>
+    );
+};
 
-export const VeritasFalls: React.FC<VeritasFallsProps> = ({ onComplete, t }) => {
-    const [phase, setPhase] = useState<Phase>('BRIEFING');
-    const [auraActive, setAuraActive] = useState(false);
-    const [evidence, setEvidence] = useState<Evidence[]>([]);
-    const [accusation, setAccusation] = useState('');
-    const [processing, setProcessing] = useState(false);
-    const [result, setResult] = useState<{ correct: boolean, feedback: string } | null>(null);
+export const VeritasFalls: React.FC<VeritasFallsProps> = ({ onComplete, difficulty, t }) => {
+    const [score, setScore] = useState(0);
+    const [timeLeft, setTimeLeft] = useState(60);
+    const [gameState, setGameState] = useState<'PLAYING' | 'SUCCESS' | 'FAILED'>('PLAYING');
+    const [activeNode, setActiveNode] = useState(false);
+    
+    // Multi-Agent Flow Logic State
+    const [advisorMsg, setAdvisorMsg] = useState('Initiating cognitive overlay...');
+    const [adversaryMsg, setAdversaryMsg] = useState('Awaiting vulnerability...');
+    const [glitchActive, setGlitchActive] = useState(false);
 
     useEffect(() => {
-        setEvidence([
-            { id: 'video', name: t('veritas.e_video'), icon: <Video size={16} />, description: 'MP4 showing you taking a bribe. Timestamp: 03:00 AM.', isFake: true, found: false },
-            { id: 'receipt', name: t('veritas.e_receipt'), icon: <FileText size={16} />, description: 'Receipt from "Midnight Brew" at 03:05 AM. Across town.', isFake: false, found: false },
-            { id: 'fiber', name: t('veritas.e_fiber'), icon: <Fingerprint size={16} />, description: 'Found at scene. Matches police uniform issue.', isFake: false, found: false },
-            { id: 'meta', name: t('veritas.e_meta'), icon: <ShieldAlert size={16} />, description: 'Edit logs found in cloud trash.', isFake: true, found: false }
-        ]);
-    }, [t]);
+        if (gameState !== 'PLAYING') return;
 
-    const toggleAura = () => { setAuraActive(!auraActive); if (!auraActive) audio.playScan(); };
-    const handleFind = (id: string) => { if (evidence.find(e => e.id === id)?.found) return; setEvidence(prev => prev.map(e => e.id === id ? { ...e, found: true } : e)); audio.playSuccess(); };
+        const advisorLines = [
+            'Flow state stable. Keep pushing.',
+            'Structural integrity at optimal levels.',
+            'Adversary attempting breach. Stay focused.',
+            'Metrics align with mission parameters.'
+        ];
 
-    const handleSubmit = async () => {
-        if (!accusation.trim()) return;
-        setProcessing(true);
-        const foundEvidence = evidence.filter(e => e.found).map(e => e.name);
-        const analysis = await analyzeVeritasEvidence(foundEvidence, accusation);
-        setResult(analysis); setPhase('RESULT'); setProcessing(false);
-        if (analysis.correct) { audio.playSuccess(); setTimeout(() => onComplete(analysis.score), 3000); } else { audio.playError(); }
+        const adversaryLines = [
+            'Your strategy is inherently flawed.',
+            'I can see the cracks in your attention.',
+            'Diverting systemic resources to overwhelm you.',
+            'Inevitability is written in the code.'
+        ];
+
+        const agentInterval = setInterval(() => {
+            const isAdversary = Math.random() > 0.65;
+            if (isAdversary) {
+                setAdversaryMsg(adversaryLines[Math.floor(Math.random() * adversaryLines.length)]);
+                audio.playSystemMessage({ type: 'warning' });
+                setGlitchActive(true);
+                setTimeout(() => setGlitchActive(false), 500);
+            } else {
+                setAdvisorMsg(advisorLines[Math.floor(Math.random() * advisorLines.length)]);
+                audio.playSystemMessage({ type: 'success' });
+            }
+        }, 6000);
+
+        return () => clearInterval(agentInterval);
+    }, [gameState]);
+
+    useEffect(() => {
+        if (gameState !== 'PLAYING') return;
+        const timer = setInterval(() => {
+            setTimeLeft((prev) => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    const finalScore = score >= 500 ? score : 0;
+                    setGameState(finalScore >= 500 ? 'SUCCESS' : 'FAILED');
+                    onComplete(finalScore, { completionTime: 60 - prev, difficulty });
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [gameState, score, onComplete, difficulty]);
+
+    const handleInteract = () => {
+        if (gameState !== 'PLAYING') return;
+        audio.playTyping();
+        setActiveNode(true);
+        setScore(s => s + 50);
+        setTimeout(() => setActiveNode(false), 300);
+        
+        if (score + 50 >= 1000) {
+            setGameState('SUCCESS');
+            onComplete(1000, { completionTime: 60 - timeLeft, difficulty });
+        }
     };
 
     return (
-        <div className="h-full flex flex-col bg-black relative overflow-hidden font-mono select-none">
-            <div className="absolute inset-0 pointer-events-none z-20 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20 animate-fall"></div>
-            <Scanlines /> <Vignette color="#000510" /> <Noise opacity={0.15} />
-
-            {/* Lens Distortion Filter */}
-            <svg className="absolute w-0 h-0">
-                <filter id="lens-distortion">
-                    <feTurbulence type="fractalNoise" baseFrequency="0.01" numOctaves="3" result="noise" />
-                    <feDisplacementMap in="SourceGraphic" in2="noise" scale="5" />
-                </filter>
-            </svg>
-
-            {auraActive && (
-                <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
-                    {/* Aura Overlay */}
-                    <div className="absolute inset-0 border-[30px] border-cyan-500/10 mix-blend-screen animate-pulse"
-                        style={{ boxShadow: 'inset 0 0 100px rgba(6,182,212,0.5)' }}></div>
-
-                    {/* Chromatic Aberration Shift */}
-                    <div className="absolute top-4 right-4 text-cyan-400 font-bold text-xs tracking-[0.2em] flex items-center bg-black/50 px-3 py-1 rounded border border-cyan-500/30 backdrop-blur-md">
-                        <Eye size={16} className="mr-2 animate-spin-slow" /> {t('veritas.aura_active')}
+        <div className="relative w-full h-[600px] rounded-xl overflow-hidden border border-white/10 bg-black shadow-2xl">
+            {/* UI Overlay */}
+            <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-start z-10 pointer-events-none">
+                <div className="flex flex-col gap-4">
+                    <div className="bg-black/50 backdrop-blur-md rounded-lg p-3 border border-indigo-500/40 shadow-[0_0_15px_rgba(79,70,229,0.3)]">
+                        <div className="flex items-center gap-2 text-indigo-400 mb-1">
+                            <Activity className="w-4 h-4" />
+                            <span className="text-xs uppercase tracking-widest font-bold">Signal</span>
+                        </div>
+                        <div className="text-2xl font-mono text-white">{score} / 1000</div>
                     </div>
-
-                    {/* Moving Scan Line */}
-                    <div className="absolute top-0 w-full h-1 bg-cyan-400/50 shadow-[0_0_20px_cyan] animate-scan-fast"></div>
                 </div>
-            )}
 
-            {phase === 'BRIEFING' && (
-                <div className="absolute inset-0 z-30 flex flex-col items-center justify-center p-8 text-center bg-black/90">
-                    <ShieldAlert size={64} className="text-red-500 mb-6 animate-pulse" />
-                    <h1 className="text-4xl font-black text-white mb-2 tracking-tighter glitch-text">{t('games.veritasfalls.veritas_falls')}</h1>
-                    <div className="max-w-md text-gray-400 text-sm mb-8 space-y-4 border-l-2 border-red-500 pl-4 text-left">
-                        <p>{t('veritas.briefing_1')}</p><p>{t('veritas.briefing_2')}</p><p>{t('veritas.briefing_3')}</p>
+                <div className="bg-black/50 backdrop-blur-md rounded-lg p-3 border border-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.3)] flex flex-col items-end">
+                     <div className="flex items-center gap-2 text-blue-400 mb-1">
+                        <AlertTriangle className="w-4 h-4" />
+                        <span className="text-xs uppercase tracking-widest font-bold">Time</span>
                     </div>
-                    <Button size="lg" variant="primary" onClick={() => setPhase('SCENE')}>{t('veritas.start')}</Button>
+                    <div className="text-3xl font-mono text-white tracking-widest">{timeLeft}s</div>
                 </div>
-            )}
+            </div>
 
-            {phase === 'SCENE' && (
-                <div className="flex-1 relative bg-gray-900 overflow-hidden">
-                    <div className={`absolute inset-0 bg-[url('https://picsum.photos/seed/noir/800/600')] bg-cover bg-center transition-all duration-500 ${auraActive ? 'grayscale invert contrast-125' : 'opacity-60'}`}></div>
-                    <button onClick={() => handleFind('video')} className={`absolute top-[20%] left-[20%] w-24 h-16 border-2 border-dashed border-red-500 bg-black/50 text-red-500 text-xs flex items-center justify-center ${auraActive ? 'opacity-100' : 'opacity-0'} transition-opacity`}>{t('veritas.fake_id')}</button>
-                    <button onClick={() => handleFind('receipt')} className="absolute bottom-[20%] right-[30%] w-8 h-8 bg-white/10 rounded-full animate-ping"></button>
-                    <button onClick={() => handleFind('meta')} className={`absolute top-[50%] right-[10%] w-16 h-16 border border-cyan-500 flex items-center justify-center ${auraActive ? 'opacity-100' : 'opacity-0'} transition-opacity`}><Scan size={24} className="text-cyan-500 animate-spin" /></button>
-                    <div className="absolute bottom-8 right-8 z-30"><button className={`w-16 h-16 rounded-full border-4 flex items-center justify-center shadow-[0_0_30px_rgba(0,255,255,0.3)] transition-all active:scale-95 ${auraActive ? 'bg-cyan-500 border-white text-black' : 'bg-black/50 border-cyan-500 text-cyan-500'}`} onMouseDown={toggleAura} onMouseUp={toggleAura} onTouchStart={toggleAura} onTouchEnd={toggleAura}><Eye size={32} /></button></div>
-                    <div className="absolute top-4 left-4 z-30"><div className="bg-black/80 border border-gray-700 px-3 py-1 rounded text-xs text-gray-300">{t('veritas.evidence_count')}: {evidence.filter(e => e.found).length}/{evidence.length}</div></div>
-                    <div className="absolute bottom-8 left-8 z-30"><Button size="sm" variant="secondary" onClick={() => setPhase('ANALYSIS')} disabled={evidence.filter(e => e.found).length < 2}>{t('veritas.analyze')}</Button></div>
+            {/* Multi-Agent Comm Panel */}
+            <div className="absolute bottom-6 left-6 right-6 flex gap-4 z-10 pointer-events-none">
+                <div className="flex-1 bg-black/70 backdrop-blur-xl rounded-lg p-4 border-l-4 border-indigo-500 shadow-[0_0_20px_rgba(0,0,0,0.8)]">
+                    <div className="text-xs text-indigo-400 mb-1 uppercase tracking-widest font-bold flex items-center gap-2"><Shield className="w-3 h-3"/> Advisor Agent</div>
+                    <div className="text-sm text-indigo-100 font-mono tracking-wide leading-relaxed">{advisorMsg}</div>
                 </div>
-            )}
+                <div className="flex-1 bg-black/70 backdrop-blur-xl rounded-lg p-4 border-l-4 border-red-500 shadow-[0_0_20px_rgba(0,0,0,0.8)]">
+                    <div className="text-xs text-red-500 mb-1 uppercase tracking-widest font-bold flex items-center gap-2"><Zap className="w-3 h-3"/> Adversary AI</div>
+                    <div className="text-sm text-red-100 font-mono tracking-wide leading-relaxed">{adversaryMsg}</div>
+                </div>
+            </div>
 
-            {phase === 'ANALYSIS' && (
-                <div className="flex-1 bg-gray-900 p-4 flex flex-col z-30">
-                    <div className="flex justify-between items-center mb-4"><h2 className="text-xl font-bold text-white">{t('veritas.case_board')}</h2><button onClick={() => setPhase('SCENE')} className="text-gray-400"><ArrowLeft /></button></div>
-                    <div className="grid grid-cols-2 gap-3 mb-6">
-                        {evidence.filter(e => e.found).map(e => (
-                            <div key={e.id} className="bg-black/50 border border-gray-700 p-3 rounded flex items-start space-x-3"><div className="text-cyan-500 mt-1">{e.icon}</div><div><div className="text-sm font-bold text-white">{e.name}</div><div className="text-[10px] text-gray-400 leading-tight">{e.description}</div>{e.isFake && <div className="text-[9px] text-red-500 font-bold mt-1 uppercase">{t('veritas.detected_fake')}</div>}</div></div>
-                        ))}
+            {/* Game Over States */}
+            {gameState !== 'PLAYING' && (
+                <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/90 backdrop-blur-md">
+                    <div className="text-center p-8 rounded-2xl border border-white/10 bg-black/50 shadow-2xl">
+                        <div className={`text-6xl font-black uppercase tracking-widest mb-4 ${gameState === 'SUCCESS' ? 'text-green-500' : 'text-red-500'} drop-shadow-[0_0_15px_currentColor]`}>
+                            {gameState === 'SUCCESS' ? 'SYSTEM SECURED' : 'BREACH DETECTED'}
+                        </div>
+                        <div className="text-2xl text-white/80 font-mono">Final Score: {score}</div>
                     </div>
-                    <div className="mt-auto space-y-3"><label className="text-xs text-gray-500 font-bold uppercase">{t('veritas.accusation')}</label><textarea className="w-full bg-black border border-gray-700 rounded p-3 text-white text-sm focus:border-red-500 focus:outline-none h-24 resize-none font-sans" placeholder={t('veritas.placeholder')} value={accusation} onChange={e => setAccusation(e.target.value)} /><Button fullWidth variant="danger" onClick={handleSubmit} disabled={processing}>{processing ? t('veritas.cross_ref') : t('veritas.submit')}</Button></div>
                 </div>
             )}
 
-            {phase === 'RESULT' && result && (
-                <div className="absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-8 text-center animate-in zoom-in">
-                    <div className="mb-6">{result.correct ? <UserCheck size={80} className="text-green-500 animate-bounce" /> : <ShieldAlert size={80} className="text-red-500 animate-shake" />}</div>
-                    <h2 className={`text-3xl font-black mb-4 ${result.correct ? 'text-green-500' : 'text-red-500'}`}>{result.correct ? t('veritas.solved') : t('veritas.alert')}</h2>
-                    <p className="text-gray-300 mb-8 text-sm leading-relaxed border border-gray-800 p-4 rounded bg-gray-900">{result.feedback}</p>
-                    <Button variant="primary" onClick={() => result.correct ? onComplete(100) : setPhase('SCENE')}>{result.correct ? t('veritas.close') : t('veritas.reopen')}</Button>
-                </div>
-            )}
+            {/* Interaction Layer */}
+            <div className="absolute inset-0 z-0 cursor-crosshair" onClick={handleInteract}>
+                <Canvas camera={{ position: [0, 0, 10], fov: 60 }}>
+                    <ambientLight intensity={0.6} />
+                    <pointLight position={[10, 10, 10]} intensity={1.5} color={new THREE.Color().setHSL(0.85, 1, 0.6)} />
+                    <pointLight position={[-10, -10, -10]} intensity={0.8} color="#4f46e5" />
+                    
+                    <Sparkles count={300} scale={15} size={3} speed={0.5} opacity={0.6} color={new THREE.Color().setHSL(0.85, 1, 0.9)} />
+                    
+                    <CoreEntity isActive={activeNode} />
+                    
+                    <OrbitControls enableZoom={false} enablePan={false} autoRotate autoRotateSpeed={0.8} />
+                    
+                    <EffectComposer>
+                        <Bloom luminanceThreshold={0.15} luminanceSmoothing={0.9} height={300} intensity={2.0} />
+                        <ChromaticAberration blendFunction={BlendFunction.NORMAL} offset={new THREE.Vector2(0.003, 0.003)} />
+                        {glitchActive && (
+                            <Glitch delay={new THREE.Vector2(0, 0)} duration={new THREE.Vector2(0.1, 0.4)} mode={GlitchMode.SPORADIC} active ratio={0.6} />
+                        )}
+                    </EffectComposer>
+                </Canvas>
+            </div>
         </div>
     );
 };

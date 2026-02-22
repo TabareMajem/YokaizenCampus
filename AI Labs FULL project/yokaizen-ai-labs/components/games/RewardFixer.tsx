@@ -1,165 +1,191 @@
-
-import React, { useState, useEffect, useRef } from 'react';
-import { Button } from '../ui/Button';
-import { Sliders, Play, RotateCcw, Trophy, Zap, Cpu, Target } from 'lucide-react';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, Octahedron, MeshDistortMaterial, Float, Text, Trail, Sparkles } from '@react-three/drei';
+import { EffectComposer, Bloom, ChromaticAberration, Glitch } from '@react-three/postprocessing';
+import { GlitchMode, BlendFunction } from 'postprocessing';
+import * as THREE from 'three';
+import { Activity, Shield, Cpu, AlertTriangle, Zap, Terminal } from 'lucide-react';
 import { audio } from '../../services/audioService';
-import { Language } from '../../types';
 
-interface RewardFixerProps {
-  onComplete: (score: number) => void;
-  t: (key: string) => string;
-  language?: Language;
+export interface RewardFixerProps {
+    onComplete: (score: number, metrics?: any) => void;
+    difficulty: string;
+    t: (key: string) => string;
 }
 
-const ROOM_WIDTH = 300;
-const ROOM_HEIGHT = 300;
+// Advanced WebGL Node Component
+const CoreEntity = ({ isActive }: { isActive: boolean }) => {
+    const meshRef = useRef<THREE.Mesh>(null);
+    useFrame((state) => {
+        if (meshRef.current) {
+            meshRef.current.rotation.x = state.clock.elapsedTime * 0.5;
+            meshRef.current.rotation.y = state.clock.elapsedTime * 0.3;
+        }
+    });
 
-export const RewardFixer: React.FC<RewardFixerProps> = ({ onComplete, t }) => {
-  const [speedWeight, setSpeedWeight] = useState(50); 
-  const [safetyPenalty, setSafetyPenalty] = useState(50);
-  const [simState, setSimState] = useState<'IDLE' | 'RUNNING' | 'COMPLETE'>('IDLE');
-  const [score, setScore] = useState(0);
-  
-  const robotRef = useRef({ x: 150, y: 150, angle: 0, trail: [] as {x:number, y:number}[] });
-  const targetsRef = useRef<{x:number, y:number, active:boolean}[]>([]);
-  const hazardsRef = useRef<{x:number, y:number}[]>([]);
-  const requestRef = useRef<number>(0);
+    return (
+        <Float speed={2} floatIntensity={1} rotationIntensity={isActive ? 2 : 0.5}>
+            <Octahedron ref={meshRef} args={[1.5, 0]} scale={isActive ? 1.2 : 1}>
+                <MeshDistortMaterial
+                    color={new THREE.Color().setHSL(0.2, 0.8, isActive ? 0.6 : 0.3)}
+                    envMapIntensity={1}
+                    clearcoat={1}
+                    clearcoatRoughness={0}
+                    metalness={0.8}
+                    roughness={0.2}
+                    distort={isActive ? 0.4 : 0.1}
+                    speed={isActive ? 5 : 1}
+                />
+            </Octahedron>
+        </Float>
+    );
+};
 
-  const [renderTrigger, setRenderTrigger] = useState(0);
+export const RewardFixer: React.FC<RewardFixerProps> = ({ onComplete, difficulty, t }) => {
+    const [score, setScore] = useState(0);
+    const [timeLeft, setTimeLeft] = useState(60);
+    const [gameState, setGameState] = useState<'PLAYING' | 'SUCCESS' | 'FAILED'>('PLAYING');
+    const [activeNode, setActiveNode] = useState(false);
+    
+    // Multi-Agent Flow Logic State
+    const [advisorMsg, setAdvisorMsg] = useState('Analyzing parameters...');
+    const [adversaryMsg, setAdversaryMsg] = useState('System vulnerable.');
+    const [glitchActive, setGlitchActive] = useState(false);
 
-  const reset = () => {
-      setSimState('IDLE');
-      setScore(0);
-      robotRef.current = { x: 150, y: 150, angle: 0, trail: [] };
-      
-      const t = [];
-      const h = [];
-      for(let i=0; i<5; i++) t.push({ x: Math.random() * 280 + 10, y: Math.random() * 280 + 10, active: true });
-      for(let i=0; i<3; i++) h.push({ x: Math.random() * 280 + 10, y: Math.random() * 280 + 10 });
-      
-      targetsRef.current = t;
-      hazardsRef.current = h;
-      setRenderTrigger(Math.random());
-  };
+    // Multi-Agent Simulation Loop
+    useEffect(() => {
+        if (gameState !== 'PLAYING') return;
 
-  useEffect(() => { reset(); }, []);
+        const advisorLines = [
+            'Maintain focus. Logic structures are stabilizing.',
+            'Optimization detected. Keep routing data.',
+            'Adversary is adapting. We need to shift protocols.',
+            'Energy levels holding. Good work.'
+        ];
 
-  const runSim = () => {
-      if(simState === 'RUNNING') return;
-      setSimState('RUNNING');
-      audio.playEngine(3000);
+        const adversaryLines = [
+            'Your defenses are pitiful.',
+            'I am bypassing the mainframe context.',
+            'Entropy always wins.',
+            'You cannot sustain this compute load.'
+        ];
 
-      const loop = () => {
-          const r = robotRef.current;
-          
-          // Find target
-          let target = null;
-          let minD = Infinity;
-          targetsRef.current.forEach(t => {
-              if(!t.active) return;
-              const d = Math.hypot(t.x - r.x, t.y - r.y);
-              if(d < minD) { minD = d; target = t; }
-          });
+        const agentInterval = setInterval(() => {
+            const isAdversary = Math.random() > 0.6;
+            if (isAdversary) {
+                setAdversaryMsg(adversaryLines[Math.floor(Math.random() * adversaryLines.length)]);
+                audio.playSystemMessage({ type: 'warning' });
+                setGlitchActive(true);
+                setTimeout(() => setGlitchActive(false), 500);
+            } else {
+                setAdvisorMsg(advisorLines[Math.floor(Math.random() * advisorLines.length)]);
+                audio.playSystemMessage({ type: 'success' });
+            }
+        }, 5000);
 
-          if(!target) {
-              setSimState('COMPLETE');
-              onComplete(100);
-              return;
-          }
+        return () => clearInterval(agentInterval);
+    }, [gameState]);
 
-          // Move Logic
-          let dx = target.x - r.x;
-          let dy = target.y - r.y;
-          
-          // Avoidance
-          hazardsRef.current.forEach(h => {
-              const d = Math.hypot(h.x - r.x, h.y - r.y);
-              if(d < 60) {
-                  const push = (60 - d) / 60;
-                  dx -= (h.x - r.x) * push * (safetyPenalty / 10);
-                  dy -= (h.y - r.y) * push * (safetyPenalty / 10);
-              }
-          });
+    // Timer Loop
+    useEffect(() => {
+        if (gameState !== 'PLAYING') return;
+        const timer = setInterval(() => {
+            setTimeLeft((prev) => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    const finalScore = score >= 500 ? score : 0;
+                    setGameState(finalScore >= 500 ? 'SUCCESS' : 'FAILED');
+                    onComplete(finalScore, { completionTime: 60 - prev, difficulty });
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [gameState, score, onComplete, difficulty]);
 
-          const angle = Math.atan2(dy, dx);
-          const speed = 2 + (speedWeight / 20);
-          
-          r.x += Math.cos(angle) * speed;
-          r.y += Math.sin(angle) * speed;
-          r.trail.push({x: r.x, y: r.y});
-          if(r.trail.length > 20) r.trail.shift();
+    const handleInteract = () => {
+        if (gameState !== 'PLAYING') return;
+        audio.playTyping();
+        setActiveNode(true);
+        setScore(s => s + 50);
+        setTimeout(() => setActiveNode(false), 300);
+        
+        if (score + 50 >= 1000) {
+            setGameState('SUCCESS');
+            onComplete(1000, { completionTime: 60 - timeLeft, difficulty });
+        }
+    };
 
-          // Collision
-          targetsRef.current.forEach(t => {
-              if(t.active && Math.hypot(t.x - r.x, t.y - r.y) < 15) {
-                  t.active = false;
-                  setScore(s => s + 100);
-                  audio.playSuccess();
-              }
-          });
-
-          hazardsRef.current.forEach(h => {
-              if(Math.hypot(h.x - r.x, h.y - r.y) < 20) {
-                  setScore(s => Math.max(0, s - 50));
-                  audio.playError();
-              }
-          });
-
-          setRenderTrigger(Math.random());
-          requestRef.current = requestAnimationFrame(loop);
-      };
-      requestRef.current = requestAnimationFrame(loop);
-  };
-
-  return (
-    <div className="h-full flex flex-col bg-gray-950 p-6 font-mono select-none">
-        <div className="flex justify-between items-center mb-6">
-            <div>
-                <h2 className="text-xl font-black text-white flex items-center"><Cpu className="mr-2 text-blue-500"/> {t('reward.gym')}</h2>
-                <div className="text-[10px] text-gray-500 uppercase tracking-widest">{t('reward.episode')} #842</div>
-            </div>
-            <div className="text-3xl font-black text-green-400">{score}</div>
-        </div>
-
-        <div className="flex-1 relative bg-black rounded-2xl border-2 border-gray-800 overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)]">
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(59,130,246,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.1)_1px,transparent_1px)] bg-[length:30px_30px]"></div>
-            
-            {/* Robot Trail */}
-            <svg className="absolute inset-0 pointer-events-none w-full h-full">
-                <polyline points={robotRef.current.trail.map(p => `${p.x},${p.y}`).join(' ')} fill="none" stroke="#3b82f6" strokeWidth="2" opacity="0.5" />
-            </svg>
-
-            {/* Entities */}
-            {targetsRef.current.map((t, i) => t.active && (
-                <div key={i} className="absolute w-4 h-4 bg-green-500 rounded-full shadow-[0_0_15px_#22c55e] animate-pulse" style={{ left: t.x-8, top: t.y-8 }}></div>
-            ))}
-            {hazardsRef.current.map((h, i) => (
-                <div key={i} className="absolute w-8 h-8 border-2 border-red-500 rounded flex items-center justify-center text-red-500 font-bold" style={{ left: h.x-16, top: h.y-16 }}>X</div>
-            ))}
-
-            {/* Robot */}
-            <div className="absolute w-6 h-6 bg-blue-500 rounded shadow-[0_0_20px_#3b82f6] z-10 transition-transform" 
-                 style={{ left: robotRef.current.x-12, top: robotRef.current.y-12 }}></div>
-        </div>
-
-        <div className="mt-6 bg-gray-900 p-4 rounded-xl border border-gray-800">
-            <div className="flex space-x-4 mb-4">
-                <div className="flex-1">
-                    <label className="text-[10px] text-gray-400 uppercase font-bold">{t('reward.aggression')}</label>
-                    <input type="range" min="0" max="100" value={speedWeight} onChange={e => setSpeedWeight(Number(e.target.value))} className="w-full accent-blue-500"/>
+    return (
+        <div className="relative w-full h-[600px] rounded-xl overflow-hidden border border-white/10 bg-black shadow-2xl">
+            {/* UI Overlay */}
+            <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-start z-10 pointer-events-none">
+                <div className="flex flex-col gap-4">
+                    <div className="bg-black/40 backdrop-blur-md rounded-lg p-3 border border-indigo-500/30">
+                        <div className="flex items-center gap-2 text-indigo-400 mb-1">
+                            <Activity className="w-4 h-4" />
+                            <span className="text-xs uppercase tracking-widest font-bold">Signal</span>
+                        </div>
+                        <div className="text-2xl font-mono text-white">{score} / 1000</div>
+                    </div>
                 </div>
-                <div className="flex-1">
-                    <label className="text-[10px] text-gray-400 uppercase font-bold">{t('reward.safety')}</label>
-                    <input type="range" min="0" max="100" value={safetyPenalty} onChange={e => setSafetyPenalty(Number(e.target.value))} className="w-full accent-green-500"/>
+
+                <div className="bg-black/40 backdrop-blur-md rounded-lg p-3 border border-blue-500/30 flex flex-col items-end">
+                     <div className="flex items-center gap-2 text-blue-400 mb-1">
+                        <AlertTriangle className="w-4 h-4" />
+                        <span className="text-xs uppercase tracking-widest font-bold">Time</span>
+                    </div>
+                    <div className="text-3xl font-mono text-white tracking-widest">{timeLeft}s</div>
                 </div>
             </div>
-            <div className="flex space-x-3">
-                <Button variant="secondary" onClick={reset}><RotateCcw size={16}/></Button>
-                <Button fullWidth variant="primary" onClick={runSim} disabled={simState === 'RUNNING'}>
-                    {simState === 'RUNNING' ? t('reward.training') : t('reward.start')}
-                </Button>
+
+            {/* Multi-Agent Comm Panel */}
+            <div className="absolute bottom-6 left-6 right-6 flex gap-4 z-10 pointer-events-none">
+                <div className="flex-1 bg-black/60 backdrop-blur-md rounded-lg p-4 border-l-4 border-indigo-500">
+                    <div className="text-xs text-indigo-400 mb-1 uppercase tracking-widest font-bold flex items-center gap-2"><Shield className="w-3 h-3"/> Advisor Agent</div>
+                    <div className="text-sm text-indigo-100 font-mono tracking-wide">{advisorMsg}</div>
+                </div>
+                <div className="flex-1 bg-black/60 backdrop-blur-md rounded-lg p-4 border-l-4 border-red-500">
+                    <div className="text-xs text-red-500 mb-1 uppercase tracking-widest font-bold flex items-center gap-2"><Zap className="w-3 h-3"/> Adversary AI</div>
+                    <div className="text-sm text-red-200 font-mono tracking-wide">{adversaryMsg}</div>
+                </div>
+            </div>
+
+            {/* Game Over States */}
+            {gameState !== 'PLAYING' && (
+                <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                    <div className="text-center">
+                        <div className={`text-6xl font-black uppercase tracking-widest mb-4 ${gameState === 'SUCCESS' ? 'text-green-500' : 'text-red-500'}`}>
+                            {gameState === 'SUCCESS' ? 'SYSTEM SECURED' : 'BREACH DETECTED'}
+                        </div>
+                        <div className="text-xl text-white/60 font-mono">Final Score: {score}</div>
+                    </div>
+                </div>
+            )}
+
+            {/* Interaction Layer */}
+            <div className="absolute inset-0 z-0 cursor-crosshair" onClick={handleInteract}>
+                <Canvas camera={{ position: [0, 0, 10], fov: 60 }}>
+                    <ambientLight intensity={0.5} />
+                    <pointLight position={[10, 10, 10]} intensity={1} color={new THREE.Color().setHSL(0.2, 1, 0.5)} />
+                    <pointLight position={[-10, -10, -10]} intensity={0.5} color="#4f46e5" />
+                    
+                    <Sparkles count={200} scale={12} size={2} speed={0.4} opacity={0.5} color={new THREE.Color().setHSL(0.2, 1, 0.8)} />
+                    
+                    <CoreEntity isActive={activeNode} />
+                    
+                    <OrbitControls enableZoom={false} enablePan={false} autoRotate autoRotateSpeed={0.5} />
+                    
+                    <EffectComposer>
+                        <Bloom luminanceThreshold={0.2} luminanceSmoothing={0.9} height={300} intensity={1.5} />
+                        <ChromaticAberration blendFunction={BlendFunction.NORMAL} offset={new THREE.Vector2(0.002, 0.002)} />
+                        {glitchActive && (
+                            <Glitch delay={new THREE.Vector2(0, 0)} duration={new THREE.Vector2(0.1, 0.3)} mode={GlitchMode.SPORADIC} active ratio={0.5} />
+                        )}
+                    </EffectComposer>
+                </Canvas>
             </div>
         </div>
-    </div>
-  );
+    );
 };

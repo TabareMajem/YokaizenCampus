@@ -445,6 +445,82 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onGuideC
             </div>
          </section>
 
+         {/* VIRAL ARCADE / FUNNEL SECTION */}
+         <section id="arcade" className="py-32 bg-[#020005] relative border-t border-neon-blue/20 overflow-hidden">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[radial-gradient(circle_at_top,rgba(0,255,255,0.05),transparent_70%)] pointer-events-none"></div>
+            <div className="max-w-7xl mx-auto px-6 relative z-10">
+               <div className="text-center mb-20 max-w-3xl mx-auto">
+                  <div className="inline-flex items-center gap-2 bg-cyan-900/20 border border-cyan-500/30 px-3 py-1 rounded-full text-cyan-400 text-xs font-bold uppercase tracking-wider mb-6">
+                     <Zap className="w-3 h-3" /> VIRAL ARCADE
+                  </div>
+                  <h2 className="text-4xl md:text-6xl font-black mb-6 tracking-tight text-white">TEST YOUR <span className="text-transparent bg-clip-text bg-gradient-to-r from-neon-blue to-purple-500">COGNITIVE LIMITS</span></h2>
+                  <p className="text-lg text-slate-400 leading-relaxed">
+                     Play 3 brutal, high-fidelity WebGL mini-games completely free. No login required.
+                     Beat the first level to unlock exclusive access to the AI Labs Vanguard Onboarding.
+                  </p>
+               </div>
+
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  {/* Game 1 */}
+                  <div className="bg-black border border-white/10 rounded-2xl overflow-hidden group hover:border-cyan-500/50 transition-all shadow-2xl relative">
+                     <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent z-10 pointer-events-none"></div>
+                     <div className="h-48 w-full bg-slate-900 flex items-center justify-center relative overflow-hidden">
+                        <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
+                        <Network size={64} className="text-cyan-400/50 group-hover:scale-110 transition-transform duration-500" />
+                     </div>
+                     <div className="p-8 relative z-20 -mt-10">
+                        <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center mb-4 backdrop-blur-md">
+                           <Lock size={20} className="text-cyan-400" />
+                        </div>
+                        <h3 className="text-2xl font-black text-white mb-2 tracking-tight">NEURAL HACK</h3>
+                        <p className="text-slate-400 text-sm mb-6 line-clamp-2">Connect the AI nodes without crossing data streams to bypass the firewall.</p>
+                        <a href="https://ai.yokaizencampus.com/play/neural-hack" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-cyan-400 font-bold text-sm tracking-widest hover:text-white transition-colors">
+                           PLAY FREE FOR NOW <ChevronRight size={16} />
+                        </a>
+                     </div>
+                  </div>
+
+                  {/* Game 2 */}
+                  <div className="bg-black border border-white/10 rounded-2xl overflow-hidden group hover:border-purple-500/50 transition-all shadow-2xl relative">
+                     <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent z-10 pointer-events-none"></div>
+                     <div className="h-48 w-full bg-slate-900 flex items-center justify-center relative overflow-hidden">
+                        <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+                        <TrendingDown size={64} className="text-purple-400/50 group-hover:scale-110 transition-transform duration-500" />
+                     </div>
+                     <div className="p-8 relative z-20 -mt-10">
+                        <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center mb-4 backdrop-blur-md">
+                           <Activity size={20} className="text-purple-400" />
+                        </div>
+                        <h3 className="text-2xl font-black text-white mb-2 tracking-tight">LATENCY TUNNEL</h3>
+                        <p className="text-slate-400 text-sm mb-6 line-clamp-2">High-speed WebGL avoidance. Dodge the red latency spikes in the data tube.</p>
+                        <a href="https://ai.yokaizencampus.com/play/latency-tunnel" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-purple-400 font-bold text-sm tracking-widest hover:text-white transition-colors">
+                           PLAY FREE FOR NOW <ChevronRight size={16} />
+                        </a>
+                     </div>
+                  </div>
+
+                  {/* Game 3 */}
+                  <div className="bg-black border border-white/10 rounded-2xl overflow-hidden group hover:border-red-500/50 transition-all shadow-2xl relative">
+                     <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent z-10 pointer-events-none"></div>
+                     <div className="h-48 w-full bg-slate-900 flex items-center justify-center relative overflow-hidden">
+                        <div className="absolute inset-0 opacity-30 bg-[url('https://www.transparenttextures.com/patterns/diagmonds-light.png')]"></div>
+                        <Target size={64} className="text-red-400/50 group-hover:scale-110 transition-transform duration-500" />
+                     </div>
+                     <div className="p-8 relative z-20 -mt-10">
+                        <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center justify-center mb-4 backdrop-blur-md">
+                           <Shield size={20} className="text-red-400" />
+                        </div>
+                        <h3 className="text-2xl font-black text-white mb-2 tracking-tight">CHAOS DEFENSE</h3>
+                        <p className="text-slate-400 text-sm mb-6 line-clamp-2">Defend the core. Click to shatter incoming heuristic threats before impact.</p>
+                        <a href="https://ai.yokaizencampus.com/play/chaos-defense" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-red-500 font-bold text-sm tracking-widest hover:text-white transition-colors">
+                           PLAY FREE FOR NOW <ChevronRight size={16} />
+                        </a>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </section>
+
          {/* NGO / SUSTAINABILITY SECTION */}
          <section className="py-24 bg-white/5 border-y border-white/10 relative">
             <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">

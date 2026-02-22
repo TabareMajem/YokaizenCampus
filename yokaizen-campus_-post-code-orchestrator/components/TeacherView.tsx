@@ -41,7 +41,10 @@ export const TeacherView: React.FC<TeacherViewProps> = ({ currentMode, onModeCha
   // Mobile Menu State
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  const [activeClassroomId, setActiveClassroomId] = useState<string | null>(null);
   const [students, setStudents] = useState<ClassroomStudentSummary[]>([]);
+  const [isGrading, setIsGrading] = useState(false);
+  const [gradeResult, setGradeResult] = useState<{ score: number, feedback: string } | null>(null);
 
   // Toast State
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -56,37 +59,49 @@ export const TeacherView: React.FC<TeacherViewProps> = ({ currentMode, onModeCha
   const TC = TERMS[language].COMMON;
 
   useEffect(() => {
-    // Initial data fetch
-    const fetchStatus = async () => {
+    let socket: any = null;
+
+    const setupClassroom = async () => {
       try {
-        const data = await API.classroom.getLiveStatus();
+        // 1. Get Teacher's classroom
+        const classrooms = await API.classroom.getAll();
+        const activeClass = classrooms?.[0]?.id;
+        if (!activeClass) return; // No classroom found
+
+        setActiveClassroomId(activeClass);
+
+        // 2. Fetch initial status using the ID
+        const data = await API.classroom.getLiveStatus(activeClass);
         setStudents(data);
+
+        // 3. Connect WebSocket for real-time grid updates
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+        const socketUrl = apiUrl.replace(/\/api\/v1\/?$/, '');
+
+        socket = io(socketUrl, {
+          transports: ['websocket'],
+          auth: { token: localStorage.getItem('access_token') }
+        });
+
+        socket.on('connect', () => {
+          console.log('Live Grid WS Connected');
+          socket.emit('join_room', `class:${activeClass}`);
+        });
+
+        socket.on('classroom_status_update', (updateData: ClassroomStudentSummary[]) => {
+          setStudents(updateData);
+        });
+
+        socket.on('disconnect', () => console.log('Live Grid WS Disconnected'));
       } catch (e) {
-        console.error("Failed to fetch classroom status");
+        console.error("Failed to setup classroom:", e);
       }
     };
-    fetchStatus();
 
-    // Connect WebSocket for real-time grid updates
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-    // Clean up trailing /api/v1 if it exists in env, since socket.io typically binds to the root URL
-    const socketUrl = apiUrl.replace(/\/api\/v1\/?$/, '');
-
-    const socket = io(socketUrl, {
-      transports: ['websocket'],
-      auth: { token: localStorage.getItem('access_token') }
-    });
-
-    socket.on('connect', () => console.log('Live Grid WS Connected'));
-
-    socket.on('classroom_status_update', (data: ClassroomStudentSummary[]) => {
-      setStudents(data);
-    });
-
-    socket.on('disconnect', () => console.log('Live Grid WS Disconnected'));
+    setupClassroom();
 
     return () => {
-      socket.disconnect();
+      if (socket) socket.disconnect();
     };
   }, []);
 
@@ -105,13 +120,24 @@ export const TeacherView: React.FC<TeacherViewProps> = ({ currentMode, onModeCha
   };
 
   const handleBroadcast = async () => {
-    if (!broadcastMsg) return;
+    if (!broadcastMsg || !activeClassroomId) return;
     try {
-      await API.classroom.broadcastMessage(broadcastMsg);
+      await API.classroom.broadcastMessage(activeClassroomId, broadcastMsg);
       setBroadcastMsg("");
       showToast(TC.BROADCAST_SENT);
     } catch (e) {
       showToast("Failed to send broadcast", 'error');
+    }
+  };
+
+  const handlePhilosophyChange = async (mode: PhilosophyMode) => {
+    onModeChange(mode);
+    if (!activeClassroomId) return;
+    try {
+      await API.classroom.setPhilosophy(activeClassroomId, mode);
+      showToast(`Philosophy changed to ${mode}`);
+    } catch (e) {
+      showToast("Failed to sync philosophy", 'error');
     }
   };
 
@@ -132,6 +158,20 @@ export const TeacherView: React.FC<TeacherViewProps> = ({ currentMode, onModeCha
       showToast(TC.DRAFT_SAVED);
     } catch (e) {
       showToast("Save draft failed", "error");
+    }
+  };
+
+  const handleGradeStudent = async () => {
+    if (!selectedStudent || !activeClassroomId) return;
+    setIsGrading(true);
+    try {
+      const result = await API.classroom.gradeStudent(activeClassroomId, selectedStudent.id);
+      setGradeResult(result);
+      showToast('AI Grading complete');
+    } catch (e) {
+      showToast('AI Grading failed', 'error');
+    } finally {
+      setIsGrading(false);
     }
   };
 
@@ -342,7 +382,10 @@ export const TeacherView: React.FC<TeacherViewProps> = ({ currentMode, onModeCha
                 {students.map(student => (
                   <button
                     key={student.id}
-                    onClick={() => setSelectedStudent(student)}
+                    onClick={() => {
+                      setSelectedStudent(student);
+                      setGradeResult(null); // Reset grade when switching students
+                    }}
                     className={`aspect-square rounded-lg p-3 flex flex-col justify-between transition-all relative overflow-hidden group
                         ${selectedStudent?.id === student.id ? 'ring-2 ring-white' : ''}
                         ${student.status === 'STUCK' ? 'bg-rose-900/20 border border-rose-500/30 hover:bg-rose-900/40' : 'bg-slate-800/50 border border-slate-700 hover:bg-slate-800'}
@@ -468,7 +511,7 @@ export const TeacherView: React.FC<TeacherViewProps> = ({ currentMode, onModeCha
               ].map((opt) => (
                 <button
                   key={opt.mode}
-                  onClick={() => onModeChange(opt.mode)}
+                  onClick={() => handlePhilosophyChange(opt.mode)}
                   className={`w-full p-3 rounded border text-left transition-all duration-300 relative overflow-hidden group
                       ${currentMode === opt.mode
                       ? (opt.mode === PhilosophyMode.KOREA ? 'bg-red-900/20 border-red-500' : opt.mode === PhilosophyMode.FINLAND ? 'bg-amber-900/20 border-amber-500' : 'bg-cyan-900/20 border-cyan-500')
@@ -503,6 +546,30 @@ export const TeacherView: React.FC<TeacherViewProps> = ({ currentMode, onModeCha
                   <TimelinePlayer history={studentHistory} language={language} />
 
                   <div className="bg-slate-950 p-3 rounded border border-slate-800">
+                    <div className="text-[10px] text-slate-500 mb-2 font-bold uppercase tracking-wider">AI EVALUATION</div>
+                    {gradeResult ? (
+                      <div className="mb-4 p-3 bg-purple-900/20 border border-purple-500/30 rounded text-xs space-y-2 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-2 opacity-10">
+                          <Sparkles className="w-8 h-8" />
+                        </div>
+                        <div className="flex justify-between items-center font-bold">
+                          <span className="text-purple-400">SCORE</span>
+                          <span className={`text-lg ${gradeResult.score >= 80 ? 'text-emerald-400' : gradeResult.score >= 50 ? 'text-amber-400' : 'text-rose-400'}`}>{gradeResult.score}/100</span>
+                        </div>
+                        <div className="text-purple-200/80 leading-relaxed text-[10px]">{gradeResult.feedback}</div>
+                        <button onClick={() => setGradeResult(null)} className="text-[9px] text-purple-400 hover:text-purple-300 uppercase tracking-widest mt-2 border border-purple-500/30 px-2 py-1 rounded">Dismiss</button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={handleGradeStudent}
+                        disabled={isGrading}
+                        className="w-full py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 border border-purple-500/50 rounded text-xs mb-4 flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                      >
+                        {isGrading ? <div className="animate-spin w-3 h-3 border-2 border-purple-500 border-t-transparent rounded-full"></div> : <Sparkles className="w-3 h-3" />}
+                        {isGrading ? 'ANALYZING GRAPH...' : 'TRIGGER AI GRADE'}
+                      </button>
+                    )}
+
                     <div className="text-[10px] text-slate-500 mb-1">{TT.INTERVENTION}</div>
                     <button className="w-full py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/50 rounded text-xs mb-2">
                       {TT.BTN_HINT}

@@ -19,8 +19,10 @@ export { GrantService } from './GrantService';
 export { ParentService } from './ParentService';
 export { PaymentService } from './PaymentService';
 
+import { createAIEngine } from './AiEngine';
+
 // Export singleton instances
-export const aiEngine = new AIEngine();
+export const aiEngine = createAIEngine('system', 'PRO');
 export const athenaService = new AthenaService();
 export const authService = new AuthService();
 export const classroomService = new ClassroomService();

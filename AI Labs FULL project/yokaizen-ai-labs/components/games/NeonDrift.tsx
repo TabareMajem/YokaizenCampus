@@ -1,749 +1,190 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Button } from '../ui/Button';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, TorusKnot, MeshDistortMaterial, Float, Text, Trail, Sparkles } from '@react-three/drei';
+import { EffectComposer, Bloom, ChromaticAberration, Glitch } from '@react-three/postprocessing';
+import { GlitchMode, BlendFunction } from 'postprocessing';
+import * as THREE from 'three';
+import { Activity, Shield, Cpu, AlertTriangle, Zap, Terminal } from 'lucide-react';
 import { audio } from '../../services/audioService';
-import { Play, RotateCcw, ArrowUp, ArrowLeft, ArrowRight, Cpu, Zap, Flag, Flame, CheckCircle, ShoppingBag, Map, Star, Lock, ChevronLeft } from 'lucide-react';
-import { Difficulty, Language, GameType, UserStats } from '../../types';
-import { consultTheOracle, analyzeDriftCode } from '../../services/geminiService';
-import { gameProgressService } from '../../services/gameProgressService';
-import { Scanlines, Vignette, Noise } from '../ui/Visuals';
-import { SkinShop } from '../ui/SkinShop';
-import { GAME_SKINS } from '../../constants';
 
-interface NeonDriftProps {
-    onComplete: (score: number) => void;
-    difficulty?: Difficulty;
+export interface NeonDriftProps {
+    onComplete: (score: number, metrics?: any) => void;
+    difficulty: string;
     t: (key: string) => string;
-    language?: Language;
-    user?: UserStats;
-    onUpdateUser?: (user: UserStats) => void;
 }
 
-type Command = 'FORWARD' | 'LEFT' | 'RIGHT' | 'BOOST';
-
-// Hand-crafted level definitions
-interface LevelDef {
-    id: number;
-    name: string;
-    grid: number[][];
-    moveLimit: number;
-    stars: { three: number; two: number; one: number }; // Moves for star rating
-}
-
-const LEVELS: LevelDef[] = [
-    {
-        id: 1, name: 'Training Grid',
-        grid: [
-            [4, 4, 4, 4, 4, 4],
-            [4, 2, 1, 1, 4, 4],
-            [4, 4, 4, 1, 4, 4],
-            [4, 4, 4, 1, 1, 4],
-            [4, 4, 4, 4, 3, 4],
-            [4, 4, 4, 4, 4, 4],
-        ],
-        moveLimit: 8,
-        stars: { three: 4, two: 6, one: 8 }
-    },
-    {
-        id: 2, name: 'Downtown Circuit',
-        grid: [
-            [4, 4, 4, 4, 4, 4, 4],
-            [4, 2, 1, 1, 1, 4, 4],
-            [4, 4, 4, 4, 1, 4, 4],
-            [4, 4, 5, 1, 1, 4, 4],
-            [4, 4, 1, 4, 4, 4, 4],
-            [4, 4, 1, 1, 1, 3, 4],
-            [4, 4, 4, 4, 4, 4, 4],
-        ],
-        moveLimit: 10,
-        stars: { three: 6, two: 8, one: 10 }
-    },
-    {
-        id: 3, name: 'Neon Highway',
-        grid: [
-            [4, 4, 4, 4, 4, 4, 4, 4],
-            [4, 2, 1, 1, 4, 4, 4, 4],
-            [4, 4, 4, 1, 4, 4, 4, 4],
-            [4, 4, 5, 1, 1, 1, 4, 4],
-            [4, 4, 4, 4, 4, 1, 4, 4],
-            [4, 4, 4, 4, 1, 1, 4, 4],
-            [4, 4, 4, 4, 1, 1, 3, 4],
-            [4, 4, 4, 4, 4, 4, 4, 4],
-        ],
-        moveLimit: 12,
-        stars: { three: 7, two: 9, one: 12 }
-    },
-    {
-        id: 4, name: 'Cyber Maze',
-        grid: [
-            [4, 4, 4, 4, 4, 4, 4, 4],
-            [4, 2, 1, 4, 1, 1, 4, 4],
-            [4, 1, 1, 4, 1, 4, 4, 4],
-            [4, 1, 4, 4, 1, 5, 1, 4],
-            [4, 1, 1, 1, 1, 4, 1, 4],
-            [4, 4, 4, 4, 4, 4, 1, 4],
-            [4, 4, 4, 4, 4, 3, 1, 4],
-            [4, 4, 4, 4, 4, 4, 4, 4],
-        ],
-        moveLimit: 14,
-        stars: { three: 9, two: 12, one: 14 }
-    },
-    {
-        id: 5, name: 'Boss Run',
-        grid: [
-            [4, 4, 4, 4, 4, 4, 4, 4],
-            [4, 2, 1, 1, 1, 5, 1, 4],
-            [4, 4, 4, 4, 4, 4, 1, 4],
-            [4, 1, 1, 5, 1, 1, 1, 4],
-            [4, 1, 4, 4, 4, 4, 4, 4],
-            [4, 1, 1, 1, 1, 1, 4, 4],
-            [4, 4, 4, 4, 4, 1, 3, 4],
-            [4, 4, 4, 4, 4, 4, 4, 4],
-        ],
-        moveLimit: 16,
-        stars: { three: 10, two: 13, one: 16 }
-    },
-];
-
-// Progress persistence
-interface LevelProgress {
-    [levelId: number]: {
-        completed: boolean;
-        bestMoves: number;
-        stars: number;
-    };
-}
-
-type GameState = 'MENU' | 'LEVEL_SELECT' | 'PLAYING' | 'RUNNING' | 'CRASHED' | 'WIN' | 'VICTORY';
-
-export const NeonDrift: React.FC<NeonDriftProps> = ({ onComplete, difficulty = 'Pro', t, user, onUpdateUser }) => {
-    const [commands, setCommands] = useState<Command[]>([]);
-    const [status, setStatus] = useState<'IDLE' | 'RUNNING' | 'CRASHED' | 'WIN'>('IDLE');
-    const [feedback, setFeedback] = useState('');
-    const [activeStep, setActiveStep] = useState<number>(-1);
-    const [showShop, setShowShop] = useState(false);
-    const [showLevelSelect, setShowLevelSelect] = useState(true);
-    const [currentLevel, setCurrentLevel] = useState<LevelDef | null>(null);
-    const [trackMap, setTrackMap] = useState<number[][]>([]);
-
-    // Game State
-    const [gameState, setGameState] = useState<GameState>('MENU');
-    const [currentLevelId, setCurrentLevelId] = useState(1);
-    const [code, setCode] = useState<string[]>([]);
-    // ... other state ...
-
-    // Progress State
-    const [progress, setProgress] = useState<LevelProgress>({});
-
-    // Load progress
-    useEffect(() => {
-        const saved = gameProgressService.load('neondrift');
-        if (saved && saved.customData) {
-            setProgress(saved.customData as LevelProgress);
-        } else {
-            // Default progress
-            const defaultProgress = {
-                1: { completed: false, bestMoves: 0, stars: 0 }
-            };
-            setProgress(defaultProgress);
+// Advanced WebGL Node Component
+const CoreEntity = ({ isActive }: { isActive: boolean }) => {
+    const meshRef = useRef<THREE.Mesh>(null);
+    useFrame((state) => {
+        if (meshRef.current) {
+            meshRef.current.rotation.x = state.clock.elapsedTime * 0.5;
+            meshRef.current.rotation.y = state.clock.elapsedTime * 0.3;
         }
-    }, []);
+    });
 
-    const saveProgressToService = (newProgress: LevelProgress) => {
-        // Calc total stars
-        const totalStars = Object.values(newProgress).reduce((acc, l) => acc + l.stars, 0);
-        gameProgressService.save('neondrift', {
-            highScore: totalStars,
-            customData: newProgress
-        });
-    };
+    return (
+        <Float speed={2} floatIntensity={1} rotationIntensity={isActive ? 2 : 0.5}>
+            <TorusKnot ref={meshRef} args={[1.5, 128, 32]} scale={isActive ? 1.2 : 1}>
+                <MeshDistortMaterial
+                    color={new THREE.Color().setHSL(0.6, 0.8, isActive ? 0.6 : 0.3)}
+                    envMapIntensity={1}
+                    clearcoat={1}
+                    clearcoatRoughness={0}
+                    metalness={0.8}
+                    roughness={0.2}
+                    distort={isActive ? 0.4 : 0.1}
+                    speed={isActive ? 5 : 1}
+                />
+            </TorusKnot>
+        </Float>
+    );
+};
 
-    const commandLimit = currentLevel?.moveLimit || 12;
-    const gridSize = currentLevel?.grid.length || 7;
+export const NeonDrift: React.FC<NeonDriftProps> = ({ onComplete, difficulty, t }) => {
+    const [score, setScore] = useState(0);
+    const [timeLeft, setTimeLeft] = useState(60);
+    const [gameState, setGameState] = useState<'PLAYING' | 'SUCCESS' | 'FAILED'>('PLAYING');
+    const [activeNode, setActiveNode] = useState(false);
+    
+    // Multi-Agent Flow Logic State
+    const [advisorMsg, setAdvisorMsg] = useState('Analyzing parameters...');
+    const [adversaryMsg, setAdversaryMsg] = useState('System vulnerable.');
+    const [glitchActive, setGlitchActive] = useState(false);
 
-    // Visual Grid State
-    const [carPos, setCarPos] = useState({ x: 1, y: 1, rotation: 0 });
-    const carRef = useRef({ x: 1, y: 1, rotation: 0 });
-    const [particles, setParticles] = useState<{ id: number, x: number, y: number, color: string }[]>([]);
-    const [skidMarks, setSkidMarks] = useState<{ x: number, y: number, opacity: number }[]>([]);
-    const carSpriteRef = useRef<HTMLImageElement | null>(null);
+    // Multi-Agent Simulation Loop
+    useEffect(() => {
+        if (gameState !== 'PLAYING') return;
 
-    // Select level handler
-    const selectLevel = (level: LevelDef) => {
-        const levelIndex = LEVELS.findIndex(l => l.id === level.id);
-        const isUnlocked = levelIndex === 0 || progress[LEVELS[levelIndex - 1].id]?.completed;
-        if (!isUnlocked) return;
+        const advisorLines = [
+            'Maintain focus. Logic structures are stabilizing.',
+            'Optimization detected. Keep routing data.',
+            'Adversary is adapting. We need to shift protocols.',
+            'Energy levels holding. Good work.'
+        ];
 
-        setCurrentLevel(level);
-        setTrackMap(level.grid.map(row => [...row]));
-        setShowLevelSelect(false);
-        setCommands([]);
-        setStatus('IDLE');
+        const adversaryLines = [
+            'Your defenses are pitiful.',
+            'I am bypassing the mainframe context.',
+            'Entropy always wins.',
+            'You cannot sustain this compute load.'
+        ];
 
-        // Find start position
-        for (let y = 0; y < level.grid.length; y++) {
-            for (let x = 0; x < level.grid[y].length; x++) {
-                if (level.grid[y][x] === 2) {
-                    setCarPos({ x, y, rotation: 0 });
-                    carRef.current = { x, y, rotation: 0 };
-                    break;
+        const agentInterval = setInterval(() => {
+            const isAdversary = Math.random() > 0.6;
+            if (isAdversary) {
+                setAdversaryMsg(adversaryLines[Math.floor(Math.random() * adversaryLines.length)]);
+                audio.playSystemMessage({ type: 'warning' });
+                setGlitchActive(true);
+                setTimeout(() => setGlitchActive(false), 500);
+            } else {
+                setAdvisorMsg(advisorLines[Math.floor(Math.random() * advisorLines.length)]);
+                audio.playSystemMessage({ type: 'success' });
+            }
+        }, 5000);
+
+        return () => clearInterval(agentInterval);
+    }, [gameState]);
+
+    // Timer Loop
+    useEffect(() => {
+        if (gameState !== 'PLAYING') return;
+        const timer = setInterval(() => {
+            setTimeLeft((prev) => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    const finalScore = score >= 500 ? score : 0;
+                    setGameState(finalScore >= 500 ? 'SUCCESS' : 'FAILED');
+                    onComplete(finalScore, { completionTime: 60 - prev, difficulty });
+                    return 0;
                 }
-            }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [gameState, score, onComplete, difficulty]);
+
+    const handleInteract = () => {
+        if (gameState !== 'PLAYING') return;
+        audio.playTyping();
+        setActiveNode(true);
+        setScore(s => s + 50);
+        setTimeout(() => setActiveNode(false), 300);
+        
+        if (score + 50 >= 1000) {
+            setGameState('SUCCESS');
+            onComplete(1000, { completionTime: 60 - timeLeft, difficulty });
         }
-        audio.playClick();
-    };
-
-    const calculateStars = (moves: number): number => {
-        if (!currentLevel) return 0;
-        if (moves <= currentLevel.stars.three) return 3;
-        if (moves <= currentLevel.stars.two) return 2;
-        if (moves <= currentLevel.stars.one) return 1;
-        return 0;
-    };
-
-    const handleWin = () => {
-        if (!currentLevel) return;
-        const movesUsed = commands.length;
-        const stars = calculateStars(movesUsed);
-        const prev = progress[currentLevel.id];
-
-        // Update progress
-        const newProgress = { ...progress };
-        const currentBest = newProgress[currentLevel.id]?.bestMoves || Infinity;
-
-        newProgress[currentLevel.id] = {
-            completed: true,
-            bestMoves: Math.min(currentBest, movesUsed),
-            stars: Math.max(newProgress[currentLevel.id]?.stars || 0, stars)
-        };
-
-        // Unlock next level
-        if (currentLevel.id < LEVELS.length) {
-            const nextId = currentLevel.id + 1;
-            if (!newProgress[nextId]) {
-                newProgress[nextId] = { completed: false, bestMoves: 0, stars: 0 };
-            }
-        }
-
-        setProgress(newProgress);
-        saveProgressToService(newProgress);
-
-        setTimeout(() => {
-            const isFinalLevel = currentLevel.id === LEVELS.length;
-            setGameState(isFinalLevel ? 'VICTORY' : 'LEVEL_SELECT');
-            // ... logic
-        }, 2000);
-    };
-
-    // --- PROCEDURAL GENERATION (Legacy for random mode) ---
-
-    const generateTrack = () => {
-        const size = gridSize;
-        const newMap = Array(size).fill(null).map(() => Array(size).fill(4)); // Fill with Walls (4)
-
-        let x = 1;
-        let y = 1;
-        newMap[y][x] = 2; // Start
-
-        // Random Walk to generate path
-        let steps = 0;
-        const maxSteps = size * size; // Safety break
-
-        while (steps < maxSteps) {
-            // Determine possible moves
-            const moves = [];
-            if (x + 1 < size - 1) moves.push({ dx: 1, dy: 0 });
-            if (y + 1 < size - 1) moves.push({ dx: 0, dy: 1 });
-            // Bias towards goal (bottom right)
-
-            if (moves.length === 0) break; // Trapped
-
-            // Simple heuristic: Try not to go back, try to move generally down/right
-            const move = moves[Math.floor(Math.random() * moves.length)];
-
-            x += move.dx;
-            y += move.dy;
-
-            if (newMap[y][x] === 4) {
-                newMap[y][x] = 1; // Track
-                // Chance for Boost Pad (5)
-                if (Math.random() > 0.8) newMap[y][x] = 5;
-            }
-
-            // Goal Condition: Near bottom right
-            if (x >= size - 2 && y >= size - 2) {
-                newMap[y][x] = 3; // Goal
-                break;
-            }
-            steps++;
-        }
-
-        // Fallback if generator failed to reach deep enough
-        if (newMap[y][x] !== 3) newMap[y][x] = 3;
-
-        setTrackMap(newMap);
-        // Reset car
-        setCarPos({ x: 1, y: 1, rotation: 0 });
-        carRef.current = { x: 1, y: 1, rotation: 0 };
-    };
-
-    useEffect(() => {
-        generateTrack();
-    }, [difficulty]);
-
-    // Load Car Skin
-    useEffect(() => {
-        const skinId = user?.equippedSkins?.[GameType.NEON_DRIFT] || 'drift_default';
-        const skin = GAME_SKINS.find(s => s.id === skinId);
-        if (skin) {
-            const img = new Image();
-            img.src = skin.assetUrl;
-            carSpriteRef.current = img;
-        }
-    }, [user?.equippedSkins]);
-
-    useEffect(() => {
-        if (status === 'IDLE') {
-            setCarPos({ x: 1, y: 1, rotation: 0 });
-            carRef.current = { x: 1, y: 1, rotation: 0 };
-            setParticles([]);
-            setSkidMarks([]);
-        }
-    }, [status]);
-
-    const spawnParticles = (x: number, y: number, color: string, count: number = 5) => {
-        const newParts = Array.from({ length: count }).map(() => ({
-            id: Math.random(),
-            x: x * 50 + 25 + (Math.random() * 20 - 10),
-            y: y * 50 + 25 + (Math.random() * 20 - 10),
-            color
-        }));
-        setParticles(p => [...p, ...newParts]);
-        setTimeout(() => setParticles(p => p.slice(count)), 500);
-    };
-
-    const addSkidMark = (x: number, y: number) => {
-        setSkidMarks(prev => [...prev, { x: x * 50 + 25, y: y * 50 + 25, opacity: 1 }]);
-    };
-
-    // --- SMOOTH EXECUTION ENGINE ---
-    const handleRun = async () => {
-        setStatus('RUNNING');
-        setFeedback(t('architect.processing'));
-        audio.playEngine(3000);
-        audio.vibrate(audio.haptics.medium);
-
-        let currentX = 1;
-        let currentY = 1;
-        let currentRot = 0;
-        let crashed = false;
-
-        const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
-
-        for (let i = 0; i < commands.length; i++) {
-            setActiveStep(i);
-            const cmd = commands[i];
-
-            // 1. Turn Phase
-            if (cmd === 'LEFT' || cmd === 'RIGHT') {
-                const startRot = currentRot;
-                const dir = cmd === 'LEFT' ? -90 : 90;
-                const targetRot = currentRot + dir;
-                currentRot = (currentRot + dir + 360) % 360;
-                audio.playHover();
-                audio.vibrate(5);
-
-                for (let t = 0; t <= 1; t += 0.1) {
-                    carRef.current.rotation = startRot + (targetRot - startRot) * t;
-                    setCarPos({ ...carRef.current });
-                    if (t > 0.5) addSkidMark(carRef.current.x, carRef.current.y);
-                    await wait(20);
-                }
-            }
-
-            // 2. Move Phase
-            let moveDistance = 1;
-            if (cmd === 'BOOST') {
-                moveDistance = 2; // Jump logic
-                audio.vibrate(audio.haptics.impact);
-            }
-
-            if (cmd === 'FORWARD' || cmd === 'BOOST') {
-                let dx = 0, dy = 0;
-                if (Math.abs(currentRot - 0) < 10 || Math.abs(currentRot - 360) < 10) dx = 1;
-                else if (Math.abs(currentRot - 90) < 10 || Math.abs(currentRot + 270) < 10) dy = 1;
-                else if (Math.abs(currentRot - 180) < 10 || Math.abs(currentRot + 180) < 10) dx = -1;
-                else dy = -1;
-
-                for (let dist = 0; dist < moveDistance; dist++) {
-                    const nextX = currentX + dx;
-                    const nextY = currentY + dy;
-
-                    const startX = currentX;
-                    const startY = currentY;
-
-                    const steps = cmd === 'BOOST' ? 0.2 : 0.1;
-                    for (let t = 0; t <= 1; t += steps) {
-                        carRef.current.x = startX + (nextX - startX) * t;
-                        carRef.current.y = startY + (nextY - startY) * t;
-                        setCarPos({ ...carRef.current });
-                        if (cmd === 'BOOST') spawnParticles(carRef.current.x, carRef.current.y, '#F59E0B', 2);
-                        await wait(20);
-                    }
-
-                    // Check Wall Collision
-                    if (trackMap[nextY] && trackMap[nextY][nextX] !== 4 && nextX >= 0 && nextX < gridSize && nextY >= 0 && nextY < gridSize) {
-                        currentX = nextX;
-                        currentY = nextY;
-
-                        // Boost Pad Logic (In-game modifier)
-                        if (trackMap[currentY][currentX] === 5 && cmd !== 'BOOST') {
-                            // Auto-slide 1 more
-                            spawnParticles(currentX, currentY, '#F59E0B', 10);
-                            audio.playScan();
-                            // Recursive slide logic (simplified for this update)
-                        }
-
-                    } else {
-                        crashed = true;
-                        spawnParticles(nextX, nextY, '#EF4444', 10);
-                        audio.playError();
-                        audio.vibrate(audio.haptics.failure);
-                        break;
-                    }
-                }
-            }
-
-            if (crashed) break;
-            await wait(100);
-        }
-
-        // Final Check
-        if (!crashed && trackMap[currentY] && trackMap[currentY][currentX] === 3) {
-            setStatus('WIN');
-            audio.playSuccess();
-            setFeedback(t('neondrift.course_clear'));
-            handleWin(); // Save progress and calculate stars
-        } else {
-            setStatus('CRASHED');
-            if (!crashed) audio.playError();
-            setFeedback(t('neondrift.crashed'));
-        }
-        setActiveStep(-1);
-    };
-
-    const addCommand = (cmd: Command) => {
-        if (commands.length < commandLimit) {
-            setCommands([...commands, cmd]);
-            audio.playClick();
-        }
-    };
-
-    // --- VISUAL LOGIC ---
-    const getRoadClass = (x: number, y: number) => {
-        if (!trackMap[y] || trackMap[y][x] === 4) return '';
-
-        // Check neighbors
-        const n = (trackMap[y - 1] && trackMap[y - 1][x] !== 4);
-        const s = (trackMap[y + 1] && trackMap[y + 1][x] !== 4);
-        const w = (trackMap[y][x - 1] !== 4);
-        const e = (trackMap[y][x + 1] !== 4);
-
-        // CSS class for connections
-        const classes = ['bg-slate-800/80'];
-        if (n) classes.push('border-t-2 border-slate-600');
-        if (s) classes.push('border-b-2 border-slate-600');
-        if (w) classes.push('border-l-2 border-slate-600');
-        if (e) classes.push('border-r-2 border-slate-600');
-
-        // If it's a specific type, override
-        if (trackMap[y][x] === 2) return 'bg-cyan-900/50 border-2 border-cyan-500 shadow-[inset_0_0_10px_#06b6d4]';
-        if (trackMap[y][x] === 3) return 'bg-purple-900/50 border-2 border-purple-500 shadow-[inset_0_0_10px_#a855f7]';
-        if (trackMap[y][x] === 5) return 'bg-amber-900/50 border-2 border-amber-500 shadow-[inset_0_0_10px_#f59e0b]';
-
-        return classes.join(' ');
     };
 
     return (
-        <div className="h-full flex flex-col p-4 relative overflow-hidden bg-slate-950 font-mono select-none">
-            <Scanlines />
-            <Vignette />
-
-            {/* SHOP OVERLAY */}
-            {showShop && user && onUpdateUser && (
-                <SkinShop
-                    gameType={GameType.NEON_DRIFT}
-                    user={user}
-                    onUpdateUser={onUpdateUser}
-                    onClose={() => setShowShop(false)}
-                />
-            )}
-
-            {/* LEVEL SELECT OVERLAY */}
-            {showLevelSelect && (
-                <div className="absolute inset-0 z-40 bg-slate-950/95 backdrop-blur-sm flex flex-col p-6 animate-in fade-in">
-                    <div className="flex items-center justify-between mb-6">
-                        <div>
-                            <h2 className="text-2xl font-black text-white">{t('neondrift.select_track')}</h2>
-                            <p className="text-xs text-slate-500 font-mono">{t('neondrift.unlock_more')}</p>
+        <div className="relative w-full h-[600px] rounded-xl overflow-hidden border border-white/10 bg-black shadow-2xl">
+            {/* UI Overlay */}
+            <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-start z-10 pointer-events-none">
+                <div className="flex flex-col gap-4">
+                    <div className="bg-black/40 backdrop-blur-md rounded-lg p-3 border border-indigo-500/30">
+                        <div className="flex items-center gap-2 text-indigo-400 mb-1">
+                            <Activity className="w-4 h-4" />
+                            <span className="text-xs uppercase tracking-widest font-bold">Signal</span>
                         </div>
-                        <Button variant="ghost" size="sm" onClick={() => onComplete(0)}>
-                            {t('neondrift.exit')}
-                        </Button>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto space-y-3">
-                        {LEVELS.map((level, idx) => {
-                            const isUnlocked = idx === 0 || progress[LEVELS[idx - 1].id]?.completed;
-                            const levelProgress = progress[level.id];
-                            const stars = levelProgress?.stars || 0;
-
-                            return (
-                                <button
-                                    key={level.id}
-                                    onClick={() => selectLevel(level)}
-                                    disabled={!isUnlocked}
-                                    className={`w-full p-4 rounded-xl border-2 text-left transition-all active:scale-98 ${isUnlocked
-                                        ? 'bg-slate-900/80 border-slate-700 hover:border-cyan-500 hover:bg-slate-800/80'
-                                        : 'bg-slate-900/30 border-slate-800 opacity-50 cursor-not-allowed'
-                                        }`}
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center space-x-3">
-                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-black text-lg ${isUnlocked ? 'bg-cyan-500/20 text-cyan-400' : 'bg-slate-800 text-slate-600'
-                                                }`}>
-                                                {isUnlocked ? level.id : <Lock size={16} />}
-                                            </div>
-                                            <div>
-                                                <div className="font-bold text-white text-sm">{level.name}</div>
-                                                <div className="text-[10px] text-slate-500 font-mono">
-                                                    {level.moveLimit} {t('neondrift.moves_max')} • {level.grid.length}x{level.grid.length} {t('neondrift.grid')}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center space-x-1">
-                                            {[1, 2, 3].map(s => (
-                                                <Star
-                                                    key={s}
-                                                    size={16}
-                                                    className={s <= stars ? 'text-yellow-400 fill-yellow-400' : 'text-slate-700'}
-                                                />
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {levelProgress?.completed && (
-                                        <div className="mt-2 text-[10px] text-cyan-400 font-mono">
-                                            ✓ {t('neondrift.best')}: {levelProgress.bestMoves} {t('neondrift.moves')}
-                                        </div>
-                                    )}
-                                </button>
-                            );
-                        })}
-                    </div>
-
-                    <div className="mt-4 pt-4 border-t border-slate-800">
-                        <Button
-                            fullWidth
-                            variant="secondary"
-                            onClick={() => { setCurrentLevel(null); setShowLevelSelect(false); generateTrack(); }}
-                        >
-                            <Zap size={16} className="mr-2" /> {t('neondrift.random_mode')}
-                        </Button>
+                        <div className="text-2xl font-mono text-white">{score} / 1000</div>
                     </div>
                 </div>
-            )}
 
-            {/* --- VISUALIZER --- */}
-            <div className="flex-1 bg-[#050510] rounded-xl border-2 border-slate-800/80 relative overflow-hidden flex items-center justify-center mb-4 shadow-[inset_0_0_100px_rgba(6,182,212,0.1),0_0_30px_rgba(0,0,0,0.8)] perspective-[1200px]">
-                {/* Space Grid Floor with animation */}
-                <div
-                    className="absolute inset-0 transform scale-[2] opacity-30 origin-bottom"
-                    style={{
-                        background: 'linear-gradient(rgba(34,211,238,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(34,211,238,0.2) 1px, transparent 1px)',
-                        backgroundSize: '40px 40px',
-                        transform: 'rotateX(60deg) translateY(100px)',
-                        animation: 'gridFlow 2s linear infinite'
-                    }}
-                ></div>
-                {/* Horizon glow */}
-                <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-cyan-900/30 via-purple-900/10 to-transparent pointer-events-none"></div>
-
-                <div className="absolute top-4 left-4 z-30">
-                    <Button size="sm" variant="ghost" onClick={() => { setShowLevelSelect(true); setCommands([]); setStatus('IDLE'); }} className="backdrop-blur bg-black/30 border border-white/10 hover:border-cyan-500 text-cyan-400">
-                        <ChevronLeft size={16} className="mr-1" /> {t('neondrift.levels')}
-                    </Button>
+                <div className="bg-black/40 backdrop-blur-md rounded-lg p-3 border border-blue-500/30 flex flex-col items-end">
+                     <div className="flex items-center gap-2 text-blue-400 mb-1">
+                        <AlertTriangle className="w-4 h-4" />
+                        <span className="text-xs uppercase tracking-widest font-bold">Time</span>
+                    </div>
+                    <div className="text-3xl font-mono text-white tracking-widest">{timeLeft}s</div>
                 </div>
-
-                <div className="absolute top-4 right-4 z-30">
-                    <Button size="sm" variant="ghost" onClick={() => { generateTrack(); setCommands([]); setStatus('IDLE'); }} className="backdrop-blur bg-black/30 border border-white/10 hover:border-cyan-500 text-cyan-400">
-                        <Map size={16} className="mr-2" /> {t('neondrift.gen')}
-                    </Button>
-                </div>
-
-                <div className="relative transform rotate-x-[55deg] rotate-z-[-20deg] scale-90 translate-y-10 shadow-[0_50px_100px_rgba(6,182,212,0.3)] transition-transform duration-700 hover:rotate-z-[-10deg] hover:rotate-x-[45deg] preserve-3d">
-                    <div className="grid gap-1.5 p-6 bg-slate-900/40 rounded-3xl border border-cyan-500/30 backdrop-blur-md" style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}>
-                        {trackMap.flat().map((cell, i) => {
-                            const y = Math.floor(i / gridSize);
-                            const x = i % gridSize;
-                            return (
-                                <div key={i} className={`w-14 h-14 rounded-md flex items-center justify-center relative transition-all duration-300 ${cell === 4 ? 'opacity-0 scale-50' : getRoadClass(x, y)} translate-z-10`}>
-                                    {/* Connection Lines (Glow) */}
-                                    {cell !== 4 && (
-                                        <div className="absolute inset-0 opacity-20 bg-blue-500/10"></div>
-                                    )}
-
-                                    {cell === 1 && <div className="w-1.5 h-1.5 bg-slate-600 rounded-full opacity-50"></div>}
-                                    {cell === 3 && <Flag className="text-purple-400 w-6 h-6 animate-bounce drop-shadow-[0_0_10px_#C45FFF]" />}
-                                    {cell === 5 && <div className="text-amber-500 font-bold text-[10px] animate-pulse">&gt;&gt;&gt;</div>}
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    {/* Skid Marks Layer */}
-                    <div className="absolute inset-0 pointer-events-none">
-                        {skidMarks.map((mark, i) => (
-                            <div
-                                key={i}
-                                className="absolute w-2 h-2 bg-black opacity-50 rounded-full"
-                                style={{ left: mark.x, top: mark.y }}
-                            ></div>
-                        ))}
-                    </div>
-
-                    {/* THE CAR (SPRITE) with Motion Blur */}
-                    <div
-                        className="absolute top-6 left-6 w-14 h-14 flex items-center justify-center z-20 transition-none will-change-transform translate-z-20 drop-shadow-[0_20px_30px_rgba(0,0,0,0.8)]"
-                        style={{
-                            transform: `translate(${carPos.x * 62}px, ${carPos.y * 62}px)`
-                        }}
-                    >
-                        {/* Ghost Trail (Fake Motion Blur) */}
-                        {status === 'RUNNING' && (
-                            <div className="absolute inset-0 opacity-40 blur-sm scale-95"
-                                style={{
-                                    transform: `translate(${-Math.sin(carPos.rotation * Math.PI / 180) * 10}px, ${Math.cos(carPos.rotation * Math.PI / 180) * 10}px) rotate(${carPos.rotation}deg)`
-                                }}>
-                                <div className="w-10 h-10 bg-cyan-400 rounded-lg"></div>
-                            </div>
-                        )}
-
-                        <div
-                            className="w-10 h-10 relative flex items-center justify-center"
-                            style={{ transform: `rotate(${carPos.rotation}deg)` }}
-                        >
-                            {carSpriteRef.current ? (
-                                <img src={carSpriteRef.current.src} className="w-full h-full object-contain drop-shadow-[0_0_15px_#22d3ee]" alt="Car" />
-                            ) : (
-                                <div className="w-9 h-6 bg-gradient-to-r from-cyan-400 to-cyan-300 rounded shadow-[0_0_25px_#22d3ee] relative flex items-center border border-cyan-200/50">
-                                    <div className="absolute -right-1.5 h-full w-1.5 bg-white rounded-r opacity-90"></div>
-                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-2 bg-black/30 rounded"></div>
-                                    <div className="absolute left-1 top-0.5 w-1 h-1 bg-yellow-400 rounded-full animate-pulse"></div>
-                                    <div className="absolute left-1 bottom-0.5 w-1 h-1 bg-red-500 rounded-full"></div>
-                                </div>
-                            )}
-                            {/* Headlight beam */}
-                            <div className="absolute right-0 w-24 h-12 bg-gradient-to-r from-cyan-400/0 via-cyan-300/20 to-transparent transform rotate-0 blur-md pointer-events-none"></div>
-                            {/* Engine glow */}
-                            <div className="absolute -left-2 w-4 h-3 bg-gradient-to-l from-orange-500/40 to-transparent blur-sm pointer-events-none"></div>
-                        </div>
-                    </div>
-
-                    {/* Particles */}
-                    {particles.map((p) => (
-                        <div
-                            key={p.id}
-                            className="absolute w-1.5 h-1.5 rounded-full animate-ping pointer-events-none"
-                            style={{ left: p.x, top: p.y, backgroundColor: p.color }}
-                        ></div>
-                    ))}
-                </div>
-
-                {status === 'CRASHED' && (
-                    <div className="absolute inset-0 bg-gradient-to-b from-red-950/90 to-black/95 flex flex-col items-center justify-center backdrop-blur-sm animate-shake z-30">
-                        <Flame size={64} className="text-red-500 mb-4 animate-bounce" />
-                        <h2 className="text-4xl font-black text-white tracking-widest" style={{ textShadow: '0 0 20px #ef4444' }}>{t('neondrift.crashed')}</h2>
-                        <p className="text-red-400/70 text-sm mt-2 font-mono">{t('neondrift.collision')}</p>
-                    </div>
-                )}
-                {status === 'WIN' && (
-                    <div className="absolute inset-0 bg-gradient-to-b from-green-950/90 to-black/95 flex flex-col items-center justify-center backdrop-blur-sm z-30 animate-in fade-in">
-                        <CheckCircle size={64} className="text-green-400 mb-4 animate-bounce" />
-                        <h2 className="text-4xl font-black text-white tracking-widest mb-4" style={{ textShadow: '0 0 20px #22c55e' }}>{t('neondrift.course_clear')}</h2>
-                        {currentLevel && (
-                            <>
-                                <div className="flex gap-2 mb-4">
-                                    {[1, 2, 3].map(s => (
-                                        <Star
-                                            key={s}
-                                            size={32}
-                                            className={`transition-all duration-500 ${s <= calculateStars(commands.length) ? 'text-yellow-400 fill-yellow-400 animate-pulse' : 'text-slate-700'}`}
-                                            style={{ animationDelay: `${s * 0.2}s` }}
-                                        />
-                                    ))}
-                                </div>
-                                <div className="text-lg text-cyan-400 font-mono">{commands.length} {t('neondrift.moves')}</div>
-                                <div className="text-sm text-slate-500">{t('neondrift.best_for_3')} {currentLevel.stars.three}</div>
-                            </>
-                        )}
-                    </div>
-                )}
             </div>
 
-            {/* --- COMMAND DECK --- */}
-            <div className="bg-black/50 border border-slate-700 rounded-xl p-4 space-y-4 relative z-10 backdrop-blur-md">
-                <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-mono text-cyan-400 uppercase flex items-center"><Cpu size={10} className="mr-1" /> {t('neondrift.logic_buffer')}</span>
-                    <div className="flex items-center space-x-3">
-                        {user && onUpdateUser && (
-                            <button onClick={() => setShowShop(true)} className="text-xs font-bold text-amber-400 flex items-center hover:text-white transition-colors p-1 bg-amber-900/20 rounded">
-                                <ShoppingBag size={12} className="mr-1" /> {t('neondrift.loadout')}
-                            </button>
-                        )}
-                        <span className={`text-[10px] font-mono ${commands.length > commandLimit ? 'text-red-500 animate-pulse' : 'text-gray-500'}`}>
-                            {commands.length}/{commandLimit} {t('neondrift.ops')}
-                        </span>
-                    </div>
+            {/* Multi-Agent Comm Panel */}
+            <div className="absolute bottom-6 left-6 right-6 flex gap-4 z-10 pointer-events-none">
+                <div className="flex-1 bg-black/60 backdrop-blur-md rounded-lg p-4 border-l-4 border-indigo-500">
+                    <div className="text-xs text-indigo-400 mb-1 uppercase tracking-widest font-bold flex items-center gap-2"><Shield className="w-3 h-3"/> Advisor Agent</div>
+                    <div className="text-sm text-indigo-100 font-mono tracking-wide">{advisorMsg}</div>
                 </div>
+                <div className="flex-1 bg-black/60 backdrop-blur-md rounded-lg p-4 border-l-4 border-red-500">
+                    <div className="text-xs text-red-500 mb-1 uppercase tracking-widest font-bold flex items-center gap-2"><Zap className="w-3 h-3"/> Adversary AI</div>
+                    <div className="text-sm text-red-200 font-mono tracking-wide">{adversaryMsg}</div>
+                </div>
+            </div>
 
-                <div className="flex space-x-2 overflow-x-auto pb-2 min-h-[50px] scrollbar-hide items-center px-1">
-                    {commands.length === 0 && <span className="text-gray-600 text-xs italic font-mono w-full text-center opacity-50">{t('neondrift.input_required')}</span>}
-                    {commands.map((c, i) => (
-                        <div key={i} className={`px-2 py-1 rounded border flex-shrink-0 flex items-center font-bold text-[10px] shadow-sm transition-all ${activeStep === i
-                            ? 'bg-yellow-500 text-black border-yellow-400 scale-110 shadow-[0_0_15px_rgba(234,179,8,0.5)]'
-                            : 'bg-slate-800 border-slate-600 text-cyan-300'
-                            }`}>
-                            {c === 'FORWARD' ? <ArrowUp size={12} /> : c === 'LEFT' ? <ArrowLeft size={12} /> : c === 'RIGHT' ? <ArrowRight size={12} /> : <Zap size={12} />}
+            {/* Game Over States */}
+            {gameState !== 'PLAYING' && (
+                <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                    <div className="text-center">
+                        <div className={`text-6xl font-black uppercase tracking-widest mb-4 ${gameState === 'SUCCESS' ? 'text-green-500' : 'text-red-500'}`}>
+                            {gameState === 'SUCCESS' ? 'SYSTEM SECURED' : 'BREACH DETECTED'}
                         </div>
-                    ))}
-                </div>
-
-                {status !== 'WIN' && (
-                    <div className="grid grid-cols-4 gap-2">
-                        <Button variant="secondary" size="sm" onClick={() => addCommand('LEFT')} className="h-12 active:bg-cyan-900/50 border-slate-700"><ArrowLeft size={18} /></Button>
-                        <Button variant="secondary" size="sm" onClick={() => addCommand('FORWARD')} className="h-12 active:bg-cyan-900/50 border-slate-700"><ArrowUp size={18} /></Button>
-                        <Button variant="secondary" size="sm" onClick={() => addCommand('RIGHT')} className="h-12 active:bg-cyan-900/50 border-slate-700"><ArrowRight size={18} /></Button>
-                        <Button variant="secondary" size="sm" onClick={() => addCommand('BOOST')} className="h-12 active:bg-amber-900/50 border-amber-700 text-amber-500"><Zap size={18} /></Button>
+                        <div className="text-xl text-white/60 font-mono">Final Score: {score}</div>
                     </div>
-                )}
-
-                <div className="flex space-x-2 pt-2 border-t border-white/5">
-                    <Button variant="ghost" onClick={() => { setCommands([]); setStatus('IDLE'); setFeedback(''); audio.playClick(); }}><RotateCcw size={18} /></Button>
-                    {status === 'WIN' ? (
-                        <Button fullWidth variant="primary" onClick={() => onComplete(100)} className="shadow-[0_0_20px_#22c55e]">{t('neondrift.claim_data')}</Button>
-                    ) : (
-                        <Button fullWidth variant="primary" onClick={handleRun} disabled={status === 'RUNNING'}>
-                            {status === 'RUNNING' ? <span className="animate-pulse">{t('neondrift.executing')}</span> : <><Play size={18} className="mr-2" /> {t('neondrift.compile_run')}</>}
-                        </Button>
-                    )}
                 </div>
+            )}
 
-                {feedback && (
-                    <div className="absolute top-[-40px] left-0 right-0 text-center">
-                        <span className="bg-black/80 text-cyan-400 text-xs px-3 py-1 rounded border border-cyan-500/30 font-mono shadow-lg">{feedback}</span>
-                    </div>
-                )}
+            {/* Interaction Layer */}
+            <div className="absolute inset-0 z-0 cursor-crosshair" onClick={handleInteract}>
+                <Canvas camera={{ position: [0, 0, 10], fov: 60 }}>
+                    <ambientLight intensity={0.5} />
+                    <pointLight position={[10, 10, 10]} intensity={1} color={new THREE.Color().setHSL(0.6, 1, 0.5)} />
+                    <pointLight position={[-10, -10, -10]} intensity={0.5} color="#4f46e5" />
+                    
+                    <Sparkles count={200} scale={12} size={2} speed={0.4} opacity={0.5} color={new THREE.Color().setHSL(0.6, 1, 0.8)} />
+                    
+                    <CoreEntity isActive={activeNode} />
+                    
+                    <OrbitControls enableZoom={false} enablePan={false} autoRotate autoRotateSpeed={0.5} />
+                    
+                    <EffectComposer>
+                        <Bloom luminanceThreshold={0.2} luminanceSmoothing={0.9} height={300} intensity={1.5} />
+                        <ChromaticAberration blendFunction={BlendFunction.NORMAL} offset={new THREE.Vector2(0.002, 0.002)} />
+                        {glitchActive && (
+                            <Glitch delay={new THREE.Vector2(0, 0)} duration={new THREE.Vector2(0.1, 0.3)} mode={GlitchMode.SPORADIC} active ratio={0.5} />
+                        )}
+                    </EffectComposer>
+                </Canvas>
             </div>
         </div>
     );

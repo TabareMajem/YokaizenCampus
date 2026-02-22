@@ -37,7 +37,7 @@ export class ParentController {
     }
 
     const result = await parentService.requestLink(
-      req.user!.id,
+      req.user!.userId,
       validation.data.studentEmail,
       validation.data.relationshipType
     );
@@ -64,7 +64,7 @@ export class ParentController {
     }
 
     const result = await parentService.verifyLink(
-      req.user!.id,
+      req.user!.userId,
       validation.data.token
     );
 
@@ -84,7 +84,7 @@ export class ParentController {
       throw new ForbiddenError('Only parents can view linked children');
     }
 
-    const children = await parentService.getLinkedChildren(req.user!.id);
+    const children = await parentService.getLinkedChildren(req.user!.userId);
 
     res.json({
       success: true,
@@ -101,7 +101,7 @@ export class ParentController {
       throw new ForbiddenError('Only parents can unlink children');
     }
 
-    await parentService.unlinkChild(req.user!.id, req.params.studentId);
+    await parentService.unlinkChild(req.user!.userId, req.params.studentId);
 
     res.json({
       success: true,
@@ -121,7 +121,7 @@ export class ParentController {
     const { period } = req.query;
 
     const report = await parentService.getChildReport(
-      req.user!.id,
+      req.user!.userId,
       req.params.studentId,
       (period as 'week' | 'month' | 'all') || 'week'
     );
@@ -142,7 +142,7 @@ export class ParentController {
     }
 
     const progress = await parentService.getChildProgress(
-      req.user!.id,
+      req.user!.userId,
       req.params.studentId
     );
 
@@ -164,7 +164,7 @@ export class ParentController {
     const { limit, offset } = req.query;
 
     const activity = await parentService.getChildActivity(
-      req.user!.id,
+      req.user!.userId,
       req.params.studentId,
       {
         limit: limit ? parseInt(limit as string) : 50,
@@ -188,7 +188,7 @@ export class ParentController {
     }
 
     const achievements = await parentService.getChildAchievements(
-      req.user!.id,
+      req.user!.userId,
       req.params.studentId
     );
 
@@ -208,7 +208,7 @@ export class ParentController {
     }
 
     const credits = await parentService.getChildCreditHistory(
-      req.user!.id,
+      req.user!.userId,
       req.params.studentId
     );
 
@@ -234,7 +234,7 @@ export class ParentController {
     }
 
     const result = await parentService.sponsorCredits(
-      req.user!.id,
+      req.user!.userId,
       req.params.studentId,
       credits,
       message
@@ -256,7 +256,7 @@ export class ParentController {
       throw new ForbiddenError('Only parents can view notification preferences');
     }
 
-    const prefs = await parentService.getNotificationPreferences(req.user!.id);
+    const prefs = await parentService.getNotificationPreferences(req.user!.userId);
 
     res.json({
       success: true,
@@ -279,7 +279,7 @@ export class ParentController {
     }
 
     const prefs = await parentService.updateNotificationPreferences(
-      req.user!.id,
+      req.user!.userId,
       validation.data
     );
 
@@ -299,7 +299,7 @@ export class ParentController {
       throw new ForbiddenError('Only students can view pending parent links');
     }
 
-    const pending = await parentService.getPendingLinks(req.user!.id);
+    const pending = await parentService.getPendingLinks(req.user!.userId);
 
     res.json({
       success: true,
@@ -322,7 +322,7 @@ export class ParentController {
       throw new ValidationError('Token is required');
     }
 
-    await parentService.rejectLink(req.user!.id, token);
+    await parentService.rejectLink(req.user!.userId, token);
 
     res.json({
       success: true,
@@ -339,7 +339,7 @@ export class ParentController {
       throw new ForbiddenError('Only parents can view dashboard');
     }
 
-    const dashboard = await parentService.getDashboard(req.user!.id);
+    const dashboard = await parentService.getDashboard(req.user!.userId);
 
     res.json({
       success: true,

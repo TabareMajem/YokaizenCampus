@@ -20,11 +20,11 @@ router.get('/applications/:id', grantController.getApplication);
 router.delete('/applications/:id', grantController.withdrawApplication);
 
 // Admin-only routes
-router.patch('/applications/:id', requireRole(['ADMIN']), grantController.updateApplication);
-router.post('/applications/bulk-update', requireRole(['ADMIN']), grantController.bulkUpdate);
-router.post('/applications/:id/allocate', requireRole(['ADMIN']), grantController.allocateCredits);
-router.post('/applications/:id/extend', requireRole(['ADMIN']), grantController.extendGrant);
-router.get('/stats', requireRole(['ADMIN']), grantController.getStats);
+router.patch('/applications/:id', requireRole('ADMIN'), grantController.updateApplication);
+router.post('/applications/bulk-update', requireRole('ADMIN'), grantController.bulkUpdate);
+router.post('/applications/:id/allocate', requireRole('ADMIN'), grantController.allocateCredits);
+router.post('/applications/:id/extend', requireRole('ADMIN'), grantController.extendGrant);
+router.get('/stats', requireRole('ADMIN'), grantController.getStats);
 
 // Application communication
 router.get('/applications/:id/usage', grantController.getUsage);

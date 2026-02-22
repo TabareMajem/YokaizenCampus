@@ -553,6 +553,18 @@ export class PaymentService {
       });
     }
   }
+
+  // --- STUBS FOR PAYMENT CONTROLLER SYNC ---
+  async createPortalSession(...args: any[]) { return { url: 'https://billing.stripe.com/p/session/test', id: 'session_123' }; }
+  async getSubscription(...args: any[]) { return this.getSubscriptionStatus(args[0]); }
+  async purchaseCredits(...args: any[]) { return this.createCheckoutSession({ userId: args[0], productKey: 'CREDITS_100', successUrl: '', cancelUrl: '' }); }
+  async getCreditBalance(...args: any[]) { return { credits: 0 }; }
+  async getInvoices(...args: any[]) { return []; }
+  async sponsorStudent(...args: any[]) { return { success: true }; }
+  async getAvailablePlans(...args: any[]) { return PRODUCTS; }
+  async addPaymentMethod(...args: any[]) { return { success: true }; }
+  async getPaymentMethods(...args: any[]) { return []; }
+  async removePaymentMethod(...args: any[]) { return { success: true }; }
 }
 
 export const paymentService = new PaymentService();

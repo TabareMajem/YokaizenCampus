@@ -51,9 +51,8 @@ export class GraphController {
     }
 
     const session = await graphService.createSession(
-      req.user!.id,
-      validation.data.classroomId,
-      validation.data.initialCommand
+      req.user!.userId,
+      validation.data.classroomId
     );
 
     res.status(201).json({
@@ -70,7 +69,7 @@ export class GraphController {
   getSessions = asyncHandler(async (req: Request, res: Response) => {
     const { classroomId, status, limit, offset } = req.query;
 
-    const sessions = await graphService.getUserSessions(req.user!.id, {
+    const sessions = await graphService.getUserSessions(req.user!.userId, {
       classroomId: classroomId as string,
       status: status as 'FLOW' | 'STUCK' | 'IDLE' | 'COMPLETED',
       limit: limit ? parseInt(limit as string) : 20,
@@ -88,7 +87,7 @@ export class GraphController {
    * Get a specific graph session
    */
   getSession = asyncHandler(async (req: Request, res: Response) => {
-    const session = await graphService.getSession(req.params.id, req.user!.id);
+    const session = await graphService.getSession(req.params.id, req.user!.userId);
 
     res.json({
       success: true,
@@ -106,19 +105,18 @@ export class GraphController {
       throw new ValidationError(validation.error.errors[0].message);
     }
 
-    const session = await graphService.syncGraph(
-      req.params.id,
-      req.user!.id,
-      validation.data
-    );
+    const session = await graphService.syncGraph({
+      userId: req.user!.userId,
+      ...(validation.data as any)
+    });
 
     res.json({
       success: true,
       message: 'Graph synced',
       data: {
-        id: session.id,
+        id: session.sessionId,
         status: session.status,
-        lastSync: session.updatedAt
+        lastSync: session.lastSynced
       }
     });
   });
@@ -134,9 +132,9 @@ export class GraphController {
     }
 
     const result = await graphService.auditNode(
+      req.user!.userId,
       req.params.id,
-      req.user!.id,
-      validation.data
+      validation.data.nodeId
     );
 
     res.json({
@@ -157,7 +155,7 @@ export class GraphController {
 
     const result = await graphService.performNodeAction(
       req.params.id,
-      req.user!.id,
+      req.user!.userId,
       validation.data
     );
 
@@ -172,7 +170,7 @@ export class GraphController {
    * Mark graph session as completed
    */
   completeSession = asyncHandler(async (req: Request, res: Response) => {
-    const session = await graphService.completeSession(req.params.id, req.user!.id);
+    const session = await graphService.completeSession(req.params.id, req.user!.userId);
 
     res.json({
       success: true,
@@ -186,7 +184,7 @@ export class GraphController {
    * Delete a graph session
    */
   deleteSession = asyncHandler(async (req: Request, res: Response) => {
-    await graphService.deleteSession(req.params.id, req.user!.id);
+    await graphService.deleteSession(req.params.id, req.user!.userId);
 
     res.json({
       success: true,
@@ -203,7 +201,7 @@ export class GraphController {
 
     const session = await graphService.forkSession(
       req.params.id,
-      req.user!.id,
+      req.user!.userId,
       newName
     );
 
@@ -223,7 +221,7 @@ export class GraphController {
 
     const history = await graphService.getSessionHistory(
       req.params.id,
-      req.user!.id,
+      req.user!.userId,
       limit ? parseInt(limit as string) : 50
     );
 
@@ -246,7 +244,7 @@ export class GraphController {
 
     const snapshot = await graphService.createSnapshot(
       req.params.id,
-      req.user!.id,
+      req.user!.userId,
       name,
       description
     );
@@ -266,7 +264,7 @@ export class GraphController {
     const session = await graphService.restoreSnapshot(
       req.params.id,
       req.params.snapshotId,
-      req.user!.id
+      req.user!.userId
     );
 
     res.json({
@@ -281,7 +279,7 @@ export class GraphController {
    * Get user's graph statistics
    */
   getStats = asyncHandler(async (req: Request, res: Response) => {
-    const stats = await graphService.getUserStats(req.user!.id);
+    const stats = await graphService.getUserStats(req.user!.userId);
 
     res.json({
       success: true,

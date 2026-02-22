@@ -11,12 +11,12 @@ import { APIResponse } from '../types/index.js';
 export class AppError extends Error {
   public statusCode: number;
   public isOperational: boolean;
-  
+
   constructor(message: string, statusCode: number = 500) {
     super(message);
     this.statusCode = statusCode;
     this.isOperational = true;
-    
+
     Error.captureStackTrace(this, this.constructor);
   }
 }
@@ -29,7 +29,7 @@ export class NotFoundError extends AppError {
 
 export class ValidationError extends AppError {
   public errors: string[];
-  
+
   constructor(errors: string[] | string) {
     super('Validation failed', 400);
     this.errors = Array.isArray(errors) ? errors : [errors];
@@ -57,7 +57,7 @@ export class ConflictError extends AppError {
 export class InsufficientCreditsError extends AppError {
   public required: number;
   public available: number;
-  
+
   constructor(required: number, available: number) {
     super(`Insufficient credits: requires ${required}, have ${available}`, 402);
     this.required = required;
@@ -72,7 +72,7 @@ export function validate(
   next: NextFunction
 ): void {
   const errors = validationResult(req);
-  
+
   if (!errors.isEmpty()) {
     const errorMessages = errors.array().map((err: ExpressValidationError) => {
       if (err.type === 'field') {
@@ -80,7 +80,7 @@ export function validate(
       }
       return err.msg;
     });
-    
+
     res.status(400).json({
       success: false,
       error: 'Validation failed',
@@ -88,7 +88,7 @@ export function validate(
     });
     return;
   }
-  
+
   next();
 }
 
@@ -103,7 +103,7 @@ export function validateZod<T>(schema: { parse: (data: unknown) => T }) {
         const errorMessages = error.errors.map(
           (e) => `${e.path.join('.')}: ${e.message}`
         );
-        
+
         res.status(400).json({
           success: false,
           error: 'Validation failed',
@@ -111,7 +111,7 @@ export function validateZod<T>(schema: { parse: (data: unknown) => T }) {
         });
         return;
       }
-      
+
       next(error);
     }
   };
@@ -139,7 +139,7 @@ export function errorHandler(
     message: err.message,
     stack: config.env === 'development' ? err.stack : undefined,
   });
-  
+
   // Handle known error types
   if (err instanceof AppError) {
     res.status(err.statusCode).json({
@@ -152,11 +152,11 @@ export function errorHandler(
     });
     return;
   }
-  
+
   // Handle Prisma errors
   if (err.name === 'PrismaClientKnownRequestError') {
-    const prismaError = err as { code: string; meta?: { target?: string[] } };
-    
+    const prismaError = err as unknown as { code: string; meta?: { target?: string[] } };
+
     switch (prismaError.code) {
       case 'P2002': // Unique constraint violation
         res.status(409).json({
@@ -180,7 +180,7 @@ export function errorHandler(
         return;
     }
   }
-  
+
   // Handle JWT errors
   if (err.name === 'JsonWebTokenError') {
     res.status(401).json({
@@ -189,7 +189,7 @@ export function errorHandler(
     });
     return;
   }
-  
+
   if (err.name === 'TokenExpiredError') {
     res.status(401).json({
       success: false,
@@ -197,13 +197,13 @@ export function errorHandler(
     });
     return;
   }
-  
+
   // Handle Zod validation errors
   if (err instanceof ZodError) {
     const errorMessages = err.errors.map(
       (e) => `${e.path.join('.')}: ${e.message}`
     );
-    
+
     res.status(400).json({
       success: false,
       error: 'Validation failed',
@@ -211,7 +211,7 @@ export function errorHandler(
     });
     return;
   }
-  
+
   // Default error response
   res.status(500).json({
     success: false,

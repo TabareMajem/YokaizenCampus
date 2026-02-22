@@ -64,7 +64,7 @@ export class AIController {
     const graph = await aiEngine.generateGraph(
       command,
       req.user!.userId,
-      req.user!.subscriptionTier,
+      (req.user!.tier || 'FREE'),
       (philosophy || req.user!.philosophyMode || 'JAPAN') as PhilosophyMode,
       {
         context,
@@ -95,7 +95,7 @@ export class AIController {
       context,
       input,
       req.user!.userId,
-      req.user!.subscriptionTier,
+      (req.user!.tier || 'FREE'),
       {
         philosophy: (philosophy || req.user!.philosophyMode || 'JAPAN') as PhilosophyMode,
         temperature
@@ -121,7 +121,7 @@ export class AIController {
     const result = await aiEngine.auditOutput(
       validation.data.output,
       req.user!.userId,
-      req.user!.subscriptionTier,
+      (req.user!.tier || 'FREE'),
       {
         context: validation.data.context,
         nodeType: validation.data.nodeType,
@@ -155,7 +155,7 @@ export class AIController {
     const result = await aiEngine.chat(
       messages,
       req.user!.userId,
-      req.user!.subscriptionTier,
+      (req.user!.tier || 'FREE'),
       {
         nodeType: nodeType as AgentType,
         philosophy: (philosophy || req.user!.philosophyMode || 'JAPAN') as PhilosophyMode

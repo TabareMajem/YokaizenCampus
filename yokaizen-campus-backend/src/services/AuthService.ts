@@ -20,8 +20,8 @@ const SALT_ROUNDS = 12;
 
 // Generate JWT access token
 function generateAccessToken(payload: Omit<JWTPayload, 'iat' | 'exp'>): string {
-  return jwt.sign(payload, config.jwt.secret, {
-    expiresIn: config.jwt.expiresIn,
+  return jwt.sign({ ...payload }, config.jwt.secret as any, {
+    expiresIn: config.jwt.expiresIn as any,
   });
 }
 

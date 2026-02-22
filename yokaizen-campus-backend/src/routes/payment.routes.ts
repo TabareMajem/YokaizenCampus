@@ -34,6 +34,6 @@ router.post('/payment-method', paymentController.addPaymentMethod);
 router.delete('/payment-method/:id', paymentController.removePaymentMethod);
 
 // Parent sponsorship
-router.post('/sponsor', requireRole(['PARENT']), paymentController.sponsorStudent);
+router.post('/sponsor', requireRole('PARENT'), paymentController.sponsorStudent);
 
 export default router;

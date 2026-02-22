@@ -36,7 +36,7 @@ export function authenticate(
 
   try {
     const payload = jwt.verify(token, config.jwt.secret) as JWTPayload;
-    req.user = { ...payload, id: payload.userId };
+    req.user = payload;
     next();
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
@@ -67,7 +67,7 @@ export function optionalAuth(
 
     try {
       const payload = jwt.verify(token, config.jwt.secret) as JWTPayload;
-      req.user = { ...payload, id: payload.userId };
+      req.user = payload;
     } catch {
       // Token invalid, but we continue without user
     }

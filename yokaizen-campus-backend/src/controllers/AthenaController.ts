@@ -21,7 +21,7 @@ export class AthenaController {
 
     const insights = await athenaService.getClassroomInsights(
       req.params.id,
-      req.user!.id
+      req.user!.userId
     );
 
     res.json({
@@ -41,7 +41,7 @@ export class AthenaController {
 
     const heatmap = await athenaService.getStatusHeatmap(
       req.params.id,
-      req.user!.id
+      req.user!.userId
     );
 
     res.json({
@@ -63,7 +63,7 @@ export class AthenaController {
 
     const velocity = await athenaService.getVelocityHistory(
       req.params.id,
-      req.user!.id,
+      req.user!.userId,
       (period as 'hour' | 'day' | 'week') || 'hour'
     );
 
@@ -84,7 +84,7 @@ export class AthenaController {
 
     const alerts = await athenaService.getActiveAlerts(
       req.params.id,
-      req.user!.id
+      req.user!.userId
     );
 
     res.json({
@@ -105,7 +105,7 @@ export class AthenaController {
     await athenaService.dismissAlert(
       req.params.id,
       req.params.alertId,
-      req.user!.id
+      req.user!.userId
     );
 
     res.json({
@@ -125,7 +125,7 @@ export class AthenaController {
 
     const summary = await athenaService.generateSummary(
       req.params.id,
-      req.user!.id
+      req.user!.userId
     );
 
     res.json({
@@ -145,7 +145,7 @@ export class AthenaController {
 
     const analytics = await athenaService.getStudentAnalytics(
       req.params.id,
-      req.user!.id
+      req.user!.userId
     );
 
     res.json({
@@ -166,7 +166,7 @@ export class AthenaController {
     const details = await athenaService.getStudentDetails(
       req.params.id,
       req.params.studentId,
-      req.user!.id
+      req.user!.userId
     );
 
     res.json({
@@ -186,7 +186,7 @@ export class AthenaController {
 
     const analysis = await athenaService.analyzeClassroomGraphs(
       req.params.id,
-      req.user!.id
+      req.user!.userId
     );
 
     res.json({
@@ -208,7 +208,7 @@ export class AthenaController {
 
     const trends = await athenaService.getClassroomTrends(
       req.params.id,
-      req.user!.id,
+      req.user!.userId,
       {
         startDate: startDate ? new Date(startDate as string) : undefined,
         endDate: endDate ? new Date(endDate as string) : undefined
@@ -232,7 +232,7 @@ export class AthenaController {
 
     const suggestions = await athenaService.getTeachingSuggestions(
       req.params.id,
-      req.user!.id
+      req.user!.userId
     );
 
     res.json({
@@ -254,7 +254,7 @@ export class AthenaController {
 
     const analytics = await athenaService.getSchoolAnalytics(
       schoolId as string,
-      req.user!.id
+      req.user!.userId
     );
 
     res.json({
@@ -272,7 +272,7 @@ export class AthenaController {
       throw new ForbiddenError('Only teachers can access dashboard');
     }
 
-    const dashboard = await athenaService.getTeacherDashboard(req.user!.id);
+    const dashboard = await athenaService.getTeacherDashboard(req.user!.userId);
 
     res.json({
       success: true,
@@ -297,7 +297,7 @@ export class AthenaController {
 
     const intervention = await athenaService.logIntervention(
       req.params.id,
-      req.user!.id,
+      req.user!.userId,
       { type, description, studentIds, outcome }
     );
 
@@ -319,7 +319,7 @@ export class AthenaController {
 
     const interventions = await athenaService.getInterventionHistory(
       req.params.id,
-      req.user!.id
+      req.user!.userId
     );
 
     res.json({
@@ -341,7 +341,7 @@ export class AthenaController {
 
     const data = await athenaService.exportClassroomData(
       req.params.classroomId,
-      req.user!.id,
+      req.user!.userId,
       (format as 'json' | 'csv') || 'json'
     );
 

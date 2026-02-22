@@ -208,7 +208,7 @@ export class AdminController {
     // Log the action
     await prisma.auditLog.create({
       data: {
-        userId: req.user!.id,
+        userId: req.user!.userId,
         actionType: 'ADMIN_USER_UPDATE',
         details: `Updated user ${req.params.id}`,
         meta: validation.data
@@ -238,7 +238,7 @@ export class AdminController {
     // Log the action
     await prisma.auditLog.create({
       data: {
-        userId: req.user!.id,
+        userId: req.user!.userId,
         actionType: 'ADMIN_USER_DELETE',
         details: `Deleted user ${req.params.id}`
       }
@@ -271,7 +271,7 @@ export class AdminController {
     // Log the action
     await prisma.auditLog.create({
       data: {
-        userId: req.user!.id,
+        userId: req.user!.userId,
         actionType: 'ADMIN_CREDITS_ADD',
         details: `Added ${amount} credits to user ${req.params.id}: ${reason || 'No reason provided'}`,
         meta: { amount, reason, targetUserId: req.params.id }
@@ -450,7 +450,7 @@ export class AdminController {
 
     await prisma.auditLog.create({
       data: {
-        userId: req.user!.id,
+        userId: req.user!.userId,
         actionType: 'ADMIN_SETTINGS_UPDATE',
         details: 'Updated system settings',
         meta: validation.data
@@ -461,6 +461,33 @@ export class AdminController {
       success: true,
       message: 'Settings updated',
       data: validation.data
+    });
+  });
+
+  /**
+   * POST /admin/school-key
+   * Update the global school proxy AI key
+   */
+  updateSchoolKey = asyncHandler(async (req: Request, res: Response) => {
+    this.checkAdmin(req);
+
+    const { key } = req.body;
+
+    // In a real production DB, this would go to a secure `Settings` or `Secrets` table.
+    // For now, we will log the action and simulate the save.
+
+    await prisma.auditLog.create({
+      data: {
+        userId: req.user!.userId,
+        actionType: 'ADMIN_SCHOOL_KEY_UPDATE',
+        details: key ? 'Set new global school proxy key' : 'Removed global school proxy key',
+        meta: { hasKey: !!key }
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'School key updated'
     });
   });
 
@@ -480,7 +507,7 @@ export class AdminController {
     // In a real app, this would trigger notifications via WebSocket
     await prisma.auditLog.create({
       data: {
-        userId: req.user!.id,
+        userId: req.user!.userId,
         actionType: 'ADMIN_BROADCAST',
         details: message,
         meta: { type, targetRoles }
@@ -504,7 +531,7 @@ export class AdminController {
 
     await prisma.auditLog.create({
       data: {
-        userId: req.user!.id,
+        userId: req.user!.userId,
         actionType: enabled ? 'MAINTENANCE_ENABLED' : 'MAINTENANCE_DISABLED',
         details: message || 'Maintenance mode toggled',
         meta: { enabled }

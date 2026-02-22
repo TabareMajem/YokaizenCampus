@@ -187,7 +187,7 @@ export class ClassroomService {
     }
 
     // Generate anonymous ID if classroom is anonymized
-    const anonymousId = classroom.anonymizeStudents ? generateAnonymousId() : null;
+    const anonymousId = classroom.anonymizeStudents ? generateAnonymousId() : undefined;
 
     // Create enrollment
     const enrollment = await prisma.classroomStudent.create({

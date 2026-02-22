@@ -1,6 +1,12 @@
-import React, { useState } from 'react';
-import { Brain, Target, Shield, Palette, Zap, ChevronRight, Sparkles, Trophy } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Brain, Target, Shield, Palette, Zap, ChevronRight, Sparkles as SparklesIcon, Trophy } from 'lucide-react';
 import { audio } from '../../services/audioService';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { Float, Sparkles, MeshDistortMaterial, Sphere } from '@react-three/drei';
+import { EffectComposer, Bloom, ChromaticAberration } from '@react-three/postprocessing';
+import { BlendFunction } from 'postprocessing';
+import * as THREE from 'three';
+import { useDialogue } from '../../contexts/DialogueContext';
 
 interface OnboardingWizardProps {
     onComplete: (selectedSkills: string[]) => void;
@@ -8,16 +14,71 @@ interface OnboardingWizardProps {
 }
 
 const SKILLS = [
-    { id: 'PROMPTING', name: 'Prompt Engineering', icon: Brain, color: 'from-cyan-500 to-blue-600', desc: 'Master AI communication' },
-    { id: 'SAFETY', name: 'AI Safety', icon: Shield, color: 'from-red-500 to-orange-600', desc: 'Break and defend AI systems' },
-    { id: 'ETHICS', name: 'AI Ethics', icon: Target, color: 'from-purple-500 to-pink-600', desc: 'Bias detection & alignment' },
-    { id: 'CREATIVITY', name: 'AI Creativity', icon: Palette, color: 'from-green-500 to-teal-600', desc: 'Generate amazing content' },
+    { id: 'PROMPTING', name: 'Prompt Engineering', icon: Brain, color: 'from-cyan-500 to-blue-600', hex: '#00f0ff', desc: 'Master AI communication' },
+    { id: 'SAFETY', name: 'AI Safety', icon: Shield, color: 'from-red-500 to-orange-600', hex: '#ff3366', desc: 'Break and defend AI systems' },
+    { id: 'ETHICS', name: 'AI Ethics', icon: Target, color: 'from-purple-500 to-pink-600', hex: '#b026ff', desc: 'Bias detection & alignment' },
+    { id: 'CREATIVITY', name: 'AI Creativity', icon: Palette, color: 'from-green-500 to-teal-600', hex: '#00ff9d', desc: 'Generate amazing content' },
 ];
 
+const BackgroundCore = ({ activeColors }: { activeColors: string[] }) => {
+    const meshRef = useRef<THREE.Mesh>(null);
+    const primaryColor = activeColors.length > 0 ? activeColors[0] : '#444444';
+
+    useFrame((state) => {
+        if (meshRef.current) {
+            meshRef.current.rotation.x = state.clock.elapsedTime * 0.2;
+            meshRef.current.rotation.y = state.clock.elapsedTime * 0.15;
+
+            // Pulse scale based on active selections
+            const targetScale = 1.5 + (activeColors.length * 0.3);
+            meshRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.05);
+        }
+    });
+
+    return (
+        <Float speed={2} rotationIntensity={1} floatIntensity={2}>
+            <Sphere ref={meshRef} args={[1, 64, 64]}>
+                <MeshDistortMaterial
+                    color={primaryColor}
+                    emissive={primaryColor}
+                    emissiveIntensity={1.5}
+                    distort={0.5}
+                    speed={4}
+                    roughness={0.1}
+                    metalness={0.9}
+                    clearcoat={1}
+                />
+            </Sphere>
+        </Float>
+    );
+};
+
 export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, t }) => {
+    const { queueDialogue } = useDialogue();
     const [step, setStep] = useState(1);
     const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
     const [isAnimating, setIsAnimating] = useState(false);
+
+    React.useEffect(() => {
+        queueDialogue([
+            {
+                id: 'ob-intro-1',
+                character: 'ATHENA',
+                text: "Initialization sequence detected. Scanning biological interface..."
+            },
+            {
+                id: 'ob-intro-2',
+                character: 'BYTE',
+                text: "Woah, hold up. You're actually letting them in without a background check? This is how you get malware in the coffee machine.",
+                isGlitchy: true
+            },
+            {
+                id: 'ob-intro-3',
+                character: 'ATHENA',
+                text: "Silence, Byte. The Vanguard protocol requires new blood. Human, structure your neural pathways. Choose your domains."
+            }
+        ]);
+    }, [queueDialogue]);
 
     const handleSkillToggle = (skillId: string) => {
         audio.playClick();
@@ -35,37 +96,60 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, 
             setTimeout(() => {
                 setStep(2);
                 setIsAnimating(false);
-            }, 300);
+            }, 500);
         } else if (step === 2) {
             audio.playSuccess();
             onComplete(selectedSkills);
         }
     };
 
+    const activeHexColors = selectedSkills.map(id => SKILLS.find(s => s.id === id)?.hex || '#ffffff');
+
     return (
-        <div className="fixed inset-0 bg-black/95 backdrop-blur-xl z-[100] flex items-center justify-center p-4">
-            <div className={`max-w-2xl w-full transition-all duration-300 ${isAnimating ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center font-sans overflow-hidden bg-black">
+
+            {/* 3D WebGL Background Layer */}
+            <div className="absolute inset-0 z-0">
+                <Canvas camera={{ position: [0, 0, 8], fov: 60 }}>
+                    <ambientLight intensity={0.5} />
+                    <pointLight position={[10, 10, 10]} intensity={2} color={activeHexColors[0] || "#ffffff"} />
+                    <pointLight position={[-10, -10, -10]} intensity={2} color={activeHexColors[1] || "#ffffff"} />
+
+                    <BackgroundCore activeColors={activeHexColors} />
+
+                    <Sparkles count={500} scale={15} size={3} speed={0.4} opacity={0.6} color={activeHexColors[0] || "#ffffff"} />
+                    {activeHexColors[1] && <Sparkles count={300} scale={20} size={4} speed={0.6} opacity={0.8} color={activeHexColors[1]} />}
+
+                    <EffectComposer>
+                        <Bloom luminanceThreshold={0.15} luminanceSmoothing={0.9} height={300} intensity={2.5} />
+                        <ChromaticAberration blendFunction={BlendFunction.NORMAL} offset={new THREE.Vector2(0.003, 0.003)} />
+                    </EffectComposer>
+                </Canvas>
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-md"></div>
+            </div>
+
+            {/* Interactive Glassmorphism Overlay */}
+            <div className={`relative z-10 w-full max-w-4xl px-4 sm:px-6 py-6 transition-all duration-500 ${isAnimating ? 'opacity-0 scale-110 blur-md' : 'opacity-100 scale-100 blur-0'}`}>
 
                 {/* Progress Bar */}
-                <div className="flex items-center justify-center mb-8 gap-2">
-                    <div className={`h-1 w-16 rounded-full transition-colors ${step >= 1 ? 'bg-electric' : 'bg-white/20'}`} />
-                    <div className={`h-1 w-16 rounded-full transition-colors ${step >= 2 ? 'bg-electric' : 'bg-white/20'}`} />
+                <div className="flex items-center justify-center mb-10 gap-3">
+                    <div className={`h-1.5 w-20 sm:w-32 rounded-full transition-all duration-500 shadow-[0_0_10px_currentColor] ${step >= 1 ? 'bg-white text-white' : 'bg-white/20 text-transparent shadow-none'}`} />
+                    <div className={`h-1.5 w-20 sm:w-32 rounded-full transition-all duration-500 shadow-[0_0_10px_currentColor] ${step >= 2 ? 'bg-white text-white' : 'bg-white/20 text-transparent shadow-none'}`} />
                 </div>
 
                 {step === 1 && (
-                    <div className="text-center">
-                        {/* Header */}
-                        <div className="mb-8">
-                            <h2 className="text-3xl md:text-4xl font-black text-white mb-3">
-                                What do you want to master?
+                    <div className="text-center flex flex-col h-full justify-center">
+                        <div className="mb-10 sm:mb-12">
+                            <h2 className="text-4xl sm:text-5xl md:text-6xl font-black text-white mb-4 tracking-tighter drop-shadow-[0_0_30px_rgba(255,255,255,0.3)]">
+                                CHOOSE YOUR MASTERY
                             </h2>
-                            <p className="text-gray-400 text-lg">
-                                Pick 1-2 skills to personalize your experience
+                            <p className="text-white/60 text-lg sm:text-xl tracking-widest uppercase font-bold">
+                                Select up to 2 domains to initialize parameters
                             </p>
                         </div>
 
-                        {/* Skill Cards */}
-                        <div className="grid grid-cols-2 gap-4 mb-8">
+                        {/* Holographic Skill Cards */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-12 max-w-3xl mx-auto">
                             {SKILLS.map(skill => {
                                 const Icon = skill.icon;
                                 const isSelected = selectedSkills.includes(skill.id);
@@ -74,27 +158,26 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, 
                                         key={skill.id}
                                         onClick={() => handleSkillToggle(skill.id)}
                                         onMouseEnter={() => audio.playHover()}
-                                        className={`relative p-6 rounded-2xl border-2 transition-all duration-200 text-left group overflow-hidden ${isSelected
-                                                ? 'border-electric bg-electric/10 scale-[1.02]'
-                                                : 'border-white/10 bg-white/5 hover:border-white/30 hover:bg-white/10'
+                                        className={`relative p-6 sm:p-8 rounded-3xl border-2 transition-all duration-300 text-left group overflow-hidden ${isSelected
+                                            ? 'border-white bg-white/10 scale-105 shadow-[0_0_40px_rgba(255,255,255,0.2)]'
+                                            : 'border-white/10 bg-black/40 hover:border-white/30 hover:bg-white/5 backdrop-blur-xl hover:scale-[1.02]'
                                             }`}
                                     >
-                                        {/* Gradient Background */}
-                                        <div className={`absolute inset-0 bg-gradient-to-br ${skill.color} opacity-0 group-hover:opacity-10 transition-opacity`} />
+                                        <div className={`absolute inset-0 bg-gradient-to-br ${skill.color} ${isSelected ? 'opacity-30' : 'opacity-0 group-hover:opacity-10'} transition-opacity duration-500`} />
 
-                                        {/* Content */}
-                                        <div className="relative z-10">
-                                            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${skill.color} flex items-center justify-center mb-4`}>
-                                                <Icon size={24} className="text-white" />
+                                        <div className="relative z-10 flex items-start gap-5">
+                                            <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br ${skill.color} flex items-center justify-center shadow-lg shadow-black/50 shrink-0`}>
+                                                <Icon size={28} className="text-white" />
                                             </div>
-                                            <h3 className="text-lg font-bold text-white mb-1">{skill.name}</h3>
-                                            <p className="text-sm text-gray-400">{skill.desc}</p>
+                                            <div>
+                                                <h3 className="text-xl sm:text-2xl font-black text-white mb-1 tracking-wide">{skill.name}</h3>
+                                                <p className="text-sm sm:text-base text-white/60 font-medium">{skill.desc}</p>
+                                            </div>
                                         </div>
 
-                                        {/* Checkbox */}
                                         {isSelected && (
-                                            <div className="absolute top-4 right-4 w-6 h-6 bg-electric rounded-full flex items-center justify-center">
-                                                <Zap size={14} className="text-black" />
+                                            <div className="absolute top-6 right-6 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-[0_0_20px_white] animate-in zoom-in duration-300">
+                                                <Zap size={18} className="text-black" />
                                             </div>
                                         )}
                                     </button>
@@ -102,60 +185,52 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, 
                             })}
                         </div>
 
-                        {/* Continue Button */}
                         <button
                             onClick={handleContinue}
                             disabled={selectedSkills.length === 0}
-                            className={`px-8 py-4 font-bold text-lg rounded-xl transition-all flex items-center justify-center mx-auto gap-2 ${selectedSkills.length > 0
-                                    ? 'bg-electric text-black hover:bg-white'
-                                    : 'bg-white/10 text-gray-500 cursor-not-allowed'
+                            className={`px-10 py-5 sm:px-12 sm:py-6 font-black text-xl sm:text-2xl tracking-[0.2em] uppercase rounded-2xl transition-all duration-300 flex items-center justify-center mx-auto gap-4 ${selectedSkills.length > 0
+                                ? 'bg-white text-black hover:scale-110 shadow-[0_0_40px_rgba(255,255,255,0.6)] hover:shadow-[0_0_60px_rgba(255,255,255,1)]'
+                                : 'bg-white/10 text-white/30 cursor-not-allowed border border-white/10 backdrop-blur-md'
                                 }`}
                         >
-                            Continue <ChevronRight size={20} />
+                            INITIALIZE <ChevronRight size={28} />
                         </button>
                     </div>
                 )}
 
                 {step === 2 && (
-                    <div className="text-center">
-                        {/* Success Animation */}
-                        <div className="mb-8">
-                            <div className="w-24 h-24 mx-auto bg-gradient-to-br from-electric to-cyan-400 rounded-full flex items-center justify-center mb-6 animate-pulse shadow-[0_0_60px_rgba(0,255,255,0.4)]">
-                                <Sparkles size={48} className="text-black" />
+                    <div className="text-center flex flex-col h-full justify-center animate-in zoom-in-95 duration-700 fade-in slide-in-from-bottom-10">
+                        <div className="mb-12">
+                            <div className="w-32 h-32 mx-auto bg-gradient-to-br from-white to-white/50 rounded-full flex items-center justify-center mb-8 animate-pulse shadow-[0_0_100px_rgba(255,255,255,0.6)]">
+                                <SparklesIcon size={64} className="text-black" />
                             </div>
-                            <h2 className="text-3xl md:text-4xl font-black text-white mb-3">
-                                You're all set!
+                            <h2 className="text-5xl sm:text-6xl md:text-7xl font-black text-white mb-6 tracking-tighter">
+                                NEURAL LINK ESTABLISHED
                             </h2>
-                            <p className="text-gray-400 text-lg mb-4">
-                                Your personalized training path is ready
+                            <p className="text-white/60 text-xl sm:text-2xl tracking-widest font-bold uppercase">
+                                Welcome to the absolute cutting edge.
                             </p>
                         </div>
 
-                        {/* Quick Stats */}
-                        <div className="flex items-center justify-center gap-8 mb-8 text-center">
-                            <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-                                <Trophy size={24} className="text-yellow-400 mx-auto mb-2" />
-                                <div className="text-2xl font-bold text-white">47</div>
-                                <div className="text-xs text-gray-400">Games</div>
-                            </div>
-                            <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-                                <Brain size={24} className="text-electric mx-auto mb-2" />
-                                <div className="text-2xl font-bold text-white">5</div>
-                                <div className="text-xs text-gray-400">Skill Trees</div>
-                            </div>
-                            <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-                                <Zap size={24} className="text-green-400 mx-auto mb-2" />
-                                <div className="text-2xl font-bold text-white">∞</div>
-                                <div className="text-xs text-gray-400">XP to Earn</div>
-                            </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-12 max-w-4xl mx-auto">
+                            {[
+                                { icon: Trophy, color: 'text-yellow-400', value: '58', label: 'AAA GAMES' },
+                                { icon: Brain, color: 'text-cyan-400', value: '4', label: 'SKILL DOMAINS' },
+                                { icon: Zap, color: 'text-green-400', value: '∞', label: 'POTENTIAL' }
+                            ].map((stat, i) => (
+                                <div key={i} className="p-6 sm:p-8 bg-black/40 backdrop-blur-xl rounded-3xl border border-white/20 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+                                    <stat.icon size={36} className={`${stat.color} mx-auto mb-4 drop-shadow-[0_0_15px_currentColor]`} />
+                                    <div className="text-4xl sm:text-5xl font-black text-white mb-2">{stat.value}</div>
+                                    <div className="text-sm font-bold text-white/50 tracking-widest uppercase">{stat.label}</div>
+                                </div>
+                            ))}
                         </div>
 
-                        {/* Start Playing */}
                         <button
                             onClick={handleContinue}
-                            className="px-10 py-5 bg-electric text-black font-black text-xl rounded-xl hover:bg-white transition-all flex items-center justify-center mx-auto gap-2 shadow-[0_0_30px_rgba(0,255,255,0.3)]"
+                            className="px-12 py-6 sm:px-16 sm:py-8 bg-white text-black font-black text-2xl sm:text-3xl tracking-[0.3em] uppercase rounded-2xl hover:scale-110 hover:bg-cyan-400 hover:text-black transition-all duration-300 flex items-center justify-center mx-auto gap-4 shadow-[0_0_60px_rgba(255,255,255,0.5)] active:scale-95 border-4 border-white/30"
                         >
-                            Start Playing <ChevronRight size={24} />
+                            DIVE IN <ChevronRight size={36} />
                         </button>
                     </div>
                 )}

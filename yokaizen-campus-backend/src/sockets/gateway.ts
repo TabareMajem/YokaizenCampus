@@ -32,7 +32,7 @@ interface ChaosEvent {
 }
 
 export class SocketGateway {
-  private io: Server;
+  public io: Server;
 
   constructor(httpServer: HTTPServer) {
     this.io = new Server(httpServer, {
@@ -60,8 +60,8 @@ export class SocketGateway {
         }
 
         const payload = await authService.verifyToken(token);
-        socket.userId = payload.userId;
-        socket.userRole = payload.role;
+        socket.userId = payload!.userId;
+        socket.userRole = payload!.role;
 
         next();
       } catch (error) {
@@ -137,8 +137,8 @@ export class SocketGateway {
       socket.join(`class:${classroomId}`);
 
       // Update Redis presence
-      await getRedisClient().hSet(
-        REDIS_KEYS.classroomState(classroomId),
+      await getRedisClient().hset(
+        `${REDIS_KEYS.CLASSROOM_STATE}:${classroomId}`,
         `presence:${socket.userId}`,
         JSON.stringify({
           socketId: socket.id,
@@ -174,8 +174,8 @@ export class SocketGateway {
     const classroomId = socket.classroomId;
 
     // Remove from Redis presence
-    await getRedisClient().hDel(
-      REDIS_KEYS.classroomState(classroomId),
+    await getRedisClient().hdel(
+      `${REDIS_KEYS.CLASSROOM_STATE}:${classroomId}`,
       `presence:${socket.userId}`
     );
 
@@ -196,14 +196,16 @@ export class SocketGateway {
     if (!socket.classroomId || socket.userRole !== 'STUDENT') return;
 
     try {
-      await classroomService.updateStudentStatus({
-        studentId: socket.userId!,
-        classroomId: socket.classroomId,
-        status: data.status,
-        sentiment: data.sentiment,
-        nodeCount: data.nodeCount,
-        currentNodeType: data.currentNode
-      });
+      await classroomService.updateStudentStatus(
+        socket.userId!,
+        socket.classroomId,
+        {
+          status: data.status,
+          sentiment: data.sentiment,
+          nodeCount: data.nodeCount,
+          currentNodeType: data.currentNode
+        } as any
+      );
 
       // Broadcast to teachers in the classroom
       socket.to(`class:${socket.classroomId}`).emit('student_status_update', {
@@ -225,8 +227,7 @@ export class SocketGateway {
     try {
       await classroomService.raiseHand(
         socket.userId!,
-        socket.classroomId,
-        data.message
+        socket.classroomId
       );
 
       // Notify teachers
@@ -444,8 +445,8 @@ export class SocketGateway {
 
     if (socket.classroomId) {
       // Remove from Redis presence
-      await getRedisClient().hDel(
-        REDIS_KEYS.classroomState(socket.classroomId),
+      await getRedisClient().hdel(
+        `${REDIS_KEYS.CLASSROOM_STATE}:${socket.classroomId}`,
         `presence:${socket.userId}`
       );
 

@@ -294,6 +294,8 @@ export interface ChaosEffect {
 }
 
 export const CHAOS_EVENTS: Record<ChaosEventType, ChaosEventData> = {
+  MEMORY_LEAK: { type: 'MEMORY_LEAK', duration: 30, effects: [] },
+  QUANTUM_NOISE: { type: 'QUANTUM_NOISE', duration: 30, effects: [] },
   SOLAR_FLARE: {
     type: 'SOLAR_FLARE',
     duration: 30,

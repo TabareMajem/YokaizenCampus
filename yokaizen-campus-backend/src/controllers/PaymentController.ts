@@ -37,15 +37,15 @@ export class PaymentController {
       throw new ValidationError(validation.error.errors[0].message);
     }
 
-    const session = await paymentService.createCheckoutSession(
-      req.user!.id,
-      validation.data
-    );
+    const session = await paymentService.createCheckoutSession({
+      userId: req.user!.userId,
+      ...validation.data
+    } as any);
 
     res.json({
       success: true,
       data: {
-        sessionId: session.id,
+        sessionId: session.sessionId,
         url: session.url
       }
     });
@@ -62,7 +62,7 @@ export class PaymentController {
     }
 
     const session = await paymentService.createPortalSession(
-      req.user!.id,
+      req.user!.userId,
       validation.data.returnUrl
     );
 
@@ -80,14 +80,14 @@ export class PaymentController {
    */
   handleWebhook = asyncHandler(async (req: Request, res: Response) => {
     const sig = req.headers['stripe-signature'] as string;
-    
+
     if (!sig) {
       throw new ValidationError('Missing Stripe signature');
     }
 
     // Raw body is needed for webhook verification
     const rawBody = (req as any).rawBody;
-    
+
     if (!rawBody) {
       throw new ValidationError('Missing raw body for webhook verification');
     }
@@ -102,7 +102,7 @@ export class PaymentController {
    * Get current subscription status
    */
   getSubscription = asyncHandler(async (req: Request, res: Response) => {
-    const subscription = await paymentService.getSubscription(req.user!.id);
+    const subscription = await paymentService.getSubscription(req.user!.userId);
 
     res.json({
       success: true,
@@ -117,12 +117,12 @@ export class PaymentController {
   cancelSubscription = asyncHandler(async (req: Request, res: Response) => {
     const { immediately } = req.body;
 
-    await paymentService.cancelSubscription(req.user!.id, immediately);
+    await paymentService.cancelSubscription(req.user!.userId);
 
     res.json({
       success: true,
-      message: immediately 
-        ? 'Subscription cancelled immediately' 
+      message: immediately
+        ? 'Subscription cancelled immediately'
         : 'Subscription will be cancelled at end of billing period'
     });
   });
@@ -132,7 +132,7 @@ export class PaymentController {
    * Resume a cancelled subscription
    */
   resumeSubscription = asyncHandler(async (req: Request, res: Response) => {
-    await paymentService.resumeSubscription(req.user!.id);
+    await paymentService.resumeSubscription(req.user!.userId);
 
     res.json({
       success: true,
@@ -151,7 +151,7 @@ export class PaymentController {
     }
 
     const result = await paymentService.purchaseCredits(
-      req.user!.id,
+      req.user!.userId,
       validation.data.amount,
       validation.data.paymentMethodId
     );
@@ -168,7 +168,7 @@ export class PaymentController {
    * Get current credit balance
    */
   getCredits = asyncHandler(async (req: Request, res: Response) => {
-    const credits = await paymentService.getCreditBalance(req.user!.id);
+    const credits = await paymentService.getCreditBalance(req.user!.userId);
 
     res.json({
       success: true,
@@ -184,11 +184,8 @@ export class PaymentController {
     const { limit, offset } = req.query;
 
     const history = await paymentService.getPaymentHistory(
-      req.user!.id,
-      {
-        limit: limit ? parseInt(limit as string) : 20,
-        offset: offset ? parseInt(offset as string) : 0
-      }
+      req.user!.userId,
+      limit ? parseInt(limit as string) : 20
     );
 
     res.json({
@@ -205,7 +202,7 @@ export class PaymentController {
     const { limit } = req.query;
 
     const invoices = await paymentService.getInvoices(
-      req.user!.id,
+      req.user!.userId,
       limit ? parseInt(limit as string) : 10
     );
 
@@ -230,7 +227,7 @@ export class PaymentController {
     }
 
     const result = await paymentService.sponsorStudent(
-      req.user!.id,
+      req.user!.userId,
       validation.data.studentId,
       validation.data.credits
     );
@@ -267,7 +264,7 @@ export class PaymentController {
     }
 
     await paymentService.addPaymentMethod(
-      req.user!.id,
+      req.user!.userId,
       paymentMethodId,
       setAsDefault
     );
@@ -283,7 +280,7 @@ export class PaymentController {
    * Get saved payment methods
    */
   getPaymentMethods = asyncHandler(async (req: Request, res: Response) => {
-    const methods = await paymentService.getPaymentMethods(req.user!.id);
+    const methods = await paymentService.getPaymentMethods(req.user!.userId);
 
     res.json({
       success: true,
@@ -296,7 +293,7 @@ export class PaymentController {
    * Remove a payment method
    */
   removePaymentMethod = asyncHandler(async (req: Request, res: Response) => {
-    await paymentService.removePaymentMethod(req.user!.id, req.params.id);
+    await paymentService.removePaymentMethod(req.user!.userId, req.params.id);
 
     res.json({
       success: true,

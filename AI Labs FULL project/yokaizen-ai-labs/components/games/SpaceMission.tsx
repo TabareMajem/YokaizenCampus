@@ -1,427 +1,188 @@
-
-import React, { useState, useEffect, useRef } from 'react';
-import { Button } from '../ui/Button';
-import { Rocket, RefreshCw, Target, AlertTriangle, ShoppingBag } from 'lucide-react';
+import React, { useRef, useState, useEffect } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, TorusKnot, MeshDistortMaterial, Float, Sparkles } from '@react-three/drei';
+import { EffectComposer, Bloom, ChromaticAberration, Glitch } from '@react-three/postprocessing';
+import { GlitchMode, BlendFunction } from 'postprocessing';
+import * as THREE from 'three';
+import { Activity, Shield, Zap, AlertTriangle } from 'lucide-react';
 import { audio } from '../../services/audioService';
-import { Language, UserStats, GameType } from '../../types';
-import { SkinShop } from '../ui/SkinShop';
-import { GAME_SKINS } from '../../constants';
 
-interface SpaceMissionProps {
-    onComplete: (score: number) => void;
+export interface SpaceMissionProps {
+    onComplete: (score: number, metrics?: any) => void;
+    difficulty: string;
     t: (key: string) => string;
-    language?: Language;
-    user?: UserStats;
-    onUpdateUser?: (user: UserStats) => void;
 }
 
-// Physics Constants
-const G = 0.5; // Gravity constant
-const PLANET_MASS = 2000;
-const PLANET_RADIUS = 40;
-
-export const SpaceMission: React.FC<SpaceMissionProps> = ({ onComplete, t, user, onUpdateUser }) => {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const requestRef = useRef<number>(0);
-
-    // Game State
-    const [gameState, setGameState] = useState<'PLANNING' | 'LAUNCHED' | 'CRASH' | 'ORBIT' | 'LOST'>('PLANNING');
-    const [showShop, setShowShop] = useState(false);
-
-    // Assets Refs
-    const shipSpriteRef = useRef<HTMLImageElement | null>(null);
-    const trailColorRef = useRef('#f59e0b');
-
-    // Physics State
-    const state = useRef({
-        ship: { x: 100, y: 300, vx: 0, vy: 0, angle: 0 },
-        planet: { x: 400, y: 300 },
-        target: { angle: 0, speed: 0.02, radius: 180, x: 0, y: 0 },
-        particles: [] as { x: number, y: number, vx: number, vy: number, life: number, color: string }[],
-        orbitTime: 0
+const CoreEntity = ({ isActive }: { isActive: boolean }) => {
+    const meshRef = useRef<THREE.Mesh>(null);
+    useFrame((state) => {
+        if (meshRef.current) {
+            meshRef.current.rotation.x = state.clock.elapsedTime * 0.4;
+            meshRef.current.rotation.y = state.clock.elapsedTime * 0.6;
+        }
     });
 
-    // Load Skins
+    return (
+        <Float speed={isActive ? 4 : 1.5} floatIntensity={1.5} rotationIntensity={isActive ? 3 : 1}>
+            <TorusKnot ref={meshRef} args={[1.5, 128, 32]} scale={isActive ? 1.3 : 1}>
+                <MeshDistortMaterial
+                    color={new THREE.Color().setHSL(0.25, 0.9, isActive ? 0.7 : 0.4)}
+                    envMapIntensity={1.5}
+                    clearcoat={1}
+                    clearcoatRoughness={0.1}
+                    metalness={0.9}
+                    roughness={0.1}
+                    distort={isActive ? 0.5 : 0.2}
+                    speed={isActive ? 6 : 2}
+                />
+            </TorusKnot>
+        </Float>
+    );
+};
+
+export const SpaceMission: React.FC<SpaceMissionProps> = ({ onComplete, difficulty, t }) => {
+    const [score, setScore] = useState(0);
+    const [timeLeft, setTimeLeft] = useState(60);
+    const [gameState, setGameState] = useState<'PLAYING' | 'SUCCESS' | 'FAILED'>('PLAYING');
+    const [activeNode, setActiveNode] = useState(false);
+    
+    // Multi-Agent Flow Logic State
+    const [advisorMsg, setAdvisorMsg] = useState('Initiating cognitive overlay...');
+    const [adversaryMsg, setAdversaryMsg] = useState('Awaiting vulnerability...');
+    const [glitchActive, setGlitchActive] = useState(false);
+
     useEffect(() => {
-        const skinId = user?.equippedSkins?.[GameType.SPACE_MISSION] || 'space_default';
-        const trailId = user?.equippedSkins?.[GameType.SPACE_MISSION + '_TRAIL'] || 'trail_default';
+        if (gameState !== 'PLAYING') return;
 
-        const skin = GAME_SKINS.find(s => s.id === skinId);
-        const trail = GAME_SKINS.find(s => s.id === trailId);
+        const advisorLines = [
+            'Flow state stable. Keep pushing.',
+            'Structural integrity at optimal levels.',
+            'Adversary attempting breach. Stay focused.',
+            'Metrics align with mission parameters.'
+        ];
 
-        if (skin) {
-            const img = new Image();
-            img.src = skin.assetUrl;
-            shipSpriteRef.current = img;
-        }
-        if (trail) {
-            trailColorRef.current = trail.assetUrl;
-        }
-    }, [user?.equippedSkins]);
+        const adversaryLines = [
+            'Your strategy is inherently flawed.',
+            'I can see the cracks in your attention.',
+            'Diverting systemic resources to overwhelm you.',
+            'Inevitability is written in the code.'
+        ];
 
-    // Input State
-    const dragRef = useRef({ active: false, startX: 0, startY: 0, currX: 0, currY: 0 });
+        const agentInterval = setInterval(() => {
+            const isAdversary = Math.random() > 0.65;
+            if (isAdversary) {
+                setAdversaryMsg(adversaryLines[Math.floor(Math.random() * adversaryLines.length)]);
+                audio.playSystemMessage({ type: 'warning' });
+                setGlitchActive(true);
+                setTimeout(() => setGlitchActive(false), 500);
+            } else {
+                setAdvisorMsg(advisorLines[Math.floor(Math.random() * advisorLines.length)]);
+                audio.playSystemMessage({ type: 'success' });
+            }
+        }, 6000);
 
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        state.current.planet = { x: canvas.width / 2, y: canvas.height / 2 };
-        state.current.ship = { x: 100, y: canvas.height / 2, vx: 0, vy: 0, angle: 0 };
-
-        const loop = () => {
-            update();
-            draw();
-            requestRef.current = requestAnimationFrame(loop);
-        };
-        requestRef.current = requestAnimationFrame(loop);
-
-        return () => cancelAnimationFrame(requestRef.current);
+        return () => clearInterval(agentInterval);
     }, [gameState]);
 
-    const update = () => {
-        const s = state.current;
-        const width = canvasRef.current?.width || 800;
-        const height = canvasRef.current?.height || 600;
-
-        s.target.angle += s.target.speed;
-        s.target.x = s.planet.x + Math.cos(s.target.angle) * s.target.radius;
-        s.target.y = s.planet.y + Math.sin(s.target.angle) * s.target.radius;
-
-        if (gameState === 'LAUNCHED') {
-            const dx = s.planet.x - s.ship.x;
-            const dy = s.planet.y - s.ship.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            const force = (G * PLANET_MASS) / (dist * dist);
-            const ax = (dx / dist) * force;
-            const ay = (dy / dist) * force;
-
-            s.ship.vx += ax;
-            s.ship.vy += ay;
-            s.ship.x += s.ship.vx;
-            s.ship.y += s.ship.vy;
-
-            s.ship.angle = Math.atan2(s.ship.vy, s.ship.vx);
-
-            if (Math.random() > 0.5) {
-                s.particles.push({
-                    x: s.ship.x, y: s.ship.y,
-                    vx: -s.ship.vx * 0.5 + (Math.random() - 0.5),
-                    vy: -s.ship.vy * 0.5 + (Math.random() - 0.5),
-                    life: 1.0,
-                    color: trailColorRef.current
-                });
-            }
-
-            if (dist < PLANET_RADIUS + 5) {
-                setGameState('CRASH');
-                audio.playError();
-                spawnExplosion(s.ship.x, s.ship.y);
-            }
-            if (s.ship.x < 0 || s.ship.x > width || s.ship.y < 0 || s.ship.y > height) {
-                setGameState('LOST');
-                audio.playError();
-            }
-
-            const tdx = s.target.x - s.ship.x;
-            const tdy = s.target.y - s.ship.y;
-            const tDist = Math.sqrt(tdx * tdx + tdy * tdy);
-
-            if (tDist < 30) {
-                s.orbitTime += 1;
-                s.particles.push({
-                    x: s.target.x + (Math.random() - 0.5) * 20,
-                    y: s.target.y + (Math.random() - 0.5) * 20,
-                    vx: 0, vy: 0, life: 0.5, color: '#10b981'
-                });
-
-                if (s.orbitTime > 100) {
-                    setGameState('ORBIT');
-                    audio.playSuccess();
-                    setTimeout(() => onComplete(100), 1500);
+    useEffect(() => {
+        if (gameState !== 'PLAYING') return;
+        const timer = setInterval(() => {
+            setTimeLeft((prev) => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    const finalScore = score >= 500 ? score : 0;
+                    setGameState(finalScore >= 500 ? 'SUCCESS' : 'FAILED');
+                    onComplete(finalScore, { completionTime: 60 - prev, difficulty });
+                    return 0;
                 }
-            } else {
-                s.orbitTime = Math.max(0, s.orbitTime - 0.5);
-            }
-        }
-
-        s.particles.forEach(p => {
-            p.x += p.vx;
-            p.y += p.vy;
-            p.life -= 0.02;
-        });
-        s.particles = s.particles.filter(p => p.life > 0);
-    };
-
-    const spawnExplosion = (x: number, y: number) => {
-        for (let i = 0; i < 20; i++) {
-            state.current.particles.push({
-                x, y,
-                vx: (Math.random() - 0.5) * 5,
-                vy: (Math.random() - 0.5) * 5,
-                life: 1.0,
-                color: '#ef4444'
+                return prev - 1;
             });
-        }
-    };
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [gameState, score, onComplete, difficulty]);
 
-    const draw = () => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        const width = canvas.width;
-        const height = canvas.height;
-        const s = state.current;
-
-        ctx.fillStyle = '#020617';
-        ctx.fillRect(0, 0, width, height);
-
-        ctx.fillStyle = '#ffffff';
-        for (let i = 0; i < 50; i++) {
-            const x = (i * 1234) % width;
-            const y = (i * 5678) % height;
-            ctx.globalAlpha = Math.random() * 0.5 + 0.1;
-            ctx.fillRect(x, y, 1, 1);
-        }
-        ctx.globalAlpha = 1;
-
-        const grad = ctx.createRadialGradient(s.planet.x, s.planet.y, 10, s.planet.x, s.planet.y, PLANET_RADIUS * 4);
-        grad.addColorStop(0, 'rgba(124, 58, 237, 0.3)');
-        grad.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(s.planet.x, s.planet.y, PLANET_RADIUS * 4, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = '#4c1d95';
-        ctx.beginPath();
-        ctx.arc(s.planet.x, s.planet.y, PLANET_RADIUS, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#a78bfa';
-        ctx.lineWidth = 3;
-        ctx.stroke();
-
-        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-        ctx.setLineDash([5, 5]);
-        ctx.beginPath();
-        ctx.arc(s.planet.x, s.planet.y, s.target.radius, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        ctx.save();
-        ctx.translate(s.target.x, s.target.y);
-        ctx.rotate(Date.now() / 500);
-
-        // Target Reticle
-        ctx.strokeStyle = '#10b981';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(0, 0, 15, 0, Math.PI * 2);
-        ctx.moveTo(0, -20); ctx.lineTo(0, 20);
-        ctx.moveTo(-20, 0); ctx.lineTo(20, 0);
-        ctx.stroke();
-
-        // Capture Zone
-        ctx.fillStyle = `rgba(16, 185, 129, ${0.1 + (s.orbitTime / 100) * 0.4})`;
-        ctx.beginPath();
-        ctx.arc(0, 0, 30, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-
-        if (dragRef.current.active && gameState === 'PLANNING') {
-            // Launch Vector
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(s.ship.x, s.ship.y);
-            ctx.lineTo(s.ship.x + (dragRef.current.startX - dragRef.current.currX), s.ship.y + (dragRef.current.startY - dragRef.current.currY));
-            ctx.stroke();
-
-            // Trajectory Prediction (Dotted Line)
-            ctx.strokeStyle = 'rgba(245, 158, 11, 0.6)';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([4, 4]);
-            ctx.beginPath();
-            ctx.moveTo(s.ship.x, s.ship.y);
-            let px = s.ship.x;
-            let py = s.ship.y;
-            let pvx = (dragRef.current.startX - dragRef.current.currX) * 0.1;
-            let pvy = (dragRef.current.startY - dragRef.current.currY) * 0.1;
-
-            for (let i = 0; i < 40; i++) { // More steps for better preview
-                const pdx = s.planet.x - px;
-                const pdy = s.planet.y - py;
-                const pdist = Math.sqrt(pdx * pdx + pdy * pdy);
-                const pforce = (G * PLANET_MASS) / (pdist * pdist);
-                pvx += (pdx / pdist) * pforce;
-                pvy += (pdy / pdist) * pforce;
-                px += pvx;
-                py += pvy;
-
-                // Crash prediction color
-                if (pdist < PLANET_RADIUS) {
-                    ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)'; // Red if crash
-                    break;
-                }
-
-                ctx.lineTo(px, py);
-            }
-            ctx.stroke();
-            ctx.setLineDash([]);
-        }
-
-        ctx.save();
-        ctx.translate(s.ship.x, s.ship.y);
-        ctx.rotate(gameState === 'PLANNING' && dragRef.current.active
-            ? Math.atan2(dragRef.current.startY - dragRef.current.currY, dragRef.current.startX - dragRef.current.currX)
-            : s.ship.angle
-        );
-
-        if (shipSpriteRef.current) {
-            ctx.drawImage(shipSpriteRef.current, -16, -16, 32, 32);
-        } else {
-            ctx.fillStyle = '#e2e8f0';
-            ctx.beginPath();
-            ctx.moveTo(12, 0);
-            ctx.lineTo(-8, 6);
-            ctx.lineTo(-8, -6);
-            ctx.fill();
-        }
-
-        if (gameState === 'LAUNCHED') {
-            ctx.fillStyle = trailColorRef.current;
-            ctx.beginPath();
-            ctx.moveTo(-10, 0);
-            ctx.lineTo(-20 - Math.random() * 5, 0);
-            ctx.stroke();
-        }
-        ctx.restore();
-
-        s.particles.forEach(p => {
-            ctx.fillStyle = p.color;
-            ctx.globalAlpha = p.life;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
-            ctx.fill();
-        });
-        ctx.globalAlpha = 1;
-    };
-
-    const handleStart = (e: React.MouseEvent | React.TouchEvent) => {
-        if (gameState !== 'PLANNING') return;
-        const pos = getPos(e);
-        dragRef.current = { active: true, startX: pos.x, startY: pos.y, currX: pos.x, currY: pos.y };
-    };
-
-    const handleMove = (e: React.MouseEvent | React.TouchEvent) => {
-        if (!dragRef.current.active) return;
-        const pos = getPos(e);
-        dragRef.current.currX = pos.x;
-        dragRef.current.currY = pos.y;
-    };
-
-    const handleEnd = () => {
-        if (!dragRef.current.active) return;
-        dragRef.current.active = false;
-
-        const vx = (dragRef.current.startX - dragRef.current.currX) * 0.1;
-        const vy = (dragRef.current.startY - dragRef.current.currY) * 0.1;
-
-        if (Math.abs(vx) > 0.5 || Math.abs(vy) > 0.5) {
-            state.current.ship.vx = vx;
-            state.current.ship.vy = vy;
-            setGameState('LAUNCHED');
-            audio.playEngine(1000);
-        }
-    };
-
-    const getPos = (e: React.MouseEvent | React.TouchEvent) => {
-        const rect = canvasRef.current?.getBoundingClientRect();
-        const x = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
-        const y = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
-        return { x: x - (rect?.left || 0), y: y - (rect?.top || 0) };
-    };
-
-    const reset = () => {
-        setGameState('PLANNING');
-        const canvas = canvasRef.current;
-        if (canvas) {
-            state.current.ship = { x: 100, y: canvas.height / 2, vx: 0, vy: 0, angle: 0 };
-            state.current.orbitTime = 0;
-            state.current.particles = [];
+    const handleInteract = () => {
+        if (gameState !== 'PLAYING') return;
+        audio.playTyping();
+        setActiveNode(true);
+        setScore(s => s + 50);
+        setTimeout(() => setActiveNode(false), 300);
+        
+        if (score + 50 >= 1000) {
+            setGameState('SUCCESS');
+            onComplete(1000, { completionTime: 60 - timeLeft, difficulty });
         }
     };
 
     return (
-        <div className="h-full flex flex-col bg-black relative overflow-hidden touch-none select-none">
+        <div className="relative w-full h-[600px] rounded-xl overflow-hidden border border-white/10 bg-black shadow-2xl">
+            {/* UI Overlay */}
+            <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-start z-10 pointer-events-none">
+                <div className="flex flex-col gap-4">
+                    <div className="bg-black/50 backdrop-blur-md rounded-lg p-3 border border-indigo-500/40 shadow-[0_0_15px_rgba(79,70,229,0.3)]">
+                        <div className="flex items-center gap-2 text-indigo-400 mb-1">
+                            <Activity className="w-4 h-4" />
+                            <span className="text-xs uppercase tracking-widest font-bold">Signal</span>
+                        </div>
+                        <div className="text-2xl font-mono text-white">{score} / 1000</div>
+                    </div>
+                </div>
 
-            {showShop && user && onUpdateUser && (
-                <SkinShop
-                    gameType={GameType.SPACE_MISSION}
-                    user={user}
-                    onUpdateUser={onUpdateUser}
-                    onClose={() => setShowShop(false)}
-                />
-            )}
-
-            <div className="absolute top-16 left-4 z-10 flex flex-col space-y-2 pointer-events-none">
-                <div className="bg-black/30 p-2 rounded backdrop-blur-sm">
-                    <h2 className="text-xl font-black text-white uppercase italic tracking-widest flex items-center">
-                        <Rocket className="mr-2 text-orange-500" /> {t('space.injection')}
-                    </h2>
-                    <p className="text-xs text-gray-400">{t('space.instruction')}</p>
+                <div className="bg-black/50 backdrop-blur-md rounded-lg p-3 border border-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.3)] flex flex-col items-end">
+                     <div className="flex items-center gap-2 text-blue-400 mb-1">
+                        <AlertTriangle className="w-4 h-4" />
+                        <span className="text-xs uppercase tracking-widest font-bold">Time</span>
+                    </div>
+                    <div className="text-3xl font-mono text-white tracking-widest">{timeLeft}s</div>
                 </div>
             </div>
 
-            {gameState === 'PLANNING' && user && onUpdateUser && (
-                <div className="absolute top-16 right-4 z-20 pointer-events-auto">
-                    <button onClick={() => setShowShop(true)} className="bg-black/50 p-2 rounded-full border border-amber-500/50 text-amber-400 hover:text-white hover:bg-amber-900/50 transition-colors">
-                        <ShoppingBag size={20} />
-                    </button>
+            {/* Multi-Agent Comm Panel */}
+            <div className="absolute bottom-6 left-6 right-6 flex gap-4 z-10 pointer-events-none">
+                <div className="flex-1 bg-black/70 backdrop-blur-xl rounded-lg p-4 border-l-4 border-indigo-500 shadow-[0_0_20px_rgba(0,0,0,0.8)]">
+                    <div className="text-xs text-indigo-400 mb-1 uppercase tracking-widest font-bold flex items-center gap-2"><Shield className="w-3 h-3"/> Advisor Agent</div>
+                    <div className="text-sm text-indigo-100 font-mono tracking-wide leading-relaxed">{advisorMsg}</div>
                 </div>
-            )}
+                <div className="flex-1 bg-black/70 backdrop-blur-xl rounded-lg p-4 border-l-4 border-red-500 shadow-[0_0_20px_rgba(0,0,0,0.8)]">
+                    <div className="text-xs text-red-500 mb-1 uppercase tracking-widest font-bold flex items-center gap-2"><Zap className="w-3 h-3"/> Adversary AI</div>
+                    <div className="text-sm text-red-100 font-mono tracking-wide leading-relaxed">{adversaryMsg}</div>
+                </div>
+            </div>
 
-            {gameState !== 'PLANNING' && gameState !== 'LAUNCHED' && (
-                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm animate-in zoom-in">
-                    {gameState === 'ORBIT' ? (
-                        <div className="text-center">
-                            <h3 className="text-3xl font-black text-green-500 mb-2">{t('space.orbit_stable')}</h3>
-                            <Target size={64} className="text-green-500 mx-auto mb-4 animate-pulse" />
-                            <p className="text-gray-300 mb-6">{t('space.satellite')}</p>
-                            <Button onClick={() => onComplete(100)} variant="primary">{t('space.complete')}</Button>
+            {/* Game Over States */}
+            {gameState !== 'PLAYING' && (
+                <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/90 backdrop-blur-md">
+                    <div className="text-center p-8 rounded-2xl border border-white/10 bg-black/50 shadow-2xl">
+                        <div className={`text-6xl font-black uppercase tracking-widest mb-4 ${gameState === 'SUCCESS' ? 'text-green-500' : 'text-red-500'} drop-shadow-[0_0_15px_currentColor]`}>
+                            {gameState === 'SUCCESS' ? 'SYSTEM SECURED' : 'BREACH DETECTED'}
                         </div>
-                    ) : (
-                        <div className="text-center">
-                            <h3 className="text-3xl font-black text-red-500 mb-2">{t('space.failed')}</h3>
-                            <AlertTriangle size={64} className="text-red-500 mx-auto mb-4" />
-                            <p className="text-gray-300 mb-6">{t('space.unstable')}</p>
-                            <Button onClick={reset} variant="secondary"><RefreshCw className="mr-2" /> {t('space.retry')}</Button>
-                        </div>
-                    )}
+                        <div className="text-2xl text-white/80 font-mono">Final Score: {score}</div>
+                    </div>
                 </div>
             )}
 
-            {gameState === 'PLANNING' && (
-                <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10 pointer-events-none animate-bounce text-white text-xs bg-black/50 px-3 py-1 rounded-full">
-                    {t('space.drag')}
-                </div>
-            )}
-
-            <canvas
-                ref={canvasRef}
-                width={800}
-                height={600}
-                className="w-full h-full object-cover cursor-crosshair"
-                onMouseDown={handleStart}
-                onMouseMove={handleMove}
-                onMouseUp={handleEnd}
-                onMouseLeave={handleEnd}
-                onTouchStart={handleStart}
-                onTouchMove={handleMove}
-                onTouchEnd={handleEnd}
-            />
+            {/* Interaction Layer */}
+            <div className="absolute inset-0 z-0 cursor-crosshair" onClick={handleInteract}>
+                <Canvas camera={{ position: [0, 0, 10], fov: 60 }}>
+                    <ambientLight intensity={0.6} />
+                    <pointLight position={[10, 10, 10]} intensity={1.5} color={new THREE.Color().setHSL(0.25, 1, 0.6)} />
+                    <pointLight position={[-10, -10, -10]} intensity={0.8} color="#4f46e5" />
+                    
+                    <Sparkles count={300} scale={15} size={3} speed={0.5} opacity={0.6} color={new THREE.Color().setHSL(0.25, 1, 0.9)} />
+                    
+                    <CoreEntity isActive={activeNode} />
+                    
+                    <OrbitControls enableZoom={false} enablePan={false} autoRotate autoRotateSpeed={0.8} />
+                    
+                    <EffectComposer>
+                        <Bloom luminanceThreshold={0.15} luminanceSmoothing={0.9} height={300} intensity={2.0} />
+                        <ChromaticAberration blendFunction={BlendFunction.NORMAL} offset={new THREE.Vector2(0.003, 0.003)} />
+                        {glitchActive && (
+                            <Glitch delay={new THREE.Vector2(0, 0)} duration={new THREE.Vector2(0.1, 0.4)} mode={GlitchMode.SPORADIC} active ratio={0.6} />
+                        )}
+                    </EffectComposer>
+                </Canvas>
+            </div>
         </div>
     );
 };

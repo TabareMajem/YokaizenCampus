@@ -6,7 +6,7 @@ const router = Router();
 
 // All routes require authentication and admin role
 router.use(authenticate);
-router.use(requireRole(['ADMIN']));
+router.use(requireRole('ADMIN'));
 
 // Dashboard and stats
 router.get('/stats', adminController.getStats);
@@ -30,6 +30,7 @@ router.get('/audit-logs', adminController.getAuditLogs);
 // System settings
 router.get('/settings', adminController.getSettings);
 router.patch('/settings', adminController.updateSettings);
+router.post('/school-key', adminController.updateSchoolKey);
 
 // System operations
 router.post('/broadcast', adminController.sendBroadcast);

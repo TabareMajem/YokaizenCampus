@@ -4,6 +4,8 @@ import ReactDOM from 'react-dom/client';
 import { App } from './App';
 import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
+import { DialogueProvider } from './contexts/DialogueContext';
+import { DialogueBox } from './components/rpg/DialogueBox';
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -27,7 +29,10 @@ root.render(
   <React.StrictMode>
     <ToastProvider>
       <AuthProvider>
-        <App />
+        <DialogueProvider>
+          <App />
+          <DialogueBox />
+        </DialogueProvider>
       </AuthProvider>
     </ToastProvider>
   </React.StrictMode>

@@ -5,6 +5,7 @@ import { useToast } from './contexts/ToastContext';
 import { GAMES, GAME_TUTORIALS, GAME_DEBRIEFS, LEARN_PATH, MOCK_SQUADS, TOOLS, SKILL_TREE } from './constants';
 import { TRANSLATIONS } from './translations';
 import { audio } from './services/audioService';
+import { useDialogue } from './contexts/DialogueContext';
 import { squadsService } from './services/squadsService';
 import { AppTab, GameDef, GameType, Difficulty, Language, CreatorGame, Squad, UserStats } from './types';
 import { AuthScreen } from './components/auth/AuthScreen';
@@ -58,6 +59,11 @@ import { ClimateTimeMachine } from './components/games/ClimateTimeMachine';
 import { WallStreetWar } from './components/games/WallStreetWar';
 import { SmartCityMayor } from './components/games/SmartCityMayor';
 import { SpaceMission } from './components/games/SpaceMission';
+
+// Viral Mini Games (Funnel bypasses)
+import { ViralNeuralHack } from './components/viral/ViralNeuralHack';
+import { ViralLatencyTunnel } from './components/viral/ViralLatencyTunnel';
+import { ViralChaosDefense } from './components/viral/ViralChaosDefense';
 import { DefenseStrategist } from './components/games/DefenseStrategist';
 import { PersonaSwitchboard } from './components/games/PersonaSwitchboard';
 import { DeepfakeDetective } from './components/games/DeepfakeDetective';
@@ -84,6 +90,16 @@ import { ArrakisSands } from './components/games/ArrakisSands';
 import { LazarusVector } from './components/games/LazarusVector';
 import { VeritasFalls } from './components/games/VeritasFalls';
 import { AethelredGambit } from './components/games/AethelredGambit';
+import { QuantumQubit } from './components/games/QuantumQubit';
+import { NeuralPrism } from './components/games/NeuralPrism';
+import { SynapseSurge } from './components/games/SynapseSurge';
+import { DeepfakeDeflector } from './components/games/DeepfakeDeflector';
+import { OracleIndex } from './components/games/OracleIndex';
+import { ChaosEngineering } from './components/games/ChaosEngineering';
+import { TuringTessellation } from './components/games/TuringTessellation';
+import { DataHeist } from './components/games/DataHeist';
+import { PromptSculptor } from './components/games/PromptSculptor';
+import { SingularityCore } from './components/games/SingularityCore';
 
 // Assets to preload
 const PRELOAD_ASSETS = [
@@ -94,6 +110,7 @@ const PRELOAD_ASSETS = [
 
 export const App: React.FC = () => {
     const { user, isAuthenticated, updateUser } = useAuth();
+    const { queueDialogue } = useDialogue();
     const [isPreloading, setIsPreloading] = useState(true);
     const [activeTab, setActiveTab] = useState<AppTab>(AppTab.HOME);
     const [activeGame, setActiveGame] = useState<GameDef | null>(null);
@@ -213,9 +230,35 @@ export const App: React.FC = () => {
             setShowPaywall(true);
             return;
         }
+
+        // Feature: Phase 9 Narrative Interceptor
+        const characters = ['ATHENA', 'BYTE', 'SYNTAX'] as const;
+        const assignedChar = characters[Math.floor(Math.random() * characters.length)];
+        const gameName = t(`game.${game.type.toLowerCase()}.title`) || game.type;
+
+        queueDialogue([
+            {
+                id: `mission-brief-${game.id}-${Date.now()}`,
+                character: assignedChar,
+                text: `Initializing mission parameter: [${gameName}]. Ensure cognitive readiness.`
+            }
+        ]);
+
         setActiveGame(game);
         setGameDifficulty(game.difficulty);
         setShowTutorial(true);
+    };
+
+    const handleTabSwitch = (tab: AppTab) => {
+        // Feature: 2% chance of Algorithm glitch
+        if (Math.random() < 0.02) {
+            audio.playGlitch();
+            queueDialogue([
+                { id: `alg-${Date.now()}-1`, character: 'SYSTEM', text: "ROUTING ERROR... THE ALGORITHM DEMANDS YOUR UNDIVIDED ATTENTION.", isGlitchy: true },
+                { id: `alg-${Date.now()}-2`, character: 'BYTE', text: "Whoa! Purging rogue thread! Sorry about that, flesh-brain." }
+            ]);
+        }
+        setActiveTab(tab);
     };
 
     const handleTutorialStart = (diff: Difficulty) => {
@@ -365,7 +408,17 @@ export const App: React.FC = () => {
                         case GameType.LAZARUS_VECTOR: return <LazarusVector {...baseProps} />;
                         case GameType.VERITAS_FALLS: return <VeritasFalls {...baseProps} />;
                         case GameType.AETHELRED_GAMBIT: return <AethelredGambit {...baseProps} />;
-                        default: return <div className="text-white p-10">Game Module Not Loaded</div>;
+                        case GameType.QUANTUM_QUBIT: return <QuantumQubit {...baseProps} />;
+                        case GameType.NEURAL_PRISM: return <NeuralPrism {...baseProps} />;
+                        case GameType.SYNAPSE_SURGE: return <SynapseSurge {...baseProps} />;
+                        case GameType.DEEPFAKE_DEFLECTOR: return <DeepfakeDeflector {...baseProps} />;
+                        case GameType.ORACLE_INDEX: return <OracleIndex {...baseProps} />;
+                        case GameType.CHAOS_ENGINEERING: return <ChaosEngineering {...baseProps} />;
+                        case GameType.TURING_TESSELLATION: return <TuringTessellation {...baseProps} />;
+                        case GameType.DATA_HEIST: return <DataHeist {...baseProps} />;
+                        case GameType.PROMPT_SCULPTOR: return <PromptSculptor {...baseProps} />;
+                        case GameType.SINGULARITY_CORE: return <SingularityCore {...baseProps} />;
+                        default: return <div className="text-white p-8">Game not implemented yet.</div>;
                     }
                 })()}
             </ErrorBoundary>
@@ -374,6 +427,23 @@ export const App: React.FC = () => {
 
     if (isPreloading) {
         return <Preloader assets={PRELOAD_ASSETS} onComplete={() => setIsPreloading(false)} />;
+    }
+
+    // Viral Mini Games Unauthenticated Routing
+    const path = window.location.pathname;
+    const redirectToOnboarding = () => {
+        // Redirct with a query parameter to automatically open the Auth Modal / Onboarding
+        window.location.href = '/?viral=true';
+    };
+
+    if (path === '/play/neural-hack') {
+        return <ViralNeuralHack onComplete={redirectToOnboarding} />;
+    }
+    if (path === '/play/latency-tunnel') {
+        return <ViralLatencyTunnel onComplete={redirectToOnboarding} />;
+    }
+    if (path === '/play/chaos-defense') {
+        return <ViralChaosDefense onComplete={redirectToOnboarding} />;
     }
 
     if (showEpicOnboarding) {
@@ -513,7 +583,7 @@ export const App: React.FC = () => {
                     </div>
 
                     {user.role === 'admin' && (
-                        <Button fullWidth variant="danger" onClick={() => { setShowSettings(false); setActiveTab(AppTab.ADMIN); }}>
+                        <Button fullWidth variant="danger" onClick={() => { setShowSettings(false); handleTabSwitch(AppTab.ADMIN); }}>
                             {t('settings.admin_console')}
                         </Button>
                     )}
@@ -530,7 +600,7 @@ export const App: React.FC = () => {
                     {[AppTab.HOME, AppTab.LEARN, AppTab.LAB, AppTab.LEADERBOARD, AppTab.PROFILE].map(tab => (
                         <button
                             key={tab}
-                            onClick={() => setActiveTab(tab)}
+                            onClick={() => handleTabSwitch(tab)}
                             className={`w-full flex items-center px-4 py-3 rounded-lg transition-all ${activeTab === tab ? 'bg-electric text-white shadow-[0_0_15px_rgba(196,95,255,0.3)]' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
                         >
                             {tab === AppTab.HOME && <img src="/assets/aaa/nav-home.png" className="w-5 h-5 mr-3" />}
@@ -569,7 +639,7 @@ export const App: React.FC = () => {
                         <button onClick={() => setShowSettings(true)} className="text-gray-400 hover:text-white">
                             <Settings size={20} />
                         </button>
-                        <img src={user.avatar} className="w-8 h-8 rounded-full" onClick={() => setActiveTab(AppTab.PROFILE)} />
+                        <img src={user.avatar} className="w-8 h-8 rounded-full cursor-pointer" onClick={() => handleTabSwitch(AppTab.PROFILE)} />
                     </div>
                 </div>
 
@@ -620,7 +690,7 @@ export const App: React.FC = () => {
 
                                     {/* Next Unlock Widget */}
                                     {nextLockedTool && (
-                                        <div className="bg-black/60 border-t border-white/5 p-4 flex items-center justify-between backdrop-blur-md cursor-pointer hover:bg-white/5 transition-colors group/unlock" onClick={() => setActiveTab(AppTab.LAB)}>
+                                        <div className="bg-black/60 border-t border-white/5 p-4 flex items-center justify-between backdrop-blur-md cursor-pointer hover:bg-white/5 transition-colors group/unlock" onClick={() => handleTabSwitch(AppTab.LAB)}>
                                             <div className="flex items-center space-x-4">
                                                 <div className="p-2 bg-gray-800 rounded-lg border border-gray-700 group-hover/unlock:border-electric transition-colors">
                                                     <Lock size={18} className="text-gray-500 group-hover/unlock:text-electric" />
@@ -673,7 +743,7 @@ export const App: React.FC = () => {
                                 </div>
 
                                 {/* Continue Learning Path Link */}
-                                <div className="mt-8 p-6 bg-gradient-to-r from-blue-900/40 to-purple-900/40 rounded-2xl border border-white/10 flex flex-col md:flex-row items-center justify-between gap-4 group cursor-pointer hover:border-electric transition-all" onClick={() => setActiveTab(AppTab.LEARN)}>
+                                <div className="mt-8 p-6 bg-gradient-to-r from-blue-900/40 to-purple-900/40 rounded-2xl border border-white/10 flex flex-col md:flex-row items-center justify-between gap-4 group cursor-pointer hover:border-electric transition-all" onClick={() => handleTabSwitch(AppTab.LEARN)}>
                                     <div className="flex items-center space-x-4">
                                         <div className="p-3 bg-electric/20 rounded-full border border-electric/50 text-electric group-hover:scale-110 transition-transform">
                                             <BookOpen size={24} />

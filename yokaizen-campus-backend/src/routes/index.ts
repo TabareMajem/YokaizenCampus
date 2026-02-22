@@ -10,6 +10,7 @@ import parentRoutes from './parent.routes';
 import athenaRoutes from './athena.routes';
 import gamificationRoutes from './gamification.routes';
 import adminRoutes from './admin.routes';
+import momentaicRoutes from './momentaic.routes';
 
 const router = Router();
 
@@ -34,6 +35,7 @@ router.use('/parent', parentRoutes);
 router.use('/athena', athenaRoutes);
 router.use('/gamification', gamificationRoutes);
 router.use('/admin', adminRoutes);
+router.use('/momentaic', momentaicRoutes);
 
 // 404 handler for API routes
 router.use('*', (req, res) => {

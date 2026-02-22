@@ -104,7 +104,7 @@ export class GamificationService {
         data: {
           userId,
           unlockedNodes: ['SCOUT'],
-          stats: getDefaultCareerStats(),
+          stats: getDefaultCareerStats() as any,
           achievements: [],
           chaosEventsSurvived: 0,
         },
@@ -115,7 +115,7 @@ export class GamificationService {
       id: careerPath.id,
       userId: careerPath.userId,
       unlockedNodes: careerPath.unlockedNodes,
-      stats: careerPath.stats as CareerStats,
+      stats: careerPath.stats as any,
       achievements: careerPath.achievements,
       chaosEventsSurvived: careerPath.chaosEventsSurvived,
     };
@@ -160,7 +160,7 @@ export class GamificationService {
 
     await prisma.careerPath.update({
       where: { userId },
-      data: { stats: updatedStats },
+      data: { stats: updatedStats as any },
     });
 
     // Handle level up
@@ -291,7 +291,7 @@ export class GamificationService {
     const careerPath = await this.getCareerPath(userId);
 
     if (careerPath.unlockedNodes.includes(agentType)) {
-      return { success: false, alreadyUnlocked: true, xpGained: 0 };
+      return { alreadyUnlocked: true, xpGained: 0 };
     }
 
     await prisma.careerPath.update({
@@ -307,7 +307,6 @@ export class GamificationService {
     const xpResult = await this.awardXP(userId, 'COMPLETE_QUEST', 100);
 
     return {
-      success: true,
       alreadyUnlocked: false,
       xpGained: xpResult.xpGained,
     };

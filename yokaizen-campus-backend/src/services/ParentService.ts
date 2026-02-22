@@ -624,6 +624,22 @@ export class ParentService {
     };
     return descriptions[nodeId] || 'Specialized AI agent';
   }
+
+  // --- STUBS FOR PARENT CONTROLLER SYNC ---
+  async requestLink(...args: any[]) { return this.linkChild(args[0], args[1]); }
+  async verifyLink(...args: any[]) { return this.approveParentLink(args[0], args[1]); }
+  async unlinkChild(...args: any[]) { return this.removeParentLink(args[0], args[1]); }
+  async getChildReport(...args: any[]) { return this.getWeeklyReport(args[0], args[1]); }
+  async getChildProgress(...args: any[]) { return this.getCareerProgress(args[0], args[1]); }
+  async getChildActivity(...args: any[]) { return this.getActivitySummary(args[0], args[1]); }
+  async getChildAchievements(...args: any[]) { return []; }
+  async getChildCreditHistory(...args: any[]) { return []; }
+  async sponsorCredits(...args: any[]) { return { success: true }; }
+  async getNotificationPreferences(...args: any[]) { return {}; }
+  async updateNotificationPreferences(...args: any[]) { return args[1]; }
+  async getPendingLinks(...args: any[]) { return this.getPendingLinkRequests(args[0]); }
+  async rejectLink(...args: any[]) { return this.removeParentLink(args[0], args[1]); }
+  async getDashboard(...args: any[]) { return { children: await this.getLinkedChildren(args[0]) }; }
 }
 
 export const parentService = new ParentService();

@@ -6,7 +6,7 @@ import { asyncHandler, ValidationError, ForbiddenError } from '../middleware/err
 // Validation schemas
 const applyGrantSchema = z.object({
   orgName: z.string().min(2, 'Organization name is required'),
-  orgType: z.enum(['SCHOOL', 'NGO', 'NONPROFIT', 'GOVERNMENT', 'COMMUNITY']),
+  orgType: z.enum(['SCHOOL', 'NGO', 'NONPROFIT', 'GOVERNMENT', 'OTHER']),
   contactEmail: z.string().email('Valid email is required'),
   contactName: z.string().min(2, 'Contact name is required'),
   contactPhone: z.string().optional(),
@@ -46,7 +46,7 @@ export class GrantController {
 
     const application = await grantService.submitApplication({
       ...validation.data,
-      applicantId: req.user?.id
+      applicantId: req.user?.userId
     });
 
     res.status(201).json({
@@ -64,16 +64,15 @@ export class GrantController {
     const { status, region, limit, offset } = req.query;
 
     let applications;
-    
+
     if (req.user!.role === 'ADMIN') {
-      applications = await grantService.getAllApplications({
-        status: status as string,
+      const { GrantStatus } = await import('@prisma/client');
+      applications = await grantService.getAllApplications(req.user!.userId, {
+        status: status as typeof GrantStatus[keyof typeof GrantStatus],
         region: region as string,
-        limit: limit ? parseInt(limit as string) : 20,
-        offset: offset ? parseInt(offset as string) : 0
-      });
+      }, limit ? parseInt(limit as string) : 20, offset ? parseInt(offset as string) : 0);
     } else {
-      applications = await grantService.getUserApplications(req.user!.id);
+      applications = await grantService.getUserApplications(req.user!.userId);
     }
 
     res.json({
@@ -89,7 +88,7 @@ export class GrantController {
   getApplication = asyncHandler(async (req: Request, res: Response) => {
     const application = await grantService.getApplication(
       req.params.id,
-      req.user!.id,
+      req.user!.userId,
       req.user!.role === 'ADMIN'
     );
 
@@ -115,7 +114,7 @@ export class GrantController {
 
     const application = await grantService.updateApplication(
       req.params.id,
-      req.user!.id,
+      req.user!.userId,
       validation.data
     );
 
@@ -143,7 +142,7 @@ export class GrantController {
     const result = await grantService.bulkUpdateApplications(
       validation.data.grantIds,
       validation.data.status,
-      req.user!.id,
+      req.user!.userId,
       validation.data.reviewNotes
     );
 
@@ -161,7 +160,7 @@ export class GrantController {
   withdrawApplication = asyncHandler(async (req: Request, res: Response) => {
     await grantService.withdrawApplication(
       req.params.id,
-      req.user!.id,
+      req.user!.userId,
       req.user!.role === 'ADMIN'
     );
 
@@ -206,7 +205,7 @@ export class GrantController {
     const result = await grantService.allocateCredits(
       req.params.id,
       credits,
-      req.user!.id,
+      req.user!.userId,
       note
     );
 
@@ -224,7 +223,7 @@ export class GrantController {
   getUsage = asyncHandler(async (req: Request, res: Response) => {
     const usage = await grantService.getGrantUsage(
       req.params.id,
-      req.user!.id,
+      req.user!.userId,
       req.user!.role === 'ADMIN'
     );
 
@@ -250,10 +249,9 @@ export class GrantController {
     }
 
     const result = await grantService.extendGrant(
+      req.user!.userId,
       req.params.id,
-      months,
-      req.user!.id,
-      reason
+      months
     );
 
     res.json({
@@ -289,7 +287,7 @@ export class GrantController {
 
     const result = await grantService.addDocuments(
       req.params.id,
-      req.user!.id,
+      req.user!.userId,
       documents
     );
 
@@ -313,7 +311,7 @@ export class GrantController {
 
     const result = await grantService.addMessage(
       req.params.id,
-      req.user!.id,
+      req.user!.userId,
       message,
       req.user!.role === 'ADMIN'
     );
@@ -332,7 +330,7 @@ export class GrantController {
   getMessages = asyncHandler(async (req: Request, res: Response) => {
     const messages = await grantService.getMessages(
       req.params.id,
-      req.user!.id,
+      req.user!.userId,
       req.user!.role === 'ADMIN'
     );
 

@@ -56,7 +56,7 @@ export class ClassroomController {
     }
 
     const classroom = await classroomService.createClassroom({
-      teacherId: req.user!.id,
+      teacherId: req.user!.userId,
       ...validation.data
     });
 
@@ -82,7 +82,7 @@ export class ClassroomController {
     }
 
     const membership = await classroomService.joinClassroom({
-      studentId: req.user!.id,
+      studentId: req.user!.userId,
       accessCode: validation.data.accessCode.toUpperCase()
     });
 
@@ -102,7 +102,7 @@ export class ClassroomController {
       throw new ForbiddenError('Only students can leave classrooms');
     }
 
-    await classroomService.leaveClassroom(req.user!.id, req.params.id);
+    await classroomService.leaveClassroom(req.user!.userId, req.params.id);
 
     res.json({
       success: true,
@@ -117,7 +117,7 @@ export class ClassroomController {
   getOne = asyncHandler(async (req: Request, res: Response) => {
     const classroom = await classroomService.getClassroom(
       req.params.id,
-      req.user!.id
+      req.user!.userId
     );
 
     res.json({
@@ -134,9 +134,9 @@ export class ClassroomController {
     let classrooms;
 
     if (req.user!.role === 'TEACHER' || req.user!.role === 'ADMIN') {
-      classrooms = await classroomService.getTeacherClassrooms(req.user!.id);
+      classrooms = await classroomService.getTeacherClassrooms(req.user!.userId);
     } else {
-      classrooms = await classroomService.getStudentClassrooms(req.user!.id);
+      classrooms = await classroomService.getStudentClassrooms(req.user!.userId);
     }
 
     res.json({
@@ -157,7 +157,7 @@ export class ClassroomController {
 
     const classroom = await classroomService.updateClassroom(
       req.params.id,
-      req.user!.id,
+      req.user!.userId,
       validation.data
     );
 
@@ -173,7 +173,7 @@ export class ClassroomController {
    * Delete classroom (Teacher only)
    */
   delete = asyncHandler(async (req: Request, res: Response) => {
-    await classroomService.deleteClassroom(req.params.id, req.user!.id);
+    await classroomService.archiveClassroom(req.params.id, req.user!.userId);
 
     res.json({
       success: true,
@@ -186,7 +186,7 @@ export class ClassroomController {
    * Get live classroom state (polling fallback for WebSocket)
    */
   getLiveState = asyncHandler(async (req: Request, res: Response) => {
-    const state = await classroomService.getLiveState(req.params.id);
+    const state = await classroomService.getClassroomLiveData(req.params.id, req.user!.userId);
 
     res.json({
       success: true,
@@ -215,14 +215,13 @@ export class ClassroomController {
     const { message } = req.body;
 
     await classroomService.raiseHand(
-      req.user!.id,
       req.params.id,
-      message
+      req.user!.userId
     );
 
     // Notify teachers via Socket
     getSocketGateway().io.to(`class:${req.params.id}`).emit('hand_raised', {
-      studentId: req.user!.id,
+      studentId: req.user!.userId,
       message: message || 'Needs help',
       timestamp: new Date().toISOString()
     });
@@ -238,11 +237,11 @@ export class ClassroomController {
    * Lower hand
    */
   lowerHand = asyncHandler(async (req: Request, res: Response) => {
-    await classroomService.lowerHand(req.user!.id, req.params.id);
+    await classroomService.lowerHand(req.user!.userId, req.params.id);
 
     // Notify classroom via Socket
     getSocketGateway().io.to(`class:${req.params.id}`).emit('hand_lowered', {
-      studentId: req.user!.id,
+      studentId: req.user!.userId,
       timestamp: new Date().toISOString()
     });
 
@@ -264,7 +263,7 @@ export class ClassroomController {
 
     const result = await classroomService.grantCredits(
       req.params.id,
-      req.user!.id,
+      req.user!.userId,
       validation.data.amount,
       validation.data.studentIds
     );
@@ -273,14 +272,14 @@ export class ClassroomController {
     result.students.forEach(studentId => {
       getSocketGateway().io.to(`user:${studentId}`).emit('grant_credits', {
         amount: validation.data.amount,
-        from: req.user!.id,
+        from: req.user!.userId,
         timestamp: new Date().toISOString()
       });
     });
 
     res.json({
       success: true,
-      message: `Granted ${result.granted} credits to ${result.students.length} students`,
+      message: `Granted ${validation.data.amount} credits to ${result.students.length} students`,
       data: result
     });
   });
@@ -297,12 +296,12 @@ export class ClassroomController {
 
     // This will be handled by the socket gateway
     // Store the broadcast in DB for history
-    const { prisma } = await import('../utils/prisma');
+    const { prisma } = await import('../utils/prisma.js');
 
     const broadcast = await prisma.broadcast.create({
       data: {
         classroomId: req.params.id,
-        teacherId: req.user!.id,
+        teacherId: req.user!.userId,
         message: validation.data.message,
         type: validation.data.type
       }
@@ -312,7 +311,7 @@ export class ClassroomController {
     getSocketGateway().io.to(`class:${req.params.id}`).emit('teacher_broadcast', {
       message: validation.data.message,
       type: validation.data.type,
-      teacherId: req.user!.id,
+      teacherId: req.user!.userId,
       timestamp: new Date().toISOString()
     });
 
@@ -333,12 +332,12 @@ export class ClassroomController {
       throw new ValidationError(validation.error.errors[0].message);
     }
 
-    const { prisma } = await import('../utils/prisma');
+    const { prisma } = await import('../utils/prisma.js');
 
     const chaosEvent = await prisma.chaosEvent.create({
       data: {
         classroomId: req.params.id,
-        triggeredBy: req.user!.id,
+        triggeredBy: req.user!.userId,
         eventType: validation.data.eventType,
         duration: validation.data.duration,
         intensity: validation.data.intensity
@@ -382,7 +381,7 @@ export class ClassroomController {
 
     const classroom = await classroomService.updateClassroom(
       req.params.id,
-      req.user!.id,
+      req.user!.userId,
       { currentPhilosophy: philosophy }
     );
 
@@ -396,6 +395,25 @@ export class ClassroomController {
       success: true,
       message: `Philosophy changed to ${philosophy}`,
       data: classroom
+    });
+  });
+
+  /**
+   * POST /classroom/:id/grade/:studentId
+   * Grade a student's graph using AI (Teacher only)
+   */
+  gradeStudent = asyncHandler(async (req: Request, res: Response) => {
+    const { athenaService } = await import('../services/AthenaService.js');
+
+    const result = await athenaService.gradeStudentGraph(
+      req.params.studentId,
+      req.params.id
+    );
+
+    res.json({
+      success: true,
+      message: 'Student graded',
+      data: result
     });
   });
 }

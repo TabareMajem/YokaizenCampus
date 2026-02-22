@@ -18,8 +18,9 @@ module.exports = {
             name: 'ailabs-frontend',
             cwd: '/var/www/yokaizen-ailabs/frontend',
             script: 'npx',
-            args: 'serve -s dist -l 7791',
+            args: 'serve -s dist -l tcp://127.0.0.1:7791',
             instances: 1,
+            exec_mode: 'fork',
             autorestart: true
         },
         {
@@ -40,8 +41,9 @@ module.exports = {
             name: 'campus-frontend',
             cwd: '/var/www/yokaizen-campus/frontend',
             script: 'npx',
-            args: 'serve -s dist -l 7787',
+            args: 'serve -s dist -l tcp://127.0.0.1:7787',
             instances: 1,
+            exec_mode: 'fork',
             autorestart: true
         }
     ]

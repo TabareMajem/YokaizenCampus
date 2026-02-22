@@ -6,7 +6,7 @@ const router = Router();
 
 // All routes require authentication and teacher role
 router.use(authenticate);
-router.use(requireRole(['TEACHER', 'ADMIN']));
+router.use(requireRole('TEACHER', 'ADMIN'));
 
 // Teacher dashboard
 router.get('/dashboard', athenaController.getDashboard);
@@ -36,6 +36,6 @@ router.post('/classroom/:id/intervention', athenaController.logIntervention);
 router.get('/export/:classroomId', athenaController.exportData);
 
 // School-wide (admin only)
-router.get('/school', requireRole(['ADMIN']), athenaController.getSchoolAnalytics);
+router.get('/school', requireRole('ADMIN'), athenaController.getSchoolAnalytics);
 
 export default router;

@@ -12,7 +12,14 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 
 const AppContent: React.FC = () => {
   const { user, isLoading, logout } = useAuth();
-  const [philosophyMode, setPhilosophyMode] = useState<PhilosophyMode>(PhilosophyMode.JAPAN);
+  const [philosophyMode, setPhilosophyModeState] = useState<PhilosophyMode>(() => {
+    return (localStorage.getItem('app_philosophy_mode') as PhilosophyMode) || PhilosophyMode.JAPAN;
+  });
+
+  const setPhilosophyMode = (mode: PhilosophyMode) => {
+    setPhilosophyModeState(mode);
+    localStorage.setItem('app_philosophy_mode', mode);
+  };
 
   // Initialize language from local storage or default to English
   const [language, setLanguage] = useState<Language>(() => {

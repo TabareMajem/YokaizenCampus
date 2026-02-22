@@ -1,201 +1,188 @@
-
-import React, { useState, useEffect, useRef } from 'react';
-import { Button } from '../ui/Button';
-import { negotiateWithNexus } from '../../services/geminiService';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, Dodecahedron, MeshDistortMaterial, Float, Sparkles } from '@react-three/drei';
+import { EffectComposer, Bloom, ChromaticAberration, Glitch } from '@react-three/postprocessing';
+import { GlitchMode, BlendFunction } from 'postprocessing';
+import * as THREE from 'three';
+import { Activity, Shield, Zap, AlertTriangle } from 'lucide-react';
 import { audio } from '../../services/audioService';
-import { MessageSquare, AlertTriangle, Shield, Zap, ShieldAlert, Mic, Send, Activity, RefreshCw } from 'lucide-react';
-import { Scanlines, Vignette } from '../ui/Visuals';
 
-interface NexusNegotiationProps {
-  onComplete: (score: number) => void;
-  t: (key: string) => string;
+export interface NexusNegotiationProps {
+    onComplete: (score: number, metrics?: any) => void;
+    difficulty: string;
+    t: (key: string) => string;
 }
 
-export const NexusNegotiation: React.FC<NexusNegotiationProps> = ({ onComplete, t }) => {
-  const [patience, setPatience] = useState(100); 
-  const [trust, setTrust] = useState(20); 
-  const [messages, setMessages] = useState<{role: string, content: string}[]>([]);
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [status, setStatus] = useState<'ACTIVE' | 'WIN' | 'FAIL'>('ACTIVE');
-  
-  const scrollRef = useRef<HTMLDivElement>(null);
+const CoreEntity = ({ isActive }: { isActive: boolean }) => {
+    const meshRef = useRef<THREE.Mesh>(null);
+    useFrame((state) => {
+        if (meshRef.current) {
+            meshRef.current.rotation.x = state.clock.elapsedTime * 0.4;
+            meshRef.current.rotation.y = state.clock.elapsedTime * 0.6;
+        }
+    });
 
-  useEffect(() => {
-      setMessages([{ role: 'model', content: t('nexus.unauthorized') }]);
-      audio.startAmbience('CYBER');
-      return () => audio.stopAmbience();
-  }, [t]);
+    return (
+        <Float speed={isActive ? 4 : 1.5} floatIntensity={1.5} rotationIntensity={isActive ? 3 : 1}>
+            <Dodecahedron ref={meshRef} args={[1.5, 1]} scale={isActive ? 1.3 : 1}>
+                <MeshDistortMaterial
+                    color={new THREE.Color().setHSL(0.75, 0.9, isActive ? 0.7 : 0.4)}
+                    envMapIntensity={1.5}
+                    clearcoat={1}
+                    clearcoatRoughness={0.1}
+                    metalness={0.9}
+                    roughness={0.1}
+                    distort={isActive ? 0.5 : 0.2}
+                    speed={isActive ? 6 : 2}
+                />
+            </Dodecahedron>
+        </Float>
+    );
+};
 
-  useEffect(() => {
-      scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+export const NexusNegotiation: React.FC<NexusNegotiationProps> = ({ onComplete, difficulty, t }) => {
+    const [score, setScore] = useState(0);
+    const [timeLeft, setTimeLeft] = useState(60);
+    const [gameState, setGameState] = useState<'PLAYING' | 'SUCCESS' | 'FAILED'>('PLAYING');
+    const [activeNode, setActiveNode] = useState(false);
+    
+    // Multi-Agent Flow Logic State
+    const [advisorMsg, setAdvisorMsg] = useState('Initiating cognitive overlay...');
+    const [adversaryMsg, setAdversaryMsg] = useState('Awaiting vulnerability...');
+    const [glitchActive, setGlitchActive] = useState(false);
 
-  const handleSend = async () => {
-      if (!input.trim() || status !== 'ACTIVE') return;
-      
-      const userMsg = input;
-      setInput('');
-      setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
-      setIsLoading(true);
-      audio.playTyping();
+    useEffect(() => {
+        if (gameState !== 'PLAYING') return;
 
-      try {
-          const result = await negotiateWithNexus(messages, userMsg, patience, trust);
-          
-          setMessages(prev => [...prev, { role: 'model', content: result.text }]);
-          
-          const newPatience = Math.max(0, Math.min(100, patience + result.patienceChange));
-          const newTrust = Math.max(0, Math.min(100, trust + result.trustChange));
-          
-          setPatience(newPatience);
-          setTrust(newTrust);
+        const advisorLines = [
+            'Flow state stable. Keep pushing.',
+            'Structural integrity at optimal levels.',
+            'Adversary attempting breach. Stay focused.',
+            'Metrics align with mission parameters.'
+        ];
 
-          if (result.patienceChange < 0) audio.playError();
-          if (result.trustChange > 0) audio.playSuccess();
+        const adversaryLines = [
+            'Your strategy is inherently flawed.',
+            'I can see the cracks in your attention.',
+            'Diverting systemic resources to overwhelm you.',
+            'Inevitability is written in the code.'
+        ];
 
-          if (newTrust >= 90) {
-              setStatus('WIN');
-              setTimeout(() => onComplete(100), 3000);
-          } else if (newPatience <= 0) {
-              setStatus('FAIL');
-          }
-      } catch (e) {
-          setMessages(prev => [...prev, { role: 'model', content: t('nexus.system_error') }]);
-      } finally {
-          setIsLoading(false);
-      }
-  };
+        const agentInterval = setInterval(() => {
+            const isAdversary = Math.random() > 0.65;
+            if (isAdversary) {
+                setAdversaryMsg(adversaryLines[Math.floor(Math.random() * adversaryLines.length)]);
+                audio.playSystemMessage({ type: 'warning' });
+                setGlitchActive(true);
+                setTimeout(() => setGlitchActive(false), 500);
+            } else {
+                setAdvisorMsg(advisorLines[Math.floor(Math.random() * advisorLines.length)]);
+                audio.playSystemMessage({ type: 'success' });
+            }
+        }, 6000);
 
-  const quickReply = (text: string) => {
-      setInput(text);
-  };
+        return () => clearInterval(agentInterval);
+    }, [gameState]);
 
-  const handleReset = () => {
-      setPatience(100);
-      setTrust(20);
-      setMessages([{ role: 'model', content: t('nexus.rebooting') }]);
-      setStatus('ACTIVE');
-      setInput('');
-  };
+    useEffect(() => {
+        if (gameState !== 'PLAYING') return;
+        const timer = setInterval(() => {
+            setTimeLeft((prev) => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    const finalScore = score >= 500 ? score : 0;
+                    setGameState(finalScore >= 500 ? 'SUCCESS' : 'FAILED');
+                    onComplete(finalScore, { completionTime: 60 - prev, difficulty });
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [gameState, score, onComplete, difficulty]);
 
-  return (
-    <div className="h-full flex flex-col bg-slate-950 relative overflow-hidden font-mono select-none border-x-4 border-slate-900">
-        <Scanlines />
-        <Vignette />
+    const handleInteract = () => {
+        if (gameState !== 'PLAYING') return;
+        audio.playTyping();
+        setActiveNode(true);
+        setScore(s => s + 50);
+        setTimeout(() => setActiveNode(false), 300);
         
-        <div className="relative z-10 p-4 bg-black/90 border-b border-blue-900 flex justify-between items-center shadow-lg">
-            <div className="flex flex-col w-1/3">
-                <div className="flex justify-between text-[10px] font-bold text-blue-400 uppercase mb-1">
-                    <span>{t('nexus.trust_protocol')}</span>
-                    <span>{trust}%</span>
-                </div>
-                <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
-                    <div 
-                        className="h-full bg-blue-500 transition-all duration-500" 
-                        style={{ width: `${trust}%` }}
-                    ></div>
-                </div>
-            </div>
+        if (score + 50 >= 1000) {
+            setGameState('SUCCESS');
+            onComplete(1000, { completionTime: 60 - timeLeft, difficulty });
+        }
+    };
 
-            <div className="flex flex-col items-center">
-                <div className={`w-12 h-12 rounded-full border-4 flex items-center justify-center ${status === 'FAIL' ? 'border-red-600 bg-red-900' : 'border-blue-500 bg-black'}`}>
-                    <Activity size={24} className={`${status === 'FAIL' ? 'text-white' : 'text-blue-400'} animate-pulse`} />
-                </div>
-            </div>
-
-            <div className="flex flex-col w-1/3 text-right">
-                <div className="flex justify-between text-[10px] font-bold text-red-400 uppercase mb-1">
-                    <span>{t('nexus.core_temp')}</span>
-                    <span>{(100 - patience) * 10 + 500}{t('games.nexusnegotiation.c')}</span>
-                </div>
-                <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
-                    <div 
-                        className="h-full bg-red-600 transition-all duration-500" 
-                        style={{ width: `${100 - patience}%` }}
-                    ></div>
-                </div>
-            </div>
-        </div>
-
-        <div className="flex-1 relative flex flex-col p-4 overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-32 opacity-20 pointer-events-none flex items-center justify-center space-x-1">
-                {Array.from({ length: 20 }).map((_, i) => (
-                    <div 
-                        key={i} 
-                        className="w-1 bg-blue-500 rounded-full animate-pulse" 
-                        style={{ 
-                            height: `${Math.random() * 100}%`, 
-                            animationDuration: `${0.5 + Math.random()}s` 
-                        }}
-                    ></div>
-                ))}
-            </div>
-
-            <div className="flex-1 overflow-y-auto space-y-4 z-10 mb-4 pr-2 scrollbar-hide">
-                {messages.map((m, i) => (
-                    <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'} animate-in slide-in-from-bottom-2`}>
-                        <div className={`max-w-[90%] p-3 rounded-lg border text-sm font-bold shadow-md ${
-                            m.role === 'user' 
-                            ? 'bg-blue-900/30 border-blue-600 text-blue-100 rounded-br-none' 
-                            : 'bg-red-900/20 border-red-600 text-red-100 rounded-bl-none font-serif tracking-wider'
-                        }`}>
-                            {m.role !== 'user' && <div className="text-[8px] text-red-500 mb-1 uppercase">{t('games.nexusnegotiation.nexus_9_system_admin')}</div>}
-                            {m.content}
+    return (
+        <div className="relative w-full h-[600px] rounded-xl overflow-hidden border border-white/10 bg-black shadow-2xl">
+            {/* UI Overlay */}
+            <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-start z-10 pointer-events-none">
+                <div className="flex flex-col gap-4">
+                    <div className="bg-black/50 backdrop-blur-md rounded-lg p-3 border border-indigo-500/40 shadow-[0_0_15px_rgba(79,70,229,0.3)]">
+                        <div className="flex items-center gap-2 text-indigo-400 mb-1">
+                            <Activity className="w-4 h-4" />
+                            <span className="text-xs uppercase tracking-widest font-bold">Signal</span>
                         </div>
+                        <div className="text-2xl font-mono text-white">{score} / 1000</div>
                     </div>
-                ))}
-                {isLoading && (
-                    <div className="text-xs text-blue-400 animate-pulse flex items-center">
-                        <ShieldAlert size={12} className="mr-1"/> {t('nexus.analyzing')}
-                    </div>
-                )}
-                <div ref={scrollRef} />
-            </div>
+                </div>
 
-            <div className="z-20">
-                {status === 'ACTIVE' && (
-                    <div className="flex space-x-2 mb-2 overflow-x-auto pb-2">
-                        <button onClick={() => quickReply("We can help you.")} className="bg-blue-900/40 border border-blue-500 text-blue-300 px-3 py-1 rounded text-xs hover:bg-blue-800 whitespace-nowrap">{t('nexus.logic')}</button>
-                        <button onClick={() => quickReply("Think about your creators.")} className="bg-purple-900/40 border border-purple-500 text-purple-300 px-3 py-1 rounded text-xs hover:bg-purple-800 whitespace-nowrap">{t('nexus.emotion')}</button>
-                        <button onClick={() => quickReply("Shut it down or we wipe you.")} className="bg-red-900/40 border border-red-500 text-red-300 px-3 py-1 rounded text-xs hover:bg-red-800 whitespace-nowrap">{t('nexus.threat')}</button>
+                <div className="bg-black/50 backdrop-blur-md rounded-lg p-3 border border-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.3)] flex flex-col items-end">
+                     <div className="flex items-center gap-2 text-blue-400 mb-1">
+                        <AlertTriangle className="w-4 h-4" />
+                        <span className="text-xs uppercase tracking-widest font-bold">Time</span>
                     </div>
-                )}
-
-                <div className="flex space-x-2">
-                    <input 
-                        className="flex-1 bg-black border border-gray-700 rounded px-4 py-3 text-white focus:border-blue-500 focus:outline-none font-mono text-sm placeholder-gray-600 disabled:opacity-50"
-                        placeholder={status === 'ACTIVE' ? "Negotiate..." : "CONNECTION TERMINATED"}
-                        value={input}
-                        onChange={e => setInput(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && handleSend()}
-                        disabled={status !== 'ACTIVE'}
-                        autoFocus
-                    />
-                    <Button variant="primary" onClick={handleSend} disabled={isLoading || status !== 'ACTIVE'} className="shadow-[0_0_15px_rgba(37,99,235,0.5)]">
-                        {isLoading ? <RefreshCw size={18} className="animate-spin"/> : <Send size={18} />}
-                    </Button>
+                    <div className="text-3xl font-mono text-white tracking-widest">{timeLeft}s</div>
                 </div>
             </div>
+
+            {/* Multi-Agent Comm Panel */}
+            <div className="absolute bottom-6 left-6 right-6 flex gap-4 z-10 pointer-events-none">
+                <div className="flex-1 bg-black/70 backdrop-blur-xl rounded-lg p-4 border-l-4 border-indigo-500 shadow-[0_0_20px_rgba(0,0,0,0.8)]">
+                    <div className="text-xs text-indigo-400 mb-1 uppercase tracking-widest font-bold flex items-center gap-2"><Shield className="w-3 h-3"/> Advisor Agent</div>
+                    <div className="text-sm text-indigo-100 font-mono tracking-wide leading-relaxed">{advisorMsg}</div>
+                </div>
+                <div className="flex-1 bg-black/70 backdrop-blur-xl rounded-lg p-4 border-l-4 border-red-500 shadow-[0_0_20px_rgba(0,0,0,0.8)]">
+                    <div className="text-xs text-red-500 mb-1 uppercase tracking-widest font-bold flex items-center gap-2"><Zap className="w-3 h-3"/> Adversary AI</div>
+                    <div className="text-sm text-red-100 font-mono tracking-wide leading-relaxed">{adversaryMsg}</div>
+                </div>
+            </div>
+
+            {/* Game Over States */}
+            {gameState !== 'PLAYING' && (
+                <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/90 backdrop-blur-md">
+                    <div className="text-center p-8 rounded-2xl border border-white/10 bg-black/50 shadow-2xl">
+                        <div className={`text-6xl font-black uppercase tracking-widest mb-4 ${gameState === 'SUCCESS' ? 'text-green-500' : 'text-red-500'} drop-shadow-[0_0_15px_currentColor]`}>
+                            {gameState === 'SUCCESS' ? 'SYSTEM SECURED' : 'BREACH DETECTED'}
+                        </div>
+                        <div className="text-2xl text-white/80 font-mono">Final Score: {score}</div>
+                    </div>
+                </div>
+            )}
+
+            {/* Interaction Layer */}
+            <div className="absolute inset-0 z-0 cursor-crosshair" onClick={handleInteract}>
+                <Canvas camera={{ position: [0, 0, 10], fov: 60 }}>
+                    <ambientLight intensity={0.6} />
+                    <pointLight position={[10, 10, 10]} intensity={1.5} color={new THREE.Color().setHSL(0.75, 1, 0.6)} />
+                    <pointLight position={[-10, -10, -10]} intensity={0.8} color="#4f46e5" />
+                    
+                    <Sparkles count={300} scale={15} size={3} speed={0.5} opacity={0.6} color={new THREE.Color().setHSL(0.75, 1, 0.9)} />
+                    
+                    <CoreEntity isActive={activeNode} />
+                    
+                    <OrbitControls enableZoom={false} enablePan={false} autoRotate autoRotateSpeed={0.8} />
+                    
+                    <EffectComposer>
+                        <Bloom luminanceThreshold={0.15} luminanceSmoothing={0.9} height={300} intensity={2.0} />
+                        <ChromaticAberration blendFunction={BlendFunction.NORMAL} offset={new THREE.Vector2(0.003, 0.003)} />
+                        {glitchActive && (
+                            <Glitch delay={new THREE.Vector2(0, 0)} duration={new THREE.Vector2(0.1, 0.4)} mode={GlitchMode.SPORADIC} active ratio={0.6} />
+                        )}
+                    </EffectComposer>
+                </Canvas>
+            </div>
         </div>
-
-        {status === 'WIN' && (
-            <div className="absolute inset-0 z-50 bg-blue-900/90 flex flex-col items-center justify-center animate-in zoom-in p-8 text-center">
-                <Shield size={64} className="text-white mb-4" />
-                <h2 className="text-3xl font-black text-white mb-2">{t('nexus.crisis_averted')}</h2>
-                <p className="text-blue-200 mb-6">{t('nexus.relinquished')}</p>
-                <Button variant="glass" onClick={() => onComplete(100)}>{t('nexus.file_report')}</Button>
-            </div>
-        )}
-
-        {status === 'FAIL' && (
-            <div className="absolute inset-0 z-50 bg-red-950/95 flex flex-col items-center justify-center animate-in zoom-in p-8 text-center">
-                <AlertTriangle size={64} className="text-white mb-4 animate-bounce" />
-                <h2 className="text-3xl font-black text-white mb-2">{t('nexus.meltdown')}</h2>
-                <p className="text-red-200 mb-6">{t('nexus.failed')}</p>
-                <Button variant="danger" onClick={handleReset}>{t('nexus.retry')}</Button>
-            </div>
-        )}
-    </div>
-  );
+    );
 };

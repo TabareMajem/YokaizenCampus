@@ -19,13 +19,13 @@ export const AdminService = {
     return API.admin.deleteUser(userId);
   },
 
-  setSchoolLicense: (key: string) => {
+  setSchoolLicense: async (key: string) => {
     if (key) {
       localStorage.setItem('school_mode', 'true');
-      localStorage.setItem('school_key', key);
+      return API.admin.setSchoolKey(key);
     } else {
       localStorage.setItem('school_mode', 'false');
-      localStorage.removeItem('school_key');
+      return API.admin.setSchoolKey('');
     }
   }
 };

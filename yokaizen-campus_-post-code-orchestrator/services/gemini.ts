@@ -48,13 +48,18 @@ async function generateHybrid(model: string, prompt: string, schema?: any): Prom
     config.responseSchema = schema;
   }
 
-  const response = await ai.models.generateContent({
-    model,
-    contents: prompt,
-    config
-  });
-
-  return response;
+  try {
+    const response = await ai.models.generateContent({
+      model,
+      contents: prompt,
+      config
+    });
+    return response;
+  } catch (error: any) {
+    console.error("[AI Service] Direct AI Call Failed:", error);
+    // Throw a clean string instead of the raw Google error object which can crash the UI component parsing
+    throw new Error(error.status === 429 ? 'RATE_LIMIT_EXCEEDED' : 'API_ERROR');
+  }
 }
 
 export const generateChaosEvent = async (context: string, language: Language): Promise<CollapseEvent> => {
@@ -263,14 +268,16 @@ export const simulateAgentTask = async (agent: AgentNode, inputContext: string, 
 
 export const askAthena = async (action: string, contextData: any, language: Language): Promise<string> => {
   try {
+    const mode = contextData?.mode || 'JAPAN';
     // Use backend for Athena insights
     if (useBackendProxy()) {
       const prompt = `ATHENA insight request: ${action} with context: ${JSON.stringify(contextData)}`;
-      const result = await API.ai.command(prompt, 'JAPAN');
+      const result = await API.ai.command(prompt, mode);
       return typeof result === 'string' ? result : JSON.stringify(result);
     }
 
     const prompt = `You are ATHENA, a high-level AI teaching assistant.
+            Philosophy Mode: ${mode}
             Language: ${language}
             Action Required: ${action}
             Context Data: ${JSON.stringify(contextData)}

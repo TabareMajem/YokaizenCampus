@@ -85,7 +85,7 @@ export class AuthController {
       throw new ValidationError(validation.error.errors[0].message);
     }
 
-    const result = await authService.refreshToken(validation.data.refreshToken);
+    const result = await authService.refresh(validation.data.refreshToken);
 
     res.json({
       success: true,
@@ -116,7 +116,7 @@ export class AuthController {
    * Get current user profile
    */
   getProfile = asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.id;
+    const userId = req.user!.userId;
     const profile = await authService.getProfile(userId);
 
     res.json({
@@ -130,7 +130,7 @@ export class AuthController {
    * Update current user profile
    */
   updateProfile = asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.id;
+    const userId = req.user!.userId;
 
     const validation = updateProfileSchema.safeParse(req.body);
     if (!validation.success) {
@@ -151,7 +151,7 @@ export class AuthController {
    * Change password
    */
   changePassword = asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.id;
+    const userId = req.user!.userId;
 
     const validation = changePasswordSchema.safeParse(req.body);
     if (!validation.success) {
@@ -182,6 +182,10 @@ export class AuthController {
     }
 
     const payload = await authService.verifyToken(token);
+
+    if (!payload) {
+      throw new ValidationError('Invalid or expired token');
+    }
 
     res.json({
       success: true,

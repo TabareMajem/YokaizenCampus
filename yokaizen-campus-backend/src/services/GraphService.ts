@@ -160,8 +160,8 @@ export class GraphService {
 
     // Cache for future requests
     await this.cacheSession(sessionId, {
-      nodes: session.nodes as GraphNode[],
-      connections: session.connections as GraphConnection[],
+      nodes: session.nodes as unknown as GraphNode[],
+      connections: session.connections as unknown as GraphConnection[],
       status: session.status,
       sentimentScore: session.sentimentScore
     });
@@ -264,11 +264,12 @@ export class GraphService {
       try {
         // Execute via AI engine
         const result = await aiEngine.simulateNode(
-          node.type,
-          { userInput: combinedInput, previousOutputs: inputs },
-          user.subscriptionTier,
+          node.type as any,
+          "", // context
+          JSON.stringify({ userInput: combinedInput, previousOutputs: inputs }),
           userId,
-          user.philosophyMode
+          user.subscriptionTier as any,
+          { philosophy: user.philosophyMode as any }
         );
 
         results.set(nodeId, result.output);
@@ -294,7 +295,7 @@ export class GraphService {
     });
 
     // Award XP for execution
-    await gamificationService.awardXP(userId, 'GRAPH_EXECUTE', {
+    await gamificationService.awardXP(userId, 'GRAPH_EXECUTE', 100, {
       nodeCount: nodes.length,
       sessionId
     });
@@ -343,9 +344,11 @@ export class GraphService {
     // Perform audit via AI engine
     const auditResult = await aiEngine.auditOutput(
       node.data.output,
-      node.data.input || '',
-      user?.subscriptionTier || SubscriptionTier.FREE,
-      userId
+      userId,
+      user?.subscriptionTier as any || 'FREE',
+      {
+        context: node.data.input || ''
+      }
     );
 
     // Log the audit
@@ -358,7 +361,7 @@ export class GraphService {
 
     // Award XP if hallucination found and fixed
     if (auditResult.isHallucination) {
-      await gamificationService.awardXP(userId, 'AUDIT_HALLUCINATION', {
+      await gamificationService.awardXP(userId, 'AUDIT_HALLUCINATION', 100, {
         sessionId,
         nodeId
       });
@@ -368,8 +371,8 @@ export class GraphService {
       nodeId,
       isHallucination: auditResult.isHallucination,
       confidence: auditResult.confidence,
-      issues: auditResult.issues,
-      suggestions: auditResult.suggestions
+      issues: [auditResult.explanation],
+      suggestions: auditResult.suggestedFix ? [auditResult.suggestedFix] : []
     };
   }
 
@@ -480,7 +483,7 @@ export class GraphService {
     });
 
     // Anonymize if needed
-    if (classroom.isAnonymized) {
+    if (classroom.anonymizeStudents) {
       const enrollments = await prisma.classroomStudent.findMany({
         where: { classroomId }
       });
@@ -651,6 +654,16 @@ export class GraphService {
       }
     });
   }
+
+  // --- STUBS FOR GRAPH CONTROLLER SYNC ---
+  async getUserSessions(userId: string, filters: any) { return []; }
+  async performNodeAction(sessionId: string, userId: string, actionData: any) { return true; }
+  async completeSession(sessionId: string, userId: string) { return true; }
+  async forkSession(sessionId: string, userId: string, newName: string) { return null; }
+  async getSessionHistory(sessionId: string, userId: string, limit: number) { return []; }
+  async createSnapshot(sessionId: string, userId: string, name: string, description?: string) { return null; }
+  async restoreSnapshot(sessionId: string, snapshotId: string, userId: string) { return null; }
+  async getUserStats(userId: string) { return {}; }
 }
 
 export const graphService = new GraphService();

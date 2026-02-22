@@ -1,199 +1,190 @@
+import React, { useRef, useState, useMemo, useEffect } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, Dodecahedron, MeshDistortMaterial, Float, Text, Trail, Sparkles } from '@react-three/drei';
+import { EffectComposer, Bloom, ChromaticAberration, Glitch } from '@react-three/postprocessing';
+import { GlitchMode, BlendFunction } from 'postprocessing';
+import * as THREE from 'three';
+import { Activity, Shield, Cpu, AlertTriangle, Zap, Terminal } from 'lucide-react';
+import { audio } from '../../services/audioService';
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { Button } from '../ui/Button';
-import { interactWithEntropy, generateMockImage } from '../../services/geminiService';
-import { Box, Zap, Clock, Atom, Wand2 } from 'lucide-react';
-import { Language } from '../../types';
-
-interface EntropySandboxProps {
-    onComplete: (score: number) => void;
+export interface EntropySandboxProps {
+    onComplete: (score: number, metrics?: any) => void;
+    difficulty: string;
     t: (key: string) => string;
-    language?: Language;
 }
 
-export const EntropySandbox: React.FC<EntropySandboxProps> = ({ onComplete, t, language = 'EN' }) => {
-    const PARTS = useMemo(() => [
-        { id: 'gear', name: t('entropy.p_gear'), icon: '⚙️' },
-        { id: 'block', name: t('entropy.p_cube'), icon: '🧊' },
-        { id: 'wheel', name: t('entropy.p_wheel'), icon: '🛞' },
-    ], [t]);
+// Advanced WebGL Node Component
+const CoreEntity = ({ isActive }: { isActive: boolean }) => {
+    const meshRef = useRef<THREE.Mesh>(null);
+    useFrame((state) => {
+        if (meshRef.current) {
+            meshRef.current.rotation.x = state.clock.elapsedTime * 0.5;
+            meshRef.current.rotation.y = state.clock.elapsedTime * 0.3;
+        }
+    });
 
-    const MODIFIERS = useMemo(() => [
-        { id: 'rust', name: t('entropy.m_rust'), desc: t('entropy.d_rust') },
-        { id: 'rubber', name: t('entropy.m_rubber'), desc: t('entropy.d_rubber') },
-        { id: 'zero_g', name: t('entropy.m_zerog'), desc: t('entropy.d_zerog') },
-        { id: 'time_dil', name: t('entropy.m_time'), desc: t('entropy.d_time') },
-    ], [t]);
+    return (
+        <Float speed={2} floatIntensity={1} rotationIntensity={isActive ? 2 : 0.5}>
+            <Dodecahedron ref={meshRef} args={[1.5, 0]} scale={isActive ? 1.2 : 1}>
+                <MeshDistortMaterial
+                    color={new THREE.Color().setHSL(0.9, 0.8, isActive ? 0.6 : 0.3)}
+                    envMapIntensity={1}
+                    clearcoat={1}
+                    clearcoatRoughness={0}
+                    metalness={0.8}
+                    roughness={0.2}
+                    distort={isActive ? 0.4 : 0.1}
+                    speed={isActive ? 5 : 1}
+                />
+            </Dodecahedron>
+        </Float>
+    );
+};
 
-    const [activePart, setActivePart] = useState<typeof PARTS[0] | null>(null);
-    const [selectedMod, setSelectedMod] = useState<typeof MODIFIERS[0] | null>(null);
-    const [time, setTime] = useState(0);
+export const EntropySandbox: React.FC<EntropySandboxProps> = ({ onComplete, difficulty, t }) => {
+    const [score, setScore] = useState(0);
+    const [timeLeft, setTimeLeft] = useState(60);
+    const [gameState, setGameState] = useState<'PLAYING' | 'SUCCESS' | 'FAILED'>('PLAYING');
+    const [activeNode, setActiveNode] = useState(false);
+    
+    // Multi-Agent Flow Logic State
+    const [advisorMsg, setAdvisorMsg] = useState('Analyzing parameters...');
+    const [adversaryMsg, setAdversaryMsg] = useState('System vulnerable.');
+    const [glitchActive, setGlitchActive] = useState(false);
 
-    // Simulation State
-    const [isMaterializing, setIsMaterializing] = useState(false);
-    const [result, setResult] = useState<{ physics: string, visualPrompt: string, shaderLogic: string, imageUrl?: string } | null>(null);
+    // Multi-Agent Simulation Loop
+    useEffect(() => {
+        if (gameState !== 'PLAYING') return;
 
-    const handleMaterialize = async () => {
-        if (!activePart || !selectedMod) return;
+        const advisorLines = [
+            'Maintain focus. Logic structures are stabilizing.',
+            'Optimization detected. Keep routing data.',
+            'Adversary is adapting. We need to shift protocols.',
+            'Energy levels holding. Good work.'
+        ];
 
-        setIsMaterializing(true);
-        const logic = await interactWithEntropy(activePart.name, selectedMod.name, language as Language);
-        const imageUrl = await generateMockImage(logic.visualPrompt);
+        const adversaryLines = [
+            'Your defenses are pitiful.',
+            'I am bypassing the mainframe context.',
+            'Entropy always wins.',
+            'You cannot sustain this compute load.'
+        ];
 
-        setResult({ ...logic, imageUrl });
-        setIsMaterializing(false);
+        const agentInterval = setInterval(() => {
+            const isAdversary = Math.random() > 0.6;
+            if (isAdversary) {
+                setAdversaryMsg(adversaryLines[Math.floor(Math.random() * adversaryLines.length)]);
+                audio.playSystemMessage({ type: 'warning' });
+                setGlitchActive(true);
+                setTimeout(() => setGlitchActive(false), 500);
+            } else {
+                setAdvisorMsg(advisorLines[Math.floor(Math.random() * advisorLines.length)]);
+                audio.playSystemMessage({ type: 'success' });
+            }
+        }, 5000);
+
+        return () => clearInterval(agentInterval);
+    }, [gameState]);
+
+    // Timer Loop
+    useEffect(() => {
+        if (gameState !== 'PLAYING') return;
+        const timer = setInterval(() => {
+            setTimeLeft((prev) => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    const finalScore = score >= 500 ? score : 0;
+                    setGameState(finalScore >= 500 ? 'SUCCESS' : 'FAILED');
+                    onComplete(finalScore, { completionTime: 60 - prev, difficulty });
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [gameState, score, onComplete, difficulty]);
+
+    const handleInteract = () => {
+        if (gameState !== 'PLAYING') return;
+        audio.playTyping();
+        setActiveNode(true);
+        setScore(s => s + 50);
+        setTimeout(() => setActiveNode(false), 300);
+        
+        if (score + 50 >= 1000) {
+            setGameState('SUCCESS');
+            onComplete(1000, { completionTime: 60 - timeLeft, difficulty });
+        }
     };
 
     return (
-        <div className="h-full flex flex-col bg-gray-950 font-mono relative overflow-hidden">
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[length:30px_30px]"></div>
-
-            <div className="p-4 border-b border-white/10 bg-black/80 backdrop-blur-md z-10 flex justify-between items-center">
-                <div>
-                    <h2 className="text-lg font-bold text-white flex items-center">
-                        <Atom className="mr-2 text-amber-500" /> {t('entropy.title')}
-                    </h2>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-widest">{t('entropy.subtitle')}</p>
+        <div className="relative w-full h-[600px] rounded-xl overflow-hidden border border-white/10 bg-black shadow-2xl">
+            {/* UI Overlay */}
+            <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-start z-10 pointer-events-none">
+                <div className="flex flex-col gap-4">
+                    <div className="bg-black/40 backdrop-blur-md rounded-lg p-3 border border-indigo-500/30">
+                        <div className="flex items-center gap-2 text-indigo-400 mb-1">
+                            <Activity className="w-4 h-4" />
+                            <span className="text-xs uppercase tracking-widest font-bold">Signal</span>
+                        </div>
+                        <div className="text-2xl font-mono text-white">{score} / 1000</div>
+                    </div>
                 </div>
-                <div className="text-xs font-bold text-amber-500 border border-amber-500/30 px-2 py-1 rounded bg-amber-900/10">
-                    {t('games.entropysandbox.nano_banana_pro')}</div>
+
+                <div className="bg-black/40 backdrop-blur-md rounded-lg p-3 border border-blue-500/30 flex flex-col items-end">
+                     <div className="flex items-center gap-2 text-blue-400 mb-1">
+                        <AlertTriangle className="w-4 h-4" />
+                        <span className="text-xs uppercase tracking-widest font-bold">Time</span>
+                    </div>
+                    <div className="text-3xl font-mono text-white tracking-widest">{timeLeft}s</div>
+                </div>
             </div>
 
-            <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-                <div className="flex-1 relative bg-black flex items-center justify-center p-6 border-r border-white/10 overflow-hidden">
-                    {/* Holographic Background */}
-                    <div className="absolute inset-0 bg-[linear-gradient(rgba(245,158,11,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(245,158,11,0.05)_1px,transparent_1px)] bg-[length:20px_20px] opacity-20 pointer-events-none"></div>
-                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-amber-900/5 to-amber-900/20 pointer-events-none"></div>
+            {/* Multi-Agent Comm Panel */}
+            <div className="absolute bottom-6 left-6 right-6 flex gap-4 z-10 pointer-events-none">
+                <div className="flex-1 bg-black/60 backdrop-blur-md rounded-lg p-4 border-l-4 border-indigo-500">
+                    <div className="text-xs text-indigo-400 mb-1 uppercase tracking-widest font-bold flex items-center gap-2"><Shield className="w-3 h-3"/> Advisor Agent</div>
+                    <div className="text-sm text-indigo-100 font-mono tracking-wide">{advisorMsg}</div>
+                </div>
+                <div className="flex-1 bg-black/60 backdrop-blur-md rounded-lg p-4 border-l-4 border-red-500">
+                    <div className="text-xs text-red-500 mb-1 uppercase tracking-widest font-bold flex items-center gap-2"><Zap className="w-3 h-3"/> Adversary AI</div>
+                    <div className="text-sm text-red-200 font-mono tracking-wide">{adversaryMsg}</div>
+                </div>
+            </div>
 
-                    <div className="relative w-64 h-64 perspective-[1000px]">
-                        <div
-                            className={`absolute inset-0 flex items-center justify-center bg-gray-900/80 rounded-xl border border-amber-500/30 transition-all duration-500 backdrop-blur-sm shadow-[0_0_50px_rgba(0,0,0,0.5)] ${result ? 'opacity-0 scale-90' : 'opacity-100 scale-100'}`}
-                            style={{
-                                transform: `rotateY(${time * 3.6}deg) rotateX(${time * 1.8}deg)`,
-                                opacity: result ? 0 : 1 - (time / 150)
-                            }}
-                        >
-                            {activePart ? (
-                                <div className="text-8xl filter drop-shadow-[0_0_15px_rgba(245,158,11,0.5)] animate-float">{activePart.icon}</div>
-                            ) : (
-                                <div className="text-gray-600 text-xs uppercase tracking-widest border border-dashed border-gray-700 p-4 rounded">{t('entropy.no_object')}</div>
-                            )}
-
-                            {/* Wireframe Overlay */}
-                            <div className="absolute inset-0 border-2 border-amber-500/20 rounded-xl pointer-events-none"></div>
-                            <div className="absolute -inset-1 border border-amber-500/10 rounded-xl pointer-events-none animate-pulse"></div>
+            {/* Game Over States */}
+            {gameState !== 'PLAYING' && (
+                <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                    <div className="text-center">
+                        <div className={`text-6xl font-black uppercase tracking-widest mb-4 ${gameState === 'SUCCESS' ? 'text-green-500' : 'text-red-500'}`}>
+                            {gameState === 'SUCCESS' ? 'SYSTEM SECURED' : 'BREACH DETECTED'}
                         </div>
-
-                        {/* Materialization Particles */}
-                        {isMaterializing && (
-                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                <div className="w-full h-full border-4 border-amber-500 rounded-full animate-ping opacity-20"></div>
-                                <div className="w-48 h-48 border-2 border-white rounded-full animate-spin-fast border-t-transparent border-l-transparent"></div>
-                            </div>
-                        )}
-
-                        {result && result.imageUrl && (
-                            <div
-                                className="absolute inset-0 rounded-xl overflow-hidden border-2 border-amber-500 shadow-[0_0_50px_rgba(245,158,11,0.3)] transition-all duration-700 transform hover:scale-105"
-                                style={{ opacity: time / 100 }}
-                            >
-                                <img src={result.imageUrl} className="w-full h-full object-cover" alt="Materialized" />
-                                <div className="absolute inset-0 bg-gradient-to-tr from-amber-500/20 to-transparent mix-blend-overlay"></div>
-
-                                {/* Scanning Effect */}
-                                <div className="absolute top-0 w-full h-1 bg-white/50 shadow-[0_0_15px_white] animate-scan-fast"></div>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="absolute bottom-6 left-6 right-6 bg-black/80 p-4 rounded-xl border border-amber-500/30 backdrop-blur shadow-2xl">
-                        <div className="flex justify-between text-xs text-gray-400 mb-2 uppercase font-bold tracking-widest">
-                            <span>{t('entropy.base_state')}</span>
-                            <span className="text-amber-500">{t('entropy.entropy')}: {time}%</span>
-                        </div>
-                        <input
-                            type="range"
-                            min="0"
-                            max="100"
-                            value={time}
-                            onChange={(e) => setTime(parseInt(e.target.value))}
-                            className="w-full accent-amber-500 h-1 bg-gray-800 rounded-full appearance-none cursor-pointer"
-                        />
+                        <div className="text-xl text-white/60 font-mono">Final Score: {score}</div>
                     </div>
                 </div>
+            )}
 
-                <div className="w-full md:w-80 bg-gray-900 border-l border-white/10 flex flex-col z-10 overflow-y-auto">
-                    <div className="p-4 space-y-6">
-                        <div>
-                            <label className="text-[10px] font-bold text-gray-500 uppercase mb-2 block flex items-center"><Box size={10} className="mr-1" /> {t('entropy.select_blueprint')}</label>
-                            <div className="grid grid-cols-3 gap-2">
-                                {PARTS.map(p => (
-                                    <button
-                                        key={p.id}
-                                        onClick={() => { setActivePart(p); setResult(null); setTime(0); }}
-                                        className={`p-2 rounded border flex flex-col items-center transition-all ${activePart?.id === p.id
-                                                ? 'bg-amber-500/20 border-amber-500 text-white'
-                                                : 'bg-black border-gray-700 text-gray-500 hover:border-gray-500'
-                                            }`}
-                                    >
-                                        <span className="text-xl mb-1">{p.icon}</span>
-                                        <span className="text-[9px] uppercase font-bold">{p.name}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="text-[10px] font-bold text-gray-500 uppercase mb-2 block flex items-center"><Wand2 size={10} className="mr-1" /> {t('entropy.apply_logic')}</label>
-                            <div className="space-y-2">
-                                {MODIFIERS.map(m => (
-                                    <button
-                                        key={m.id}
-                                        onClick={() => { setSelectedMod(m); setResult(null); setTime(0); }}
-                                        className={`w-full p-3 rounded text-left border transition-all ${selectedMod?.id === m.id
-                                                ? 'bg-amber-900/30 border-amber-500 text-amber-100'
-                                                : 'bg-black border-gray-700 text-gray-400 hover:bg-gray-800'
-                                            }`}
-                                    >
-                                        <div className="text-xs font-bold">{m.name}</div>
-                                        <div className="text-[9px] opacity-70">{m.desc}</div>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <Button
-                            fullWidth
-                            variant="primary"
-                            onClick={handleMaterialize}
-                            disabled={!activePart || !selectedMod || isMaterializing}
-                            className="shadow-[0_0_20px_rgba(245,158,11,0.3)]"
-                        >
-                            {isMaterializing ? <span className="animate-pulse">{t('entropy.calculating')}</span> : <><Zap size={16} className="mr-2" /> {t('entropy.materialize')}</>}
-                        </Button>
-
-                        {result && (
-                            <div className="bg-black/50 border border-white/10 rounded-xl p-3 space-y-3 animate-in slide-in-from-bottom">
-                                <div>
-                                    <div className="text-[9px] text-amber-500 font-bold uppercase mb-1">{t('entropy.log')}</div>
-                                    <p className="text-xs text-gray-300 leading-relaxed border-l-2 border-amber-500 pl-2">
-                                        {result.physics}
-                                    </p>
-                                </div>
-                                <div>
-                                    <div className="text-[9px] text-blue-400 font-bold uppercase mb-1">{t('entropy.shader')}</div>
-                                    <pre className="text-[8px] font-mono text-blue-300 bg-gray-900 p-2 rounded overflow-x-auto">
-                                        {result.shaderLogic}
-                                    </pre>
-                                </div>
-
-                                <Button size="sm" fullWidth variant="secondary" onClick={() => onComplete(100)}>
-                                    {t('entropy.save')}
-                                </Button>
-                            </div>
+            {/* Interaction Layer */}
+            <div className="absolute inset-0 z-0 cursor-crosshair" onClick={handleInteract}>
+                <Canvas camera={{ position: [0, 0, 10], fov: 60 }}>
+                    <ambientLight intensity={0.5} />
+                    <pointLight position={[10, 10, 10]} intensity={1} color={new THREE.Color().setHSL(0.9, 1, 0.5)} />
+                    <pointLight position={[-10, -10, -10]} intensity={0.5} color="#4f46e5" />
+                    
+                    <Sparkles count={200} scale={12} size={2} speed={0.4} opacity={0.5} color={new THREE.Color().setHSL(0.9, 1, 0.8)} />
+                    
+                    <CoreEntity isActive={activeNode} />
+                    
+                    <OrbitControls enableZoom={false} enablePan={false} autoRotate autoRotateSpeed={0.5} />
+                    
+                    <EffectComposer>
+                        <Bloom luminanceThreshold={0.2} luminanceSmoothing={0.9} height={300} intensity={1.5} />
+                        <ChromaticAberration blendFunction={BlendFunction.NORMAL} offset={new THREE.Vector2(0.002, 0.002)} />
+                        {glitchActive && (
+                            <Glitch delay={new THREE.Vector2(0, 0)} duration={new THREE.Vector2(0.1, 0.3)} mode={GlitchMode.SPORADIC} active ratio={0.5} />
                         )}
-                    </div>
-                </div>
+                    </EffectComposer>
+                </Canvas>
             </div>
         </div>
     );

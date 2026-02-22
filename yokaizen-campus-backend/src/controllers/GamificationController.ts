@@ -14,7 +14,7 @@ export class GamificationController {
    * Get user's gamification profile
    */
   getProfile = asyncHandler(async (req: Request, res: Response) => {
-    const profile = await gamificationService.getProfile(req.user!.id);
+    const profile = await gamificationService.getProfile(req.user!.userId);
 
     res.json({
       success: true,
@@ -27,7 +27,7 @@ export class GamificationController {
    * Get user's career path and skill tree
    */
   getCareerPath = asyncHandler(async (req: Request, res: Response) => {
-    const careerPath = await gamificationService.getCareerPath(req.user!.id);
+    const careerPath = await gamificationService.getCareerPath(req.user!.userId);
 
     res.json({
       success: true,
@@ -40,7 +40,7 @@ export class GamificationController {
    * Get all achievements (unlocked and available)
    */
   getAchievements = asyncHandler(async (req: Request, res: Response) => {
-    const achievements = await gamificationService.getAchievements(req.user!.id);
+    const achievements = await gamificationService.getAchievements(req.user!.userId);
 
     res.json({
       success: true,
@@ -59,7 +59,7 @@ export class GamificationController {
     }
 
     const result = await gamificationService.claimAchievement(
-      req.user!.id,
+      req.user!.userId,
       validation.data.achievementId
     );
 
@@ -81,7 +81,7 @@ export class GamificationController {
       scope: (scope as 'global' | 'classroom' | 'school') || 'global',
       period: (period as 'all' | 'week' | 'month') || 'all',
       limit: limit ? parseInt(limit as string) : 50,
-      userId: req.user!.id
+      userId: req.user!.userId
     });
 
     res.json({
@@ -95,7 +95,7 @@ export class GamificationController {
    * Get available and unlocked agent nodes
    */
   getNodes = asyncHandler(async (req: Request, res: Response) => {
-    const nodes = await gamificationService.getAvailableNodes(req.user!.id);
+    const nodes = await gamificationService.getAvailableNodes(req.user!.userId);
 
     res.json({
       success: true,
@@ -111,7 +111,7 @@ export class GamificationController {
     const { period } = req.query;
 
     const stats = await gamificationService.getDetailedStats(
-      req.user!.id,
+      req.user!.userId,
       (period as 'week' | 'month' | 'all') || 'all'
     );
 
@@ -129,7 +129,7 @@ export class GamificationController {
     const { limit, offset } = req.query;
 
     const history = await gamificationService.getXPHistory(
-      req.user!.id,
+      req.user!.userId,
       {
         limit: limit ? parseInt(limit as string) : 50,
         offset: offset ? parseInt(offset as string) : 0
@@ -147,7 +147,7 @@ export class GamificationController {
    * Get user's activity streaks
    */
   getStreaks = asyncHandler(async (req: Request, res: Response) => {
-    const streaks = await gamificationService.getStreaks(req.user!.id);
+    const streaks = await gamificationService.getStreaks(req.user!.userId);
 
     res.json({
       success: true,
@@ -160,7 +160,7 @@ export class GamificationController {
    * Get active challenges
    */
   getChallenges = asyncHandler(async (req: Request, res: Response) => {
-    const challenges = await gamificationService.getActiveChallenges(req.user!.id);
+    const challenges = await gamificationService.getActiveChallenges(req.user!.userId);
 
     res.json({
       success: true,
@@ -174,7 +174,7 @@ export class GamificationController {
    */
   joinChallenge = asyncHandler(async (req: Request, res: Response) => {
     const result = await gamificationService.joinChallenge(
-      req.user!.id,
+      req.user!.userId,
       req.params.id
     );
 
@@ -190,7 +190,7 @@ export class GamificationController {
    * Get available rewards
    */
   getRewards = asyncHandler(async (req: Request, res: Response) => {
-    const rewards = await gamificationService.getAvailableRewards(req.user!.id);
+    const rewards = await gamificationService.getAvailableRewards(req.user!.userId);
 
     res.json({
       success: true,
@@ -204,7 +204,7 @@ export class GamificationController {
    */
   redeemReward = asyncHandler(async (req: Request, res: Response) => {
     const result = await gamificationService.redeemReward(
-      req.user!.id,
+      req.user!.userId,
       req.params.id
     );
 
@@ -220,7 +220,7 @@ export class GamificationController {
    * Get user's current rank
    */
   getRank = asyncHandler(async (req: Request, res: Response) => {
-    const rank = await gamificationService.getUserRank(req.user!.id);
+    const rank = await gamificationService.getUserRank(req.user!.userId);
 
     res.json({
       success: true,
@@ -233,7 +233,7 @@ export class GamificationController {
    * Get progress towards next level
    */
   getProgress = asyncHandler(async (req: Request, res: Response) => {
-    const progress = await gamificationService.getLevelProgress(req.user!.id);
+    const progress = await gamificationService.getLevelProgress(req.user!.userId);
 
     res.json({
       success: true,
@@ -246,7 +246,7 @@ export class GamificationController {
    * Get available and earned titles
    */
   getTitles = asyncHandler(async (req: Request, res: Response) => {
-    const titles = await gamificationService.getTitles(req.user!.id);
+    const titles = await gamificationService.getTitles(req.user!.userId);
 
     res.json({
       success: true,
@@ -259,7 +259,7 @@ export class GamificationController {
    * Equip a title
    */
   equipTitle = asyncHandler(async (req: Request, res: Response) => {
-    await gamificationService.equipTitle(req.user!.id, req.params.id);
+    await gamificationService.equipTitle(req.user!.userId, req.params.id);
 
     res.json({
       success: true,
@@ -272,7 +272,7 @@ export class GamificationController {
    * Get all badges
    */
   getBadges = asyncHandler(async (req: Request, res: Response) => {
-    const badges = await gamificationService.getBadges(req.user!.id);
+    const badges = await gamificationService.getBadges(req.user!.userId);
 
     res.json({
       success: true,
@@ -288,7 +288,7 @@ export class GamificationController {
     const { slot } = req.body;
 
     await gamificationService.displayBadge(
-      req.user!.id,
+      req.user!.userId,
       req.params.id,
       slot
     );
@@ -305,7 +305,7 @@ export class GamificationController {
    */
   checkAchievements = asyncHandler(async (req: Request, res: Response) => {
     const newAchievements = await gamificationService.checkAndAwardAchievements(
-      req.user!.id
+      req.user!.userId
     );
 
     res.json({
@@ -324,7 +324,7 @@ export class GamificationController {
   getClassroomLeaderboard = asyncHandler(async (req: Request, res: Response) => {
     const leaderboard = await gamificationService.getClassroomLeaderboard(
       req.params.id,
-      req.user!.id
+      req.user!.userId
     );
 
     res.json({

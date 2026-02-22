@@ -141,7 +141,7 @@ export class ARController {
         userId: req.user!.userId,
         latitude: location?.latitude,
         longitude: location?.longitude,
-        successful: unlockResult.success
+        successful: !unlockResult.alreadyUnlocked
       }
     });
 
@@ -169,7 +169,7 @@ export class ARController {
         details: `Scanned marker: ${marker.unlocksAgent}`,
         meta: {
           markerId: marker.id,
-          unlocked: unlockResult.success,
+          unlocked: !unlockResult.alreadyUnlocked,
           agent: marker.unlocksAgent
         }
       }
@@ -178,12 +178,12 @@ export class ARController {
     res.json({
       success: true,
       data: {
-        unlocked: unlockResult.success,
+        unlocked: !unlockResult.alreadyUnlocked,
         alreadyUnlocked: unlockResult.alreadyUnlocked,
         agent: marker.unlocksAgent,
         lore: marker.loreText,
         xpAwarded: !existingScan ? marker.xpReward : 0,
-        message: unlockResult.success
+        message: !unlockResult.alreadyUnlocked
           ? `You unlocked ${marker.unlocksAgent}!`
           : unlockResult.alreadyUnlocked
             ? 'You already have this agent unlocked'

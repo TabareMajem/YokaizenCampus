@@ -1,5 +1,5 @@
 
-import { User, UserRole, AdminStats, ClassroomStudentSummary } from '../types';
+import { User, UserRole, AdminStats, ClassroomStudentSummary, PhilosophyMode } from '../types';
 
 /**
  * Yokaizen Campus API Gateway
@@ -228,6 +228,25 @@ export const API = {
 
       if (!res.ok) throw new Error('Failed to trigger chaos event');
       return (await res.json()).data;
+    },
+
+    setPhilosophy: async (classroomId: string, philosophy: PhilosophyMode): Promise<any> => {
+      const res = await authFetch(`${API_BASE_URL}/classroom/${classroomId}/philosophy`, {
+        method: 'POST',
+        body: JSON.stringify({ philosophy }),
+      });
+
+      if (!res.ok) throw new Error('Failed to update classroom philosophy');
+      return (await res.json()).data;
+    },
+
+    gradeStudent: async (classroomId: string, studentId: string): Promise<any> => {
+      const res = await authFetch(`${API_BASE_URL}/classroom/${classroomId}/grade/${studentId}`, {
+        method: 'POST',
+      });
+
+      if (!res.ok) throw new Error('Failed to grade student');
+      return (await res.json()).data;
     }
   },
 
@@ -341,6 +360,14 @@ export const API = {
         method: 'DELETE',
       });
       if (!res.ok) throw new Error('Failed to delete user');
+    },
+
+    setSchoolKey: async (key: string): Promise<void> => {
+      const res = await authFetch(`${API_BASE_URL}/admin/school-key`, {
+        method: 'POST',
+        body: JSON.stringify({ key }),
+      });
+      if (!res.ok) throw new Error('Failed to update school key');
     }
   },
 
