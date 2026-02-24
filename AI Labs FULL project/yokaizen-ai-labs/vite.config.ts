@@ -9,6 +9,20 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
     },
     plugins: [react()],
+    build: {
+      minify: 'esbuild',
+      sourcemap: false,
+      chunkSizeWarningLimit: 2000,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom'],
+            three: ['three', '@react-three/fiber', '@react-three/drei'],
+            ui: ['framer-motion', 'lucide-react']
+          }
+        }
+      }
+    },
     // SECURITY: No API keys are bundled into frontend code
     // All AI calls go through authenticated backend endpoints
     preview: {
