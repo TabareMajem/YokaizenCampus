@@ -19,6 +19,8 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+import { ErrorBoundary } from './components/ui/ErrorBoundary';
+
 const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error("Could not find root element to mount to");
@@ -27,13 +29,15 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <ToastProvider>
-      <AuthProvider>
-        <DialogueProvider>
-          <App />
-          <DialogueBox />
-        </DialogueProvider>
-      </AuthProvider>
-    </ToastProvider>
+    <ErrorBoundary>
+      <ToastProvider>
+        <AuthProvider>
+          <DialogueProvider>
+            <App />
+            <DialogueBox />
+          </DialogueProvider>
+        </AuthProvider>
+      </ToastProvider>
+    </ErrorBoundary>
   </React.StrictMode>
 );

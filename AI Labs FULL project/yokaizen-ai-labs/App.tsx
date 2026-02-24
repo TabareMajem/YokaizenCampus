@@ -64,6 +64,9 @@ import { SpaceMission } from './components/games/SpaceMission';
 import { ViralNeuralHack } from './components/viral/ViralNeuralHack';
 import { ViralLatencyTunnel } from './components/viral/ViralLatencyTunnel';
 import { ViralChaosDefense } from './components/viral/ViralChaosDefense';
+import { Canvas } from '@react-three/fiber';
+import { Sparkles as DreiSparkles } from '@react-three/drei';
+import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import { DefenseStrategist } from './components/games/DefenseStrategist';
 import { PersonaSwitchboard } from './components/games/PersonaSwitchboard';
 import { DeepfakeDetective } from './components/games/DeepfakeDetective';
@@ -103,7 +106,6 @@ import { SingularityCore } from './components/games/SingularityCore';
 
 // Assets to preload
 const PRELOAD_ASSETS = [
-    'https://api.dicebear.com/7.x/avataaars/svg?seed=CyberPunk',
     'https://grainy-gradients.vercel.app/noise.svg',
     // Add other critical game assets here
 ];
@@ -111,7 +113,7 @@ const PRELOAD_ASSETS = [
 export const App: React.FC = () => {
     const { user, isAuthenticated, updateUser } = useAuth();
     const { queueDialogue } = useDialogue();
-    const [isPreloading, setIsPreloading] = useState(true);
+    const [isPreloading, setIsPreloading] = useState(false);
     const [activeTab, setActiveTab] = useState<AppTab>(AppTab.HOME);
     const [activeGame, setActiveGame] = useState<GameDef | null>(null);
     const [activeGeneratedGame, setActiveGeneratedGame] = useState<any | null>(null);
@@ -645,117 +647,165 @@ export const App: React.FC = () => {
 
                 <div className="flex-1 overflow-y-auto scrollbar-hide bg-[#050505]">
                     <ErrorBoundary>
+                        {/* Global WebGL Backdrop for Hub Tabs */}
+                        {[AppTab.HOME, AppTab.LEARN, AppTab.LEADERBOARD, AppTab.PROFILE].includes(activeTab) && (
+                            <div className="absolute inset-0 z-0 opacity-40 pointer-events-none fixed">
+                                <Canvas camera={{ position: [0, 0, 5], fov: 60 }}>
+                                    <ambientLight intensity={0.5} />
+                                    <DreiSparkles count={200} scale={12} size={2} speed={0.4} opacity={0.3} color="#c45fff" />
+                                    <DreiSparkles count={100} scale={10} size={4} speed={0.2} opacity={0.1} color="#4fd1c5" />
+                                    <EffectComposer>
+                                        <Bloom luminanceThreshold={0.2} luminanceSmoothing={0.9} height={300} intensity={1.5} />
+                                    </EffectComposer>
+                                </Canvas>
+                            </div>
+                        )}
+
                         {activeTab === AppTab.HOME && (
-                            <div className="p-6 pb-24 max-w-7xl mx-auto animate-in fade-in">
-                                {/* HERO STATUS CARD */}
-                                <div className="mb-8 relative rounded-2xl overflow-hidden border border-white/10 bg-gray-900 shadow-2xl group">
-                                    <div className="absolute inset-0 bg-[url('/assets/aaa/card-bg-1.png')] bg-cover bg-center opacity-40"></div>
-                                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-900/20 via-black/40 to-violet-900/20 backdrop-blur-sm"></div>
+                            <div className="p-6 pb-24 max-w-7xl mx-auto animate-in fade-in relative z-10">
 
-                                    <div className="relative p-6 md:p-8 flex flex-col md:flex-row items-center md:justify-between gap-6">
-                                        <div className="flex items-center gap-6">
-                                            <div className="relative">
-                                                <div className="w-24 h-24 rounded-full border-4 border-electric p-1 bg-black shadow-[0_0_20px_rgba(196,95,255,0.4)]">
-                                                    <img src={user.avatar} className="w-full h-full rounded-full object-cover" />
-                                                </div>
-                                                <div className="absolute -bottom-2 -right-2 bg-black border border-white/20 rounded-full p-2 shadow-lg">
-                                                    <Shield className="text-electric w-5 h-5" />
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <h2 className="text-4xl font-black text-white uppercase tracking-tight glitch-text" data-text={user.name}>{user.name}</h2>
-                                                <div className="flex items-center space-x-3 text-sm text-gray-400 font-mono mt-2">
-                                                    <span className="bg-electric/20 text-electric px-3 py-1 rounded border border-electric/30 font-bold">{t('ui.lvl')} {user.level}</span>
-                                                    <span className="flex items-center"><Star size={14} className="mr-1 text-yellow-400" /> {user.title}</span>
-                                                </div>
-                                            </div>
-                                        </div>
+                                <div className="relative z-10 space-y-8">
+                                    {/* HERO STATUS CARD */}
+                                    <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-gray-900 shadow-2xl group">
+                                        <div className="absolute inset-0 bg-[url('/assets/aaa/card-bg-1.png')] bg-cover bg-center opacity-40"></div>
+                                        <div className="absolute inset-0 bg-gradient-to-r from-indigo-900/20 via-black/40 to-violet-900/20 backdrop-blur-sm"></div>
 
-                                        {/* Stats Grid */}
-                                        <div className="grid grid-cols-3 gap-8 text-center bg-black/40 p-4 rounded-xl border border-white/5 backdrop-blur-sm">
-                                            <div>
-                                                <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">{t('profile.xp')}</div>
-                                                <div className="text-2xl font-black text-white">{user.xp.toLocaleString()}</div>
-                                            </div>
-                                            <div>
-                                                <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">{t('profile.streak')}</div>
-                                                <div className="text-2xl font-black text-amber-400">{user.streak} <span className="text-[10px] text-gray-500">{t('ui.days')}</span></div>
-                                            </div>
-                                            <div>
-                                                <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">{t('profile.credits')}</div>
-                                                <div className="text-2xl font-black text-cyan-400">{user.credits}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Next Unlock Widget */}
-                                    {nextLockedTool && (
-                                        <div className="bg-black/60 border-t border-white/5 p-4 flex items-center justify-between backdrop-blur-md cursor-pointer hover:bg-white/5 transition-colors group/unlock" onClick={() => handleTabSwitch(AppTab.LAB)}>
-                                            <div className="flex items-center space-x-4">
-                                                <div className="p-2 bg-gray-800 rounded-lg border border-gray-700 group-hover/unlock:border-electric transition-colors">
-                                                    <Lock size={18} className="text-gray-500 group-hover/unlock:text-electric" />
+                                        <div className="relative p-6 md:p-8 flex flex-col md:flex-row items-center md:justify-between gap-6">
+                                            <div className="flex items-center gap-6">
+                                                <div className="relative">
+                                                    <div className="w-24 h-24 rounded-full border-4 border-electric p-1 bg-black shadow-[0_0_20px_rgba(196,95,255,0.4)]">
+                                                        <img src={user.avatar} className="w-full h-full rounded-full object-cover" />
+                                                    </div>
+                                                    <div className="absolute -bottom-2 -right-2 bg-black border border-white/20 rounded-full p-2 shadow-lg">
+                                                        <Shield className="text-electric w-5 h-5" />
+                                                    </div>
                                                 </div>
                                                 <div>
-                                                    <div className="text-xs text-gray-400 font-bold uppercase tracking-wider">{t('home.next_unlock')}</div>
-                                                    <div className="text-sm font-bold text-white group-hover/unlock:text-electric transition-colors">{t(nextLockedTool.name)}</div>
-                                                    <div className="text-[10px] text-gray-500 mt-0.5">{t(nextLockedTool.unlockCondition)}</div>
+                                                    <h2 className="text-4xl font-black text-white uppercase tracking-tight glitch-text" data-text={user.name}>{user.name}</h2>
+                                                    <div className="flex items-center space-x-3 text-sm text-gray-400 font-mono mt-2">
+                                                        <span className="bg-electric/20 text-electric px-3 py-1 rounded border border-electric/30 font-bold">{t('ui.lvl')} {user.level}</span>
+                                                        <span className="flex items-center"><Star size={14} className="mr-1 text-yellow-400" /> {user.title}</span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center text-xs text-electric font-bold uppercase bg-electric/10 px-3 py-1.5 rounded-full border border-electric/20 group-hover/unlock:bg-electric group-hover/unlock:text-white transition-all">
-                                                {t('home.view_lab')} <ChevronRight size={14} className="ml-1" />
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                    {GAMES.map(game => (
-                                        <div key={game.id} onClick={() => handleGameLaunch(game)} className="relative aspect-video bg-gray-900 rounded-xl overflow-hidden border border-white/5 cursor-pointer group hover:border-electric transition-all shadow-lg hover:shadow-[0_0_20px_rgba(196,95,255,0.2)] hover:scale-[1.02]">
-                                            <GameCover game={game} className="opacity-60 group-hover:opacity-100 transition-opacity duration-500" iconSize={48} />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
-
-                                            {game.isPremium && !user.isPro && (
-                                                <div className="absolute top-2 right-2 bg-black/80 text-amber-500 p-1.5 rounded-full border border-amber-500/50 z-10 shadow-lg">
-                                                    <Lock size={14} />
+                                            {/* Stats Grid */}
+                                            <div className="grid grid-cols-3 gap-8 text-center bg-black/40 p-4 rounded-xl border border-white/5 backdrop-blur-sm">
+                                                <div>
+                                                    <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">{t('profile.xp')}</div>
+                                                    <div className="text-2xl font-black text-white">{user.xp.toLocaleString()}</div>
                                                 </div>
-                                            )}
-
-                                            <div className="absolute bottom-3 left-3 right-3 z-10">
-                                                <div className="text-sm font-bold text-white truncate drop-shadow-md group-hover:text-electric transition-colors">
-                                                    {t(`game.${game.type.toLowerCase()}.title`)}
+                                                <div>
+                                                    <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">{t('profile.streak')}</div>
+                                                    <div className="text-2xl font-black text-amber-400">{user.streak} <span className="text-[10px] text-gray-500">{t('ui.days')}</span></div>
                                                 </div>
-                                                <div className="text-[10px] text-gray-300 truncate opacity-80 mb-2">
-                                                    {t(`game.${game.type.toLowerCase()}.desc`)}
-                                                </div>
-                                                <div className="flex items-center space-x-2">
-                                                    <span className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase border ${game.difficulty === 'Rookie' ? 'bg-green-900/40 border-green-500/30 text-green-400' :
-                                                        game.difficulty === 'Pro' ? 'bg-blue-900/40 border-blue-500/30 text-blue-400' : 'bg-red-900/40 border-red-500/30 text-red-400'
-                                                        }`}>
-                                                        {t(`difficulty.${game.difficulty.toLowerCase()}`)}
-                                                    </span>
-                                                    <span className="text-[9px] text-gray-400 font-mono flex items-center">
-                                                        <Clock size={10} className="mr-1" /> {game.durationMin} {t('ui.min')}
-                                                    </span>
+                                                <div>
+                                                    <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">{t('profile.credits')}</div>
+                                                    <div className="text-2xl font-black text-cyan-400">{user.credits}</div>
                                                 </div>
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
 
-                                {/* Continue Learning Path Link */}
-                                <div className="mt-8 p-6 bg-gradient-to-r from-blue-900/40 to-purple-900/40 rounded-2xl border border-white/10 flex flex-col md:flex-row items-center justify-between gap-4 group cursor-pointer hover:border-electric transition-all" onClick={() => handleTabSwitch(AppTab.LEARN)}>
-                                    <div className="flex items-center space-x-4">
-                                        <div className="p-3 bg-electric/20 rounded-full border border-electric/50 text-electric group-hover:scale-110 transition-transform">
-                                            <BookOpen size={24} />
+                                        {/* Next Unlock Widget */}
+                                        {nextLockedTool && (
+                                            <div className="bg-black/60 border-t border-white/5 p-4 flex items-center justify-between backdrop-blur-md cursor-pointer hover:bg-white/5 transition-colors group/unlock" onClick={() => handleTabSwitch(AppTab.LAB)}>
+                                                <div className="flex items-center space-x-4">
+                                                    <div className="p-2 bg-gray-800 rounded-lg border border-gray-700 group-hover/unlock:border-electric transition-colors">
+                                                        <Lock size={18} className="text-gray-500 group-hover/unlock:text-electric" />
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-xs text-gray-400 font-bold uppercase tracking-wider">{t('home.next_unlock')}</div>
+                                                        <div className="text-sm font-bold text-white group-hover/unlock:text-electric transition-colors">{t(nextLockedTool.name)}</div>
+                                                        <div className="text-[10px] text-gray-500 mt-0.5">{t(nextLockedTool.unlockCondition)}</div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center text-xs text-electric font-bold uppercase bg-electric/10 px-3 py-1.5 rounded-full border border-electric/20 group-hover/unlock:bg-electric group-hover/unlock:text-white transition-all">
+                                                    {t('home.view_lab')} <ChevronRight size={14} className="ml-1" />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <div className="flex items-center justify-between mb-4 px-2">
+                                            <h3 className="text-xl font-black text-white uppercase italic tracking-wide">Featured Simulations</h3>
+                                            <div className="flex gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-electric animate-pulse"></div>
+                                                <div className="w-2 h-2 rounded-full bg-gray-700"></div>
+                                                <div className="w-2 h-2 rounded-full bg-gray-700"></div>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h3 className="text-xl font-black text-white uppercase italic">{t('home.continue_path')}</h3>
-                                            <p className="text-sm text-gray-400">{t('home.path_desc')}</p>
+                                        <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-6 scrollbar-hide -mx-6 px-6 md:mx-0 md:px-0">
+                                            {GAMES.slice(0, 10).map(game => (
+                                                <div key={game.id} onClick={() => handleGameLaunch(game)} className="snap-center shrink-0 w-[280px] md:w-[320px] relative aspect-video bg-gray-900 rounded-xl overflow-hidden border border-white/10 cursor-pointer group hover:border-electric transition-all shadow-xl hover:shadow-[0_0_30px_rgba(196,95,255,0.3)] hover:-translate-y-1">
+                                                    <GameCover game={game} className="opacity-70 group-hover:opacity-100 transition-opacity duration-500 scale-105 group-hover:scale-110" iconSize={48} />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+
+                                                    {game.isPremium && !user.isPro && (
+                                                        <div className="absolute top-2 right-2 bg-black/80 text-amber-500 p-1.5 rounded-full border border-amber-500/50 z-10 shadow-lg backdrop-blur-md">
+                                                            <Lock size={14} />
+                                                        </div>
+                                                    )}
+
+                                                    <div className="absolute bottom-4 left-4 right-4 z-10">
+                                                        <div className="text-lg font-black text-white truncate drop-shadow-md group-hover:text-electric transition-colors uppercase tracking-tight">
+                                                            {t(`game.${game.type.toLowerCase()}.title`)}
+                                                        </div>
+                                                        <div className="text-[11px] text-gray-300 truncate opacity-90 mb-3 drop-shadow-md">
+                                                            {t(`game.${game.type.toLowerCase()}.desc`)}
+                                                        </div>
+                                                        <div className="flex items-center space-x-2">
+                                                            <span className={`text-[9px] px-2 py-0.5 rounded-sm font-bold uppercase border ${game.difficulty === 'Rookie' ? 'bg-green-900/40 border-green-500/50 text-green-400' :
+                                                                game.difficulty === 'Pro' ? 'bg-blue-900/40 border-blue-500/50 text-blue-400' : 'bg-red-900/40 border-red-500/50 text-red-400'
+                                                                }`}>
+                                                                {t(`difficulty.${game.difficulty.toLowerCase()}`)}
+                                                            </span>
+                                                            <span className="text-[9px] text-gray-400 font-mono flex items-center bg-black/50 px-2 py-0.5 rounded-sm backdrop-blur-sm">
+                                                                <Clock size={10} className="mr-1" /> {game.durationMin} {t('ui.min')}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
-                                    <Button variant="primary" className="shadow-[0_0_20px_rgba(196,95,255,0.3)]">
-                                        {t('ui.enter_path')} <ChevronRight className="ml-2" size={16} />
-                                    </Button>
+
+                                    <div>
+                                        <div className="flex items-center justify-between mb-4 px-2">
+                                            <h3 className="text-xl font-black text-white uppercase italic tracking-wide">All Scenarios</h3>
+                                        </div>
+                                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                            {GAMES.slice(10).map(game => (
+                                                <div key={game.id} onClick={() => handleGameLaunch(game)} className="relative aspect-video bg-gray-900 rounded-xl overflow-hidden border border-white/5 cursor-pointer group hover:border-white/30 transition-all">
+                                                    <GameCover game={game} className="opacity-40 group-hover:opacity-80 transition-opacity duration-300" iconSize={32} />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent"></div>
+                                                    {game.isPremium && !user.isPro && (
+                                                        <div className="absolute top-2 right-2 text-amber-500/50 z-10"><Lock size={12} /></div>
+                                                    )}
+                                                    <div className="absolute bottom-2 left-2 right-2 z-10">
+                                                        <div className="text-xs font-bold text-white truncate group-hover:text-electric transition-colors">{t(`game.${game.type.toLowerCase()}.title`)}</div>
+                                                        <div className="text-[9px] text-gray-500 truncate">{t(`game.${game.type.toLowerCase()}.desc`)}</div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Continue Learning Path Link */}
+                                    <div className="mt-8 p-6 bg-gradient-to-r from-blue-900/40 to-purple-900/40 rounded-2xl border border-white/10 flex flex-col md:flex-row items-center justify-between gap-4 group cursor-pointer hover:border-electric transition-all" onClick={() => handleTabSwitch(AppTab.LEARN)}>
+                                        <div className="flex items-center space-x-4">
+                                            <div className="p-3 bg-electric/20 rounded-full border border-electric/50 text-electric group-hover:scale-110 transition-transform">
+                                                <BookOpen size={24} />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-xl font-black text-white uppercase italic">{t('home.continue_path')}</h3>
+                                                <p className="text-sm text-gray-400">{t('home.path_desc')}</p>
+                                            </div>
+                                        </div>
+                                        <Button variant="primary" className="shadow-[0_0_20px_rgba(196,95,255,0.3)]">
+                                            {t('ui.enter_path')} <ChevronRight className="ml-2" size={16} />
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -914,7 +964,9 @@ export const App: React.FC = () => {
                             {tab === AppTab.LAB && <img src="/assets/aaa/nav-progress.png" className="w-5 h-5" />}
                             {tab === AppTab.LEADERBOARD && <img src="/assets/aaa/nav-leaderboard.png" className="w-5 h-5" />}
                             {tab === AppTab.PROFILE && <img src="/assets/aaa/nav-profile.png" className="w-5 h-5" />}
-                            <span className="text-[9px] font-bold mt-1 uppercase">{t(`nav.${tab.toLowerCase()}`).substring(0, 4)}</span>
+                            <span className="text-[9px] font-bold mt-1 uppercase">
+                                {tab === AppTab.LEADERBOARD ? t('leaderboard.squad').substring(0, 5) : t(`nav.${tab.toLowerCase()}`).substring(0, 4)}
+                            </span>
                         </button>
                     ))}
                 </div>
