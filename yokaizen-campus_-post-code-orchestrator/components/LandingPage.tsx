@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import {
    ArrowRight, BrainCircuit, Globe, ShieldCheck, Zap, Layers,
    Key, Check, Play, Users, ChevronDown, FlaskConical, AlertTriangle,
-   Monitor, Layout, Network, Eye, Wand2, Activity, RefreshCw, ChevronUp, Building2, HeartHandshake, Crown
+   Monitor, Layout, Network, Eye, Wand2, Activity, RefreshCw, ChevronUp, Building2, HeartHandshake, Crown, Skull, BookOpen, ChevronRight, TrendingDown, Target, Shield, Lock
 } from 'lucide-react';
 import { SettingsModal } from './SettingsModal';
 import { SubscriptionModal } from './SubscriptionModal';
@@ -455,12 +455,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onGuideC
                   </div>
                   <h2 className="text-4xl md:text-6xl font-black mb-6 tracking-tight text-white">TEST YOUR <span className="text-transparent bg-clip-text bg-gradient-to-r from-neon-blue to-purple-500">COGNITIVE LIMITS</span></h2>
                   <p className="text-lg text-slate-400 leading-relaxed">
-                     Play 3 brutal, high-fidelity WebGL mini-games completely free. No login required.
-                     Beat the first level to unlock exclusive access to the AI Labs Vanguard Onboarding.
+                     Play 4 brutal, high-fidelity mini-games completely free. No login required.
+                     Beat the challenges to unlock exclusive access to the AI Labs Vanguard Onboarding.
                   </p>
                </div>
 
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {/* Game 1 */}
                   <div className="bg-black border border-white/10 rounded-2xl overflow-hidden group hover:border-cyan-500/50 transition-all shadow-2xl relative">
                      <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent z-10 pointer-events-none"></div>
@@ -514,6 +514,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onGuideC
                         <p className="text-slate-400 text-sm mb-6 line-clamp-2">Defend the core. Click to shatter incoming heuristic threats before impact.</p>
                         <a href="https://ai.yokaizencampus.com/play/chaos-defense" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-red-500 font-bold text-sm tracking-widest hover:text-white transition-colors">
                            PLAY FREE FOR NOW <ChevronRight size={16} />
+                        </a>
+                     </div>
+                  </div>
+
+                  {/* Game 4: Prompt Injection Quiz */}
+                  <div className="bg-black border border-white/10 rounded-2xl overflow-hidden group hover:border-yellow-500/50 transition-all shadow-2xl relative">
+                     <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent z-10 pointer-events-none"></div>
+                     <div className="h-48 w-full bg-slate-900 flex items-center justify-center relative overflow-hidden">
+                        <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/dark-stripes.png')]"></div>
+                        <Skull size={64} className="text-yellow-400/50 group-hover:scale-110 transition-transform duration-500" />
+                     </div>
+                     <div className="p-8 relative z-20 -mt-10">
+                        <div className="w-12 h-12 rounded-xl bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center mb-4 backdrop-blur-md">
+                           <AlertTriangle size={20} className="text-yellow-400" />
+                        </div>
+                        <h3 className="text-2xl font-black text-white mb-2 tracking-tight">AI SURVIVABILITY</h3>
+                        <p className="text-slate-400 text-sm mb-6 line-clamp-2">5 timed questions. 10 seconds each. Can your brain survive prompt injection & social engineering?</p>
+                        <a href="https://ai.yokaizencampus.com/play/prompt-injection" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-yellow-400 font-bold text-sm tracking-widest hover:text-white transition-colors">
+                           TAKE THE TEST <ChevronRight size={16} />
                         </a>
                      </div>
                   </div>
@@ -625,24 +644,76 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onGuideC
             </div>
          </section>
 
-         {/* FOOTER */}
-         <footer className="py-12 bg-black border-t border-white/5 text-center">
-            <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
-               <div className="flex items-center gap-2 text-white font-bold tracking-wider">
-                  <div className="w-2 h-2 bg-neon-blue rounded-full" /> YOKAIZEN CAMPUS
+         {/* SEO ARTICLES / KNOWLEDGE BASE */}
+         <section id="articles" className="py-20 bg-[#030712] border-t border-white/5">
+            <div className="max-w-6xl mx-auto px-6">
+               <div className="text-center mb-12">
+                  <div className="inline-flex items-center gap-2 bg-blue-900/20 border border-blue-500/30 px-3 py-1 rounded-full text-blue-400 text-xs font-bold uppercase tracking-wider mb-4">
+                     <BookOpen className="w-3 h-3" /> Knowledge Base
+                  </div>
+                  <h2 className="text-3xl font-bold text-white mb-3">AI Survival Guides</h2>
+                  <p className="text-slate-400 max-w-2xl mx-auto text-sm">Essential reading for students, educators, and professionals navigating the age of artificial intelligence.</p>
                </div>
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[
+                     { title: 'The 2026 AI Job Purge: Will You Be Replaced or Promoted?', tag: 'URGENT', color: 'text-red-400 border-red-500/30 bg-red-500/10', desc: 'The inevitable truth about which roles are doomed, and how to become an irreplaceable orchestrator before it\'s too late.' },
+                     { title: 'If You Can\'t Speak AI, You Are Already Obsolete', tag: 'LITERACY', color: 'text-cyan-400 border-cyan-500/30 bg-cyan-500/10', desc: 'Prompt engineering isn\'t a neat trick—it\'s the new reading and writing. Real skills separate the victims from the operators.' },
+                     { title: 'Deepfake Epidemic: Survival Guide for the Post-Truth Era', tag: 'SURVIVAL', color: 'text-purple-400 border-purple-500/30 bg-purple-500/10', desc: 'When you can\'t trust your own eyes, epistemic hygiene is the only defense. Learn the forensic techniques to survive.' },
+                     { title: 'Don\'t Let Hallucinations Ruin Your Career: Master RAG Now', tag: 'ENGINEERING', color: 'text-green-400 border-green-500/30 bg-green-500/10', desc: 'Amateurs blindly trust AI. Professionals engineer reality using Retrieval-Augmented Generation. Learn the inevitable standard.' },
+                     { title: 'From Zero to Orchestrator in 90 Days: The DO NOT MISS OUT Roadmap', tag: 'SHORTCUT', color: 'text-amber-400 border-amber-500/30 bg-amber-500/10', desc: 'The window of opportunity to learn AI is closing. The exponential curve is here. Start your 90-day sprint now.' },
+                     { title: 'Schools Are Training Gen Z for Jobs That Won\'t Exist', tag: 'WARNING', color: 'text-pink-400 border-pink-500/30 bg-pink-500/10', desc: 'Traditional education is a trap. If you aren\'t learning cognitive resilience and AI delegation, you have no future.' },
+                  ].map((article, i) => (
+                     <article key={i} className="bg-white/5 border border-white/10 rounded-xl p-6 hover:bg-white/10 transition-all group cursor-pointer" onClick={onLoginClick}>
+                        <div className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider mb-3 border ${article.color}`}>{article.tag}</div>
+                        <h3 className="text-base font-bold text-white mb-2 group-hover:text-cyan-400 transition-colors leading-snug">{article.title}</h3>
+                        <p className="text-slate-500 text-xs leading-relaxed">{article.desc}</p>
+                     </article>
+                  ))}
+               </div>
+            </div>
+         </section>
 
-               <a
-                  href="https://AI.yokaizencampus.com"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-2 text-[10px] font-bold text-pink-500 tracking-wider hover:text-pink-400 transition-colors border border-pink-900/50 bg-pink-900/10 px-3 py-1 rounded-full"
-               >
-                  <FlaskConical className="w-3 h-3" />
-                  {T.FOOTER_VISIT}
-               </a>
-
-               <div className="text-slate-500 text-xs font-mono">
+         {/* FOOTER */}
+         <footer className="py-16 bg-black border-t border-white/5">
+            <div className="max-w-7xl mx-auto px-6">
+               <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+                  <div className="md:col-span-2">
+                     <div className="flex items-center gap-2 text-white font-bold tracking-wider mb-4">
+                        <div className="w-2 h-2 bg-neon-blue rounded-full" /> YOKAIZEN CAMPUS
+                     </div>
+                     <p className="text-slate-500 text-sm max-w-md leading-relaxed mb-4">
+                        The world's first AI-native cognitive training platform. Preparing the next generation for the AGI era through gamified skill-building, epistemic hygiene, and real-world orchestration.
+                     </p>
+                     <a
+                        href="https://AI.yokaizencampus.com"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-2 text-[10px] font-bold text-pink-500 tracking-wider hover:text-pink-400 transition-colors border border-pink-900/50 bg-pink-900/10 px-3 py-1 rounded-full w-fit"
+                     >
+                        <FlaskConical className="w-3 h-3" />
+                        {T.FOOTER_VISIT}
+                     </a>
+                  </div>
+                  <div>
+                     <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-4">Free Games</h4>
+                     <ul className="space-y-2 text-sm text-slate-500">
+                        <li><a href="https://ai.yokaizencampus.com/play/neural-hack" target="_blank" rel="noreferrer" className="hover:text-cyan-400 transition-colors">⚡ Neural Hack</a></li>
+                        <li><a href="https://ai.yokaizencampus.com/play/latency-tunnel" target="_blank" rel="noreferrer" className="hover:text-purple-400 transition-colors">🚀 Latency Tunnel</a></li>
+                        <li><a href="https://ai.yokaizencampus.com/play/chaos-defense" target="_blank" rel="noreferrer" className="hover:text-red-400 transition-colors">🛡️ Chaos Defense</a></li>
+                        <li><a href="https://ai.yokaizencampus.com/play/prompt-injection" target="_blank" rel="noreferrer" className="hover:text-yellow-400 transition-colors">🧠 AI Survivability Test</a></li>
+                     </ul>
+                  </div>
+                  <div>
+                     <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-4">Resources</h4>
+                     <ul className="space-y-2 text-sm text-slate-500">
+                        <li><button onClick={() => scrollToSection('articles')} className="hover:text-blue-400 transition-colors">📚 AI Survival Guides</button></li>
+                        <li><button onClick={onGuideClick} className="hover:text-white transition-colors">📖 User Guide</button></li>
+                        <li><button onClick={() => scrollToSection('pricing')} className="hover:text-white transition-colors">💰 Pricing</button></li>
+                        <li><a href="https://AI.yokaizencampus.com" target="_blank" rel="noreferrer" className="hover:text-pink-400 transition-colors">🧪 AI Labs</a></li>
+                     </ul>
+                  </div>
+               </div>
+               <div className="border-t border-white/5 pt-8 text-center text-slate-600 text-xs font-mono">
                   {T.FOOTER_COPY}
                </div>
             </div>

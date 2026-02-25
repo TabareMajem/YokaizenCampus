@@ -267,4 +267,16 @@ export const GAME = {
     'games.xenoflora.bio_form': "BIO-FORM",
     'games.xenoflora.noise': "NOISE",
     'games.xenoflora.describe_the_creatur': "Describe the creature... (e.g. 'Huge fins for gliding')",
+
+    'game.quantum_qubit.title': 'Quantum Qubit', 'game.quantum_qubit.desc': 'Entangle logic gates.',
+    'game.neural_prism.title': 'Neural Prism', 'game.neural_prism.desc': 'Refract token embeddings.',
+    'game.synapse_surge.title': 'Synapse Surge', 'game.synapse_surge.desc': 'Navigate data bottlenecks.',
+    'game.deepfake_deflector.title': 'Deepfake Deflector', 'game.deepfake_deflector.desc': 'Spot AI artifacts.',
+    'game.oracle_index.title': 'Oracle Index', 'game.oracle_index.desc': 'RAG database retrieval.',
+    'game.chaos_engineering.title': 'Chaos Engineering', 'game.chaos_engineering.desc': 'System resilience.',
+    'game.turing_tessellation.title': 'Turing Tessellation', 'game.turing_tessellation.desc': 'Align moral frameworks.',
+    'game.data_heist.title': 'Data Heist', 'game.data_heist.desc': 'Zero-knowledge proofs.',
+    'game.prompt_sculptor.title': 'Prompt Sculptor', 'game.prompt_sculptor.desc': 'Context window constraints.',
+    'game.singularity_core.title': 'Singularity Core', 'game.singularity_core.desc': 'AGI containment.',
 };
+

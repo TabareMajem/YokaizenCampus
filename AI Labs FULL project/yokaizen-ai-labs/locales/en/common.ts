@@ -36,4 +36,22 @@ export const COMMON = {
     'lab.back': 'RETURN TO SECTOR',
     'lab.system_online': 'SYSTEM: ONLINE // ENCRYPTION: 512-BIT',
     'lab.locked': 'ACCESS DENIED',
+
+    'profile.xp': 'PROFILE XP',
+    'profile.streak': 'STREAK',
+    'profile.credits': 'CREDITS',
+    'profile.level': 'LEVEL',
+    'profile.created_games': 'CREATED GAMES',
+    'profile.no_games': 'No games created yet.',
+    'profile.badges': 'BADGES',
+    'home.next_unlock': 'NEXT UNLOCK',
+    'home.view_lab': 'VIEW LAB',
+    'home.continue_path': 'CONTINUE PATH',
+    'home.path_desc': 'Resume your neural training journey.',
+    'difficulty.rookie': 'ROOKIE',
+    'difficulty.pro': 'PRO',
+    'difficulty.elite': 'ELITE',
+    'leaderboard.global': 'GLOBAL',
+    'leaderboard.squad': 'SQUAD',
 };
+

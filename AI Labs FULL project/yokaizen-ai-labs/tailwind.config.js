@@ -15,15 +15,19 @@ export default {
                 void: '#020204',
                 glass: 'rgba(255, 255, 255, 0.05)',
                 'glass-border': 'rgba(255, 255, 255, 0.1)',
-                electric: '#C45FFF',
-                cyan: '#00FFFF',
-                amber: '#F59E0B',
-                danger: '#EF4444',
-                success: '#10B981',
-                metal: '#1C1C22'
+                electric: '#c45fff',
+                cyan: '#00e5ff',
+                amber: '#ffab00',
+                danger: '#f43f5e',
+                success: '#10b981',
+                metal: '#111116',
+                // Premium deep shades
+                abyss: '#07070a',
+                midnight: '#0b0f19',
+                'deep-purple': '#1e0b35',
             },
             fontFamily: {
-                sans: ['Inter', 'sans-serif'],
+                sans: ['Outfit', 'Inter', 'sans-serif'],
                 mono: ['JetBrains Mono', 'monospace'],
             },
             animation: {

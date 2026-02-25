@@ -1,10 +1,13 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Sparkles, Float, Sphere, Instances, Instance } from '@react-three/drei';
+import { OrbitControls, Sparkles, Float, Sphere, Instances, Instance, Text } from '@react-three/drei';
+import { EffectComposer, Bloom, ChromaticAberration, Noise, Vignette, Glitch } from '@react-three/postprocessing';
+import { BlendFunction, GlitchMode } from 'postprocessing';
 import * as THREE from 'three';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Zap, Target, Crosshair, BrainCircuit } from 'lucide-react';
+import { Shield, Zap, Target, Crosshair, BrainCircuit, Flame, Twitter, MessageCircle } from 'lucide-react';
 import { useDialogue } from '../../contexts/DialogueContext';
+import { audio } from '../../services/audioService';
 
 interface GameProps {
     onComplete: () => void;
@@ -106,12 +109,26 @@ function Enemies({ onHitCore, onHitEnemy, isPlaying }: { onHitCore: () => void, 
                     onPointerOver={() => { document.body.style.cursor = 'crosshair'; }}
                     onPointerOut={() => { document.body.style.cursor = 'default'; }}
                 >
-                    <boxGeometry args={[0.5, 0.5, 0.5]} />
-                    <meshStandardMaterial color="#ff0055" emissive="#ff0055" emissiveIntensity={1} />
+                    <tetrahedronGeometry args={[0.8]} />
+                    <meshStandardMaterial color="#ff0055" emissive="#ff0055" emissiveIntensity={3} roughness={0.2} metalness={0.8} />
+                    <pointLight distance={4} intensity={2} color="#ff0055" />
                 </mesh>
             ))}
         </group>
     );
+}
+
+function CameraRig({ isShaking }: { isShaking: boolean }) {
+    useFrame((state) => {
+        if (isShaking) {
+            state.camera.position.x = (Math.random() - 0.5) * 0.5;
+            state.camera.position.y = (Math.random() - 0.5) * 0.5;
+        } else {
+            state.camera.position.x = THREE.MathUtils.lerp(state.camera.position.x, 0, 0.1);
+            state.camera.position.y = THREE.MathUtils.lerp(state.camera.position.y, 0, 0.1);
+        }
+    });
+    return null;
 }
 
 export const ViralChaosDefense: React.FC<GameProps> = ({ onComplete }) => {
@@ -119,8 +136,12 @@ export const ViralChaosDefense: React.FC<GameProps> = ({ onComplete }) => {
     const [gameState, setGameState] = useState<'playing' | 'crashed' | 'won'>('playing');
     const [timeLeft, setTimeLeft] = useState(SURVIVAL_TIME);
     const [score, setScore] = useState(0);
+    const [combo, setCombo] = useState(1);
+    const [isShaking, setIsShaking] = useState(false);
+    const [isGlitching, setIsGlitching] = useState(false);
 
     useEffect(() => {
+        audio.playEngine(SURVIVAL_TIME * 1000);
         queueDialogue([
             {
                 id: 'cd-intro-1',
@@ -144,6 +165,7 @@ export const ViralChaosDefense: React.FC<GameProps> = ({ onComplete }) => {
                 if (prev <= 1) {
                     setGameState('won');
                     clearInterval(timer);
+                    audio.playSuccess();
                     queueDialogue([
                         {
                             id: 'cd-win-1',
@@ -163,27 +185,35 @@ export const ViralChaosDefense: React.FC<GameProps> = ({ onComplete }) => {
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [gameState]);
+    }, [gameState, score, queueDialogue]);
 
     const handleCoreHit = () => {
         if (gameState === 'playing') {
-            // Just visually deduct score or flash screen to keep it casual/viral
+            audio.playError();
+            setIsShaking(true);
+            setIsGlitching(true);
+            setTimeout(() => { setIsShaking(false); setIsGlitching(false); }, 300);
             setScore(s => Math.max(0, s - 50));
+            setCombo(1); // Break combo
         }
     };
 
     const handleEnemyHit = () => {
         if (gameState === 'playing') {
-            setScore(s => s + 100);
+            audio.playClick();
+            setCombo(c => Math.min(c + 1, 10)); // Max combo x10
+            setScore(s => s + (100 * combo));
         }
     };
 
     return (
         <div className="w-screen h-screen bg-black overflow-hidden relative select-none">
-            <Canvas camera={{ position: [0, 0, 15], fov: 60 }}>
-                <color attach="background" args={['#050010']} />
+            <Canvas camera={{ position: [0, 0, 15], fov: 60 }} gl={{ antialias: false, powerPreference: "high-performance" }}>
+                <color attach="background" args={['#020005']} />
+                <fog attach="fog" args={['#020005', 10, 30]} />
                 <ambientLight intensity={0.5} />
 
+                <CameraRig isShaking={isShaking} />
                 <Core />
                 <Enemies
                     isPlaying={gameState === 'playing'}
@@ -191,8 +221,26 @@ export const ViralChaosDefense: React.FC<GameProps> = ({ onComplete }) => {
                     onHitEnemy={handleEnemyHit}
                 />
 
-                <OrbitControls enableZoom={false} enablePan={false} autoRotate speed={0.5} />
-                <Sparkles count={500} scale={20} size={2} color="#00ffff" opacity={0.3} speed={0.2} />
+                <OrbitControls enableZoom={false} enablePan={false} autoRotate autoRotateSpeed={0.8} />
+                <Sparkles count={500} scale={25} size={3} color="#00ffff" opacity={0.4} speed={0.3} />
+
+                <EffectComposer disableNormalPass>
+                    <Bloom luminanceThreshold={0.2} mipmapBlur intensity={1.5 + (combo * 0.1)} />
+                    <ChromaticAberration blendFunction={BlendFunction.NORMAL} offset={new THREE.Vector2(0.003 * combo, 0.003 * combo)} />
+                    <Noise opacity={0.05} />
+                    <Vignette eskil={false} offset={0.1} darkness={1.1} />
+                    {isGlitching && (
+                        <Glitch
+                            delay={new THREE.Vector2(0, 0)}
+                            blendFunction={BlendFunction.NORMAL}
+                            offset={new THREE.Vector2(0.005, 0)}
+                            radialModulation={false}
+                            modulationOffset={0}
+                            mode={GlitchMode.SPORADIC}
+                            active
+                        />
+                    )}
+                </EffectComposer>
             </Canvas>
 
             {/* Massive Typography Overlay */}
@@ -203,8 +251,8 @@ export const ViralChaosDefense: React.FC<GameProps> = ({ onComplete }) => {
             </div>
 
             {/* UI Hud */}
-            <div className="absolute top-0 left-0 w-full p-8 pointer-events-none z-10">
-                <div className="flex justify-between items-start">
+            <div className="absolute top-0 left-0 w-full p-4 md:p-8 pointer-events-none z-10">
+                <div className="flex flex-col md:flex-row justify-between items-start gap-4 md:gap-0 mt-[10vh] md:mt-0">
                     <div className="backdrop-blur-md bg-black/40 border border-cyan-500/30 p-4 rounded-xl">
                         <h2 className="text-cyan-400 font-bold tracking-widest text-sm flex items-center gap-2">
                             <Shield size={14} /> CORE DEFENSE
@@ -215,11 +263,27 @@ export const ViralChaosDefense: React.FC<GameProps> = ({ onComplete }) => {
                         <p className="text-gray-400 text-xs mt-1">Protect the AI Core from fragmentation.</p>
                     </div>
 
-                    <div className="text-right backdrop-blur-md bg-purple-900/30 border border-purple-500/30 p-4 rounded-xl">
-                        <div className="flex items-center gap-2 text-purple-400 font-bold text-sm">
-                            <Target size={14} /> SCORE
+                    <div className="text-left md:text-right flex flex-col items-start md:items-end w-full md:w-auto gap-2">
+                        <div className="backdrop-blur-md bg-purple-900/30 border border-purple-500/30 p-4 rounded-xl w-full md:w-auto">
+                            <div className="flex items-center gap-2 text-purple-400 font-bold text-sm">
+                                <Target size={14} /> SCORE
+                            </div>
+                            <div className="text-3xl font-black text-white mt-1 tabular-nums">{score}</div>
                         </div>
-                        <div className="text-3xl font-black text-white mt-1 tabular-nums">{score}</div>
+
+                        {combo > 1 && (
+                            <AnimatePresence>
+                                <motion.div
+                                    initial={{ scale: 0, opacity: 0, x: 50 }}
+                                    animate={{ scale: 1, opacity: 1, x: 0 }}
+                                    exit={{ scale: 0, opacity: 0 }}
+                                    className="backdrop-blur-md bg-orange-900/40 border border-orange-500/50 p-3 rounded-xl flex items-center gap-2"
+                                >
+                                    <Flame className="text-orange-500 animate-pulse" size={20} />
+                                    <span className="text-orange-400 font-black text-xl italic">{combo}x COMBO</span>
+                                </motion.div>
+                            </AnimatePresence>
+                        )}
                     </div>
                 </div>
             </div>
@@ -241,16 +305,32 @@ export const ViralChaosDefense: React.FC<GameProps> = ({ onComplete }) => {
                         animate={{ opacity: 1, scale: 1 }}
                         className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl"
                     >
-                        <div className="max-w-md w-full p-8 border border-cyan-500/50 bg-black/80 rounded-2xl text-center shadow-[0_0_50px_rgba(0,255,255,0.1)] relative overflow-hidden">
-                            <div className="w-20 h-20 mx-auto bg-cyan-500/20 rounded-full flex items-center justify-center mb-6 border border-cyan-400/30">
-                                <BrainCircuit className="text-cyan-400 w-10 h-10" />
+                        <div className="max-w-[90vw] md:max-w-md w-full p-6 md:p-8 border border-cyan-500/50 bg-black/80 rounded-2xl text-center shadow-[0_0_50px_rgba(0,255,255,0.1)] relative overflow-hidden">
+                            <div className="w-16 h-16 md:w-20 md:h-20 mx-auto bg-cyan-500/20 rounded-full flex items-center justify-center mb-4 md:mb-6 border border-cyan-400/30">
+                                <BrainCircuit className="text-cyan-400 w-8 h-8 md:w-10 md:h-10" />
                             </div>
 
-                            <h2 className="text-4xl font-black text-white mb-2 tracking-tight">CORE <span className="text-cyan-400">SECURED</span></h2>
-                            <div className="text-2xl font-mono text-white mb-4">FINAL SCORE: {score}</div>
-                            <p className="text-gray-300 mb-8 pt-4 border-t border-white/10">
-                                Threat neutralized. You have proven your strategic capability. Claim your identity within the AI Labs collective.
+                            <h2 className="text-3xl md:text-4xl font-black text-white mb-2 tracking-tight">CORE <span className="text-cyan-400">SECURED</span></h2>
+                            <div className="text-xl md:text-2xl font-mono text-white mb-4">FINAL SCORE: {score}</div>
+                            <p className="text-sm md:text-base text-gray-300 mb-4 pt-4 border-t border-white/10">
+                                Threat neutralized. Your Defense Rating: <span className="text-cyan-400 font-black">{score >= 100 ? 'LEGENDARY' : score >= 50 ? 'ELITE' : 'OPERATOR'}</span>
                             </p>
+
+                            {/* VIRAL SHARE BUTTONS */}
+                            <div className="flex flex-col sm:flex-row gap-2 mb-6">
+                                <button
+                                    onClick={() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`🛡️ The AGI transition is happening NOW. I scored ${score} defending the AI Core (${score >= 100 ? 'LEGENDARY' : score >= 50 ? 'ELITE' : 'OPERATOR'}). Are you learning real skills or falling behind? Test yourself:`)}&url=${encodeURIComponent('https://ai.yokaizencampus.com/play/chaos-defense')}`, '_blank')}
+                                    className="flex-1 py-2.5 bg-[#1DA1F2] text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 hover:brightness-110 transition-all"
+                                >
+                                    <Twitter size={14} /> Share on X
+                                </button>
+                                <button
+                                    onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`🛡️ AI jobs pay $300k+. Are you prepared? I just hit ${score >= 100 ? 'LEGENDARY' : score >= 50 ? 'ELITE' : 'OPERATOR'} status in cognitive defense. Try the free test: https://ai.yokaizencampus.com/play/chaos-defense`)}`, '_blank')}
+                                    className="flex-1 py-2.5 bg-[#25D366] text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 hover:brightness-110 transition-all"
+                                >
+                                    <MessageCircle size={14} /> WhatsApp
+                                </button>
+                            </div>
 
                             <button
                                 onClick={onComplete}

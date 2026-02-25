@@ -178,83 +178,113 @@ export const LabScreen: React.FC<LabScreenProps> = ({ user, onUpdateUser, initia
     };
 
     const renderDashboard = () => (
-        <div className="grid grid-cols-2 gap-4 p-4 pb-24 animate-in zoom-in duration-300">
-            {TOOLS.map(tool => {
-                const unlocked = isUnlocked(tool);
+        <div className="max-w-5xl mx-auto w-full p-4 md:p-8 animate-in zoom-in duration-500">
+            <div className="mb-8 p-6 bg-gradient-to-r from-blue-900/40 to-indigo-900/20 border border-indigo-500/30 rounded-2xl relative overflow-hidden group">
+                <div className="absolute inset-0 bg-[url('/assets/aaa/grid-pattern.png')] opacity-10 mix-blend-overlay"></div>
+                <div className="absolute right-0 top-0 w-64 h-64 bg-electric/20 blur-[100px] rounded-full group-hover:bg-electric/40 transition-all duration-700"></div>
 
-                const Icon =
-                    tool.icon === 'Bot' ? Bot :
-                        tool.icon === 'Image' ? ImageIcon :
-                            tool.icon === 'Eye' ? Eye :
-                                tool.icon === 'Mic' ? Mic :
-                                    tool.icon === 'Gamepad2' ? Gamepad2 :
-                                        tool.icon === 'Scan' ? Scan :
-                                            tool.icon === 'Code' ? Code :
-                                                tool.icon === 'Workflow' ? Workflow :
-                                                    tool.icon === 'Cpu' ? Cpu :
-                                                        Lock;
+                <h2 className="text-2xl md:text-3xl font-black text-white uppercase tracking-widest mb-2 relative z-10 flex items-center">
+                    <Grid className="text-electric mr-3" size={28} /> Neural Hub Tools
+                </h2>
+                <p className="text-sm text-gray-400 max-w-xl relative z-10 font-mono">
+                    Access high-level artificial intelligence modules. Tools remain locked until corresponding clearance or experience milestones are achieved.
+                </p>
+            </div>
 
-                const colorClass =
-                    tool.type === 'AGENT_BUILDER' ? 'text-electric' :
-                        tool.type === 'IMAGE_GEN' ? 'text-cyan' :
-                            tool.type === 'AUDIO' ? 'text-amber-500' :
-                                tool.type === 'GAME_CREATOR' ? 'text-pink-500' :
-                                    tool.type === 'OPENCLAW' ? 'text-indigo-500' :
-                                        tool.type === 'JARVIS' ? 'text-green-400' :
-                                            'text-blue-400';
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-24">
+                {TOOLS.map(tool => {
+                    const unlocked = isUnlocked(tool);
 
-                const borderClass =
-                    tool.type === 'AGENT_BUILDER' ? 'border-electric' :
-                        tool.type === 'IMAGE_GEN' ? 'border-cyan' :
-                            tool.type === 'AUDIO' ? 'border-amber-500' :
-                                tool.type === 'GAME_CREATOR' ? 'border-pink-500' :
-                                    tool.type === 'OPENCLAW' ? 'border-indigo-500' :
-                                        tool.type === 'JARVIS' ? 'border-green-400' :
-                                            'border-blue-400';
+                    const Icon =
+                        tool.icon === 'Bot' ? Bot :
+                            tool.icon === 'Image' ? ImageIcon :
+                                tool.icon === 'Eye' ? Eye :
+                                    tool.icon === 'Mic' ? Mic :
+                                        tool.icon === 'Gamepad2' ? Gamepad2 :
+                                            tool.icon === 'Scan' ? Scan :
+                                                tool.icon === 'Code' ? Code :
+                                                    tool.icon === 'Workflow' ? Workflow :
+                                                        tool.icon === 'Cpu' ? Cpu :
+                                                            Lock;
 
-                const displayName = t(tool.name);
-                const displayDesc = t(tool.description);
+                    const colorClass =
+                        tool.type === 'AGENT_BUILDER' ? 'text-electric' :
+                            tool.type === 'IMAGE_GEN' ? 'text-cyan' :
+                                tool.type === 'AUDIO' ? 'text-amber-500' :
+                                    tool.type === 'GAME_CREATOR' ? 'text-pink-500' :
+                                        tool.type === 'OPENCLAW' ? 'text-indigo-500' :
+                                            tool.type === 'JARVIS' ? 'text-green-400' :
+                                                'text-blue-400';
 
-                return (
-                    <div
-                        key={tool.id}
-                        className={`relative rounded-2xl border p-4 text-left flex flex-col justify-between min-h-[160px] overflow-hidden transition-all duration-300 ${unlocked
-                            ? `bg-gray-900/40 border-white/10 hover:${borderClass} hover:shadow-lg cursor-pointer`
-                            : 'bg-black/50 border-gray-800 opacity-80 cursor-not-allowed group'
-                            }`}
-                        onClick={() => handleToolClick(tool, unlocked)}
-                    >
-                        {activeTooltip === tool.id && (
-                            <ToolTooltip tool={tool} onClose={() => setActiveTooltip(null)} t={t} />
-                        )}
+                    const borderClass =
+                        tool.type === 'AGENT_BUILDER' ? 'border-electric' :
+                            tool.type === 'IMAGE_GEN' ? 'border-cyan' :
+                                tool.type === 'AUDIO' ? 'border-amber-500' :
+                                    tool.type === 'GAME_CREATOR' ? 'border-pink-500' :
+                                        tool.type === 'OPENCLAW' ? 'border-indigo-500' :
+                                            tool.type === 'JARVIS' ? 'border-green-400' :
+                                                'border-blue-400';
 
-                        <button
-                            className="absolute top-2 right-2 p-1.5 rounded-full bg-white/5 hover:bg-white/20 text-gray-400 hover:text-white z-10 transition-colors"
-                            onClick={(e) => { e.stopPropagation(); setActiveTooltip(tool.id); }}
+                    const glowClass =
+                        tool.type === 'AGENT_BUILDER' ? 'shadow-[0_0_20px_rgba(196,95,255,0.4)]' :
+                            tool.type === 'IMAGE_GEN' ? 'shadow-[0_0_20px_rgba(6,182,212,0.4)]' :
+                                'shadow-[0_0_20px_rgba(255,255,255,0.1)]';
+
+                    const displayName = t(tool.name);
+                    const displayDesc = t(tool.description);
+
+                    return (
+                        <div
+                            key={tool.id}
+                            className={`relative rounded-2xl border p-6 text-left flex flex-col justify-between min-h-[200px] overflow-hidden transition-all duration-500 ${unlocked
+                                ? `bg-gray-900/60 backdrop-blur-md border-white/10 hover:${borderClass} hover:${glowClass} hover:-translate-y-2 cursor-pointer group`
+                                : 'bg-black/80 border-gray-800 opacity-80 cursor-not-allowed group'
+                                }`}
+                            onClick={() => handleToolClick(tool, unlocked)}
                         >
-                            <Info size={14} />
-                        </button>
+                            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
 
-                        <div>
-                            <div className={`p-3 rounded-xl bg-black/40 w-min mb-3 border border-white/5`}>
-                                <Icon size={24} className={unlocked ? colorClass : 'text-gray-600'} />
-                            </div>
-                            <h3 className={`font-bold text-sm ${unlocked ? 'text-white' : 'text-gray-500'}`}>{displayName}</h3>
-                            <p className="text-[10px] text-gray-400 mt-1 leading-tight">{displayDesc.substring(0, 40)}...</p>
-                        </div>
+                            {activeTooltip === tool.id && (
+                                <ToolTooltip tool={tool} onClose={() => setActiveTooltip(null)} t={t} />
+                            )}
 
-                        {!unlocked && (
-                            <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center p-4 text-center backdrop-blur-[2px] transition-opacity duration-300">
-                                <Lock size={32} className="text-gray-600 mb-2 group-hover:scale-110 transition-transform" />
-                                <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">{t('lab.locked')}</div>
-                                <div className="text-[10px] text-electric bg-electric/10 border border-electric/30 px-3 py-1.5 rounded-full font-mono flex items-center justify-center text-center">
-                                    {t(tool.unlockCondition)}
+                            <button
+                                className="absolute top-4 right-4 p-2 rounded-full bg-black/50 hover:bg-white/20 text-gray-400 hover:text-white z-10 transition-colors backdrop-blur-md"
+                                onClick={(e) => { e.stopPropagation(); setActiveTooltip(tool.id); }}
+                            >
+                                <Info size={16} />
+                            </button>
+
+                            <div className="relative z-10">
+                                <div className={`p-4 rounded-xl bg-black/60 w-min mb-4 border border-white/10 shadow-inner group-hover:scale-110 transition-transform duration-500`}>
+                                    <Icon size={28} className={unlocked ? colorClass : 'text-gray-600'} />
                                 </div>
+                                <h3 className={`font-black tracking-wide text-lg uppercase ${unlocked ? 'text-white' : 'text-gray-500'}`}>{displayName}</h3>
+                                <p className="text-xs text-gray-400 mt-2 leading-relaxed">{displayDesc.substring(0, 60)}...</p>
                             </div>
-                        )}
-                    </div>
-                );
-            })}
+
+                            {unlocked && (
+                                <div className="relative z-10 mt-4 flex justify-end opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                    <span className={`text-[10px] font-bold uppercase tracking-widest ${colorClass}`}>Access Granted &rarr;</span>
+                                </div>
+                            )}
+
+                            {!unlocked && (
+                                <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center p-6 text-center backdrop-blur-sm transition-opacity duration-300 z-20">
+                                    <Lock size={40} className="text-gray-700 mb-3 group-hover:scale-110 group-hover:text-red-500/50 transition-all duration-300" />
+                                    <div className="text-xs font-black text-gray-500 uppercase tracking-widest mb-3">{t('lab.locked')}</div>
+                                    <div className="text-[10px] text-electric bg-electric/10 border border-electric/30 px-3 py-2 rounded-lg font-mono flex items-center justify-center text-center shadow-[0_0_15px_rgba(196,95,255,0.1)]">
+                                        {t(tool.unlockCondition)}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Overlay scanlines for premium feel */}
+                            <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.2)_50%)] bg-[length:100%_4px] pointer-events-none mix-blend-overlay opacity-50 z-10"></div>
+                        </div>
+                    );
+                })}
+            </div>
         </div>
     );
 

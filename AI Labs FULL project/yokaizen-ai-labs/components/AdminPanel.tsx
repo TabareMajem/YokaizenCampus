@@ -105,11 +105,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ games, onUpdateGames, us
 
     return (
         <div className="min-h-screen bg-[#050505] pb-20 font-mono text-gray-300">
-            <div className="p-4 border-b border-white/10 bg-black/50 backdrop-blur sticky top-0 z-20 flex justify-between items-center">
-                <h1 className="text-xl font-black text-white">ADMIN <span className="text-electric">CONSOLE</span></h1>
-                <div className="flex items-center space-x-2 text-[10px] font-bold uppercase">
-                    <div className={`w-2 h-2 rounded-full ${systemHealth > 90 ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'}`}></div>
-                    <span className={systemHealth > 90 ? 'text-green-500' : 'text-yellow-500'}>System Health: {systemHealth}%</span>
+            <div className="p-5 border-b border-white/10 bg-black/80 backdrop-blur-xl sticky top-0 z-20 flex justify-between items-center shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+                <h1 className="text-2xl font-black text-white tracking-widest flex items-center"><ShieldAlert size={24} className="mr-3 text-electric animate-pulse drop-shadow-[0_0_10px_rgba(196,95,255,0.5)]" /> ADMIN <span className="text-electric ml-2 drop-shadow-[0_0_10px_rgba(196,95,255,0.5)]">CONSOLE</span></h1>
+                <div className="flex items-center space-x-2 text-[10px] font-bold uppercase bg-white/5 border border-white/10 px-3 py-1.5 rounded-full">
+                    <div className={`w-2 h-2 rounded-full ${systemHealth > 90 ? 'bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.8)]' : 'bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.8)]'}`}></div>
+                    <span className={systemHealth > 90 ? 'text-green-500 drop-shadow-md' : 'text-yellow-500 drop-shadow-md'}>System Health: {systemHealth}%</span>
                 </div>
             </div>
 
@@ -138,25 +138,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ games, onUpdateGames, us
                     <div className="space-y-6 animate-in fade-in">
                         {/* Summary Cards */}
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <div className="bg-gray-900/50 p-4 rounded-xl border border-white/10">
-                                <div className="text-xs text-gray-500 uppercase font-bold mb-1">Total Modules</div>
-                                <div className="text-3xl font-black text-white">{games.length}</div>
+                            <div className="bg-black/50 backdrop-blur-md p-5 rounded-2xl border border-white/10 hover:border-white/20 hover:bg-black/70 hover:shadow-[0_0_20px_rgba(255,255,255,0.1)] transition-all group">
+                                <div className="text-xs text-gray-500 uppercase font-bold mb-2 flex items-center"><Gamepad2 size={14} className="mr-2 text-gray-400 group-hover:text-white transition-colors" /> Total Modules</div>
+                                <div className="text-4xl font-black text-white drop-shadow-md">{games.length}</div>
                             </div>
-                            <div className="bg-gray-900/50 p-4 rounded-xl border border-white/10">
-                                <div className="text-xs text-gray-500 uppercase font-bold mb-1">UX Score Avg</div>
-                                <div className="text-3xl font-black text-cyan-400">
+                            <div className="bg-black/50 backdrop-blur-md p-5 rounded-2xl border border-white/10 hover:border-cyan-500/30 hover:bg-cyan-900/10 hover:shadow-[0_0_20px_rgba(34,211,238,0.2)] transition-all group">
+                                <div className="text-xs text-gray-500 uppercase font-bold mb-2 flex items-center"><Smartphone size={14} className="mr-2 text-cyan-500 group-hover:animate-pulse" /> UX Score Avg</div>
+                                <div className="text-4xl font-black text-cyan-400 drop-shadow-[0_0_10px_rgba(34,211,238,0.5)]">
                                     {Math.round(auditData.reduce((acc, g) => acc + g.scores.ux, 0) / games.length)}%
                                 </div>
                             </div>
-                            <div className="bg-gray-900/50 p-4 rounded-xl border border-white/10">
-                                <div className="text-xs text-gray-500 uppercase font-bold mb-1">Visual Fidelity</div>
-                                <div className="text-3xl font-black text-purple-400">
+                            <div className="bg-black/50 backdrop-blur-md p-5 rounded-2xl border border-white/10 hover:border-purple-500/30 hover:bg-purple-900/10 hover:shadow-[0_0_20px_rgba(196,95,255,0.2)] transition-all group">
+                                <div className="text-xs text-gray-500 uppercase font-bold mb-2 flex items-center"><Monitor size={14} className="mr-2 text-purple-400 group-hover:animate-pulse" /> Visual Fidelity</div>
+                                <div className="text-4xl font-black text-purple-400 drop-shadow-[0_0_10px_rgba(196,95,255,0.5)]">
                                     {Math.round(auditData.reduce((acc, g) => acc + g.scores.visuals, 0) / games.length)}%
                                 </div>
                             </div>
-                            <div className="bg-gray-900/50 p-4 rounded-xl border border-white/10">
-                                <div className="text-xs text-gray-500 uppercase font-bold mb-1">Issues Detect</div>
-                                <div className="text-3xl font-black text-green-500">0</div> {/* Optimized */}
+                            <div className="bg-black/50 backdrop-blur-md p-5 rounded-2xl border border-white/10 hover:border-green-500/30 hover:bg-green-900/10 hover:shadow-[0_0_20px_rgba(34,197,94,0.2)] transition-all group">
+                                <div className="text-xs text-gray-500 uppercase font-bold mb-2 flex items-center"><Bug size={14} className="mr-2 text-green-500 group-hover:animate-pulse" /> Issues Detect</div>
+                                <div className="text-4xl font-black text-green-500 drop-shadow-[0_0_10px_rgba(34,197,94,0.5)]">0</div> {/* Optimized */}
                             </div>
                         </div>
 

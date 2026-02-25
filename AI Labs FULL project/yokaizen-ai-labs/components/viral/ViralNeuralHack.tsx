@@ -1,10 +1,13 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, Text3D, Center, Float, Sparkles, Line, Instances, Instance, Environment, Bloom, EffectComposer } from '@react-three/drei';
+import { OrbitControls, Text3D, Center, Float, Sparkles, Line, Instances, Instance, Environment } from '@react-three/drei';
+import { EffectComposer, Bloom, Glitch, ChromaticAberration, DepthOfField } from '@react-three/postprocessing';
+import { GlitchMode, BlendFunction } from 'postprocessing';
 import * as THREE from 'three';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Zap, Lock, ScanLine, Brain, TriangleAlert } from 'lucide-react';
+import { Shield, Zap, Lock, ScanLine, Brain, TriangleAlert, Share2, Twitter, MessageCircle, Copy, Check } from 'lucide-react';
 import { useDialogue } from '../../contexts/DialogueContext';
+import { audio } from '../../services/audioService';
 
 interface GameProps {
     onComplete: () => void;
@@ -40,31 +43,48 @@ const generateNodes = (count: number) => {
     }));
 };
 
+const CameraRig = ({ activePathLength }: { activePathLength: number }) => {
+    useFrame((state) => {
+        // Dramatic slow pan mixed with tension as hack progresses
+        const t = state.clock.getElapsedTime();
+        const intensity = activePathLength / CONSTANTS.WIN_CONDITION;
+        state.camera.position.x = THREE.MathUtils.lerp(state.camera.position.x, Math.sin(t * 0.2) * (5 + intensity * 5), 0.05);
+        state.camera.position.y = THREE.MathUtils.lerp(state.camera.position.y, Math.cos(t * 0.2) * (2 + intensity * 2), 0.05);
+        state.camera.lookAt(0, 0, 0);
+    });
+    return null;
+};
+
 const NeuralNetwork = ({ onHackComplete }: { onHackComplete: () => void }) => {
     const [nodes, setNodes] = useState(generateNodes(CONSTANTS.NODES_COUNT));
     const [connections, setConnections] = useState<[THREE.Vector3, THREE.Vector3][]>([]);
     const [activePath, setActivePath] = useState<number[]>([]);
+    const [glitchActive, setGlitchActive] = useState(false);
 
     const handleNodeClick = (id: number) => {
-        if (activePath.includes(id)) return; // Prevent loops
+        if (activePath.includes(id)) return;
 
         const newNode = nodes.find(n => n.id === id);
         if (!newNode) return;
 
-        // Check if within distance of last node if there is an active path
         if (activePath.length > 0) {
             const lastNodeId = activePath[activePath.length - 1];
             const lastNode = nodes.find(n => n.id === lastNodeId);
             if (lastNode && lastNode.position.distanceTo(newNode.position) > 6) {
-                // Too far to connect
+                audio.playError();
                 return;
             }
 
-            // Add connection line
             if (lastNode) {
                 setConnections(prev => [...prev, [lastNode.position, newNode.position]]);
             }
         }
+
+        audio.playClick();
+
+        // Trigger a visceral micro-glitch
+        setGlitchActive(true);
+        setTimeout(() => setGlitchActive(false), 150);
 
         const newPath = [...activePath, id];
         setActivePath(newPath);
@@ -76,31 +96,54 @@ const NeuralNetwork = ({ onHackComplete }: { onHackComplete: () => void }) => {
         })));
 
         if (newPath.length >= CONSTANTS.WIN_CONDITION) {
+            audio.playSuccess();
             setTimeout(() => onHackComplete(), 1000);
         }
     };
 
     return (
         <group>
-            {nodes.map((node) => (
-                <mesh
-                    key={node.id}
-                    position={node.position}
-                    onClick={(e) => { e.stopPropagation(); handleNodeClick(node.id); }}
-                    onPointerOver={(e) => { document.body.style.cursor = 'pointer'; }}
-                    onPointerOut={(e) => { document.body.style.cursor = 'default'; }}
-                >
-                    <sphereGeometry args={[0.3, 32, 32]} />
-                    <meshStandardMaterial
-                        color={node.hacked ? '#00ffff' : '#ff0055'}
-                        emissive={node.hacked ? '#00ffff' : '#440022'}
-                        emissiveIntensity={node.hacked ? 2 : 0.5}
-                        toneMapped={false}
+            <CameraRig activePathLength={activePath.length} />
+
+            <EffectComposer disableNormalPass>
+                <Bloom luminanceThreshold={0.2} mipmapBlur intensity={1.5} />
+                <ChromaticAberration blendFunction={BlendFunction.NORMAL} offset={new THREE.Vector2(0.002, 0.002)} />
+                {glitchActive && (
+                    <Glitch
+                        delay={new THREE.Vector2(0, 0)}
+                        duration={new THREE.Vector2(0.1, 0.3)}
+                        strength={new THREE.Vector2(0.1, 0.5)}
+                        mode={GlitchMode.SPORADIC}
+                        active
                     />
-                    {node.hacked && (
-                        <pointLight distance={3} intensity={2} color="#00ffff" />
-                    )}
-                </mesh>
+                )}
+                <DepthOfField target={[0, 0, 0]} focalLength={0.4} bokehScale={2} height={480} />
+            </EffectComposer>
+
+            {nodes.map((node) => (
+                <Float key={node.id} speed={2} rotationIntensity={1} floatIntensity={1}>
+                    <mesh
+                        position={node.position}
+                        onClick={(e) => { e.stopPropagation(); handleNodeClick(node.id); }}
+                        onPointerOver={(e) => { document.body.style.cursor = 'pointer'; }}
+                        onPointerOut={(e) => { document.body.style.cursor = 'default'; }}
+                    >
+                        <icosahedronGeometry args={[0.4, 1]} />
+                        <meshStandardMaterial
+                            color={node.hacked ? '#00ffff' : '#ff0055'}
+                            emissive={node.hacked ? '#00ffff' : '#ff0055'}
+                            emissiveIntensity={node.hacked ? 4 : 1}
+                            wireframe={!node.hacked}
+                            transparent
+                            opacity={0.9}
+                            roughness={0.2}
+                            metalness={0.8}
+                        />
+                        {node.hacked && (
+                            <pointLight distance={6} intensity={3} color="#00ffff" />
+                        )}
+                    </mesh>
+                </Float>
             ))}
 
             {connections.map((points, idx) => (
@@ -108,12 +151,15 @@ const NeuralNetwork = ({ onHackComplete }: { onHackComplete: () => void }) => {
                     key={idx}
                     points={points}
                     color="#00ffff"
-                    lineWidth={3}
+                    lineWidth={5}
                     dashed={false}
+                    transparent
+                    opacity={0.8}
                 />
             ))}
 
-            <Sparkles count={100} scale={15} size={2} color="#00ffff" speed={0.5} opacity={0.2} />
+            <Sparkles count={200} scale={20} size={3} color="#00ffff" speed={0.8} opacity={0.4} />
+            <Sparkles count={50} scale={15} size={8} color="#ff0055" speed={0.2} opacity={0.2} />
         </group>
     );
 };
@@ -156,14 +202,14 @@ export const ViralNeuralHack: React.FC<GameProps> = ({ onComplete }) => {
 
     return (
         <div className="w-screen h-screen bg-black overflow-hidden relative font-mono">
-            {/* 3D Canvas Context */}
-            <Canvas camera={{ position: [0, 0, 12], fov: 60 }}>
-                <color attach="background" args={['#050510']} />
-                <ambientLight intensity={0.5} />
-                <pointLight position={[10, 10, 10]} intensity={1} />
+            <Canvas camera={{ position: [0, 0, 15], fov: 60 }} gl={{ antialias: false, powerPreference: "high-performance" }}>
+                <color attach="background" args={['#020205']} />
+                <fog attach="fog" args={['#020205', 5, 25]} />
+                <ambientLight intensity={0.2} />
+                <pointLight position={[10, 10, 10]} intensity={2} color="#00ffff" />
+                <pointLight position={[-10, -10, -10]} intensity={1} color="#ff0055" />
                 <NeuralNetwork onHackComplete={handleHackComplete} />
-                <OrbitControls enableZoom={false} enablePan={false} autoRotate autoRotateSpeed={0.5} />
-                {/* Basic Bloom effect manually handled by materials and emissive if PostProcessing not fully installed, but typically we'd use <EffectComposer><Bloom/></EffectComposer> */}
+                <OrbitControls enableZoom={false} enablePan={false} autoRotate autoRotateSpeed={0.8} />
             </Canvas>
 
             {/* Massive Typography Background Overlay (Simulated HTML 3D for universal font support) */}
@@ -174,15 +220,15 @@ export const ViralNeuralHack: React.FC<GameProps> = ({ onComplete }) => {
             </div>
 
             {/* UI Overlay */}
-            <div className="absolute top-0 left-0 w-full p-8 pointer-events-none flex justify-between items-start">
+            <div className="absolute top-0 left-0 w-full p-4 md:p-8 pointer-events-none flex flex-col md:flex-row justify-between items-start gap-4 md:gap-0 mt-[10vh] md:mt-0">
                 <div>
-                    <h2 className="text-cyan-400 font-bold tracking-widest flex items-center gap-2">
+                    <h2 className="text-cyan-400 font-bold tracking-widest flex items-center gap-2 text-sm md:text-base">
                         <Lock size={16} /> SECURE CORE INTERFACE
                     </h2>
-                    <p className="text-gray-400 text-sm mt-1">Gaining root access... Connect {CONSTANTS.WIN_CONDITION} neural nodes to bypass firewall.</p>
+                    <p className="text-gray-400 text-xs md:text-sm mt-1 max-w-[80vw] md:max-w-none">Gaining root access... Connect {CONSTANTS.WIN_CONDITION} neural nodes to bypass firewall.</p>
                 </div>
-                <div className="text-right">
-                    <div className="flex items-center gap-2 text-red-500 animate-pulse font-bold">
+                <div className="text-left md:text-right w-full md:w-auto bg-black/50 md:bg-transparent p-2 md:p-0 rounded-lg md:rounded-none backdrop-blur-sm md:backdrop-blur-none border border-red-500/20 md:border-none">
+                    <div className="flex items-center gap-2 text-red-500 animate-pulse font-bold text-sm md:text-base">
                         <TriangleAlert size={16} /> INTRUSION DETECTED
                     </div>
                     <p className="text-gray-500 text-xs mt-1">TRACE IN PROGRESS: {Math.floor(Math.random() * 99)}%</p>
@@ -202,17 +248,33 @@ export const ViralNeuralHack: React.FC<GameProps> = ({ onComplete }) => {
                         animate={{ opacity: 1, scale: 1 }}
                         className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md"
                     >
-                        <div className="max-w-md w-full p-8 border border-cyan-500/30 bg-black/50 rounded-2xl text-center relative overflow-hidden">
+                        <div className="max-w-[90vw] md:max-w-md w-full p-6 md:p-8 border border-cyan-500/30 bg-black/50 rounded-2xl text-center relative overflow-hidden">
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
 
-                            <div className="w-20 h-20 mx-auto bg-cyan-500/20 rounded-full flex items-center justify-center mb-6">
-                                <Brain className="text-cyan-400 w-10 h-10" />
+                            <div className="w-16 h-16 md:w-20 md:h-20 mx-auto bg-cyan-500/20 rounded-full flex items-center justify-center mb-4 md:mb-6">
+                                <Brain className="text-cyan-400 w-8 h-8 md:w-10 md:h-10" />
                             </div>
 
-                            <h2 className="text-4xl font-black text-white mb-2 tracking-tight">ROOT ACCESS<br /><span className="text-cyan-400">GRANTED</span></h2>
-                            <p className="text-gray-300 mb-8 border-y border-white/10 py-4">
-                                You have successfully bypassed the perimeter firewall. The AI Labs core is now open. Register to establish your command identity.
+                            <h2 className="text-3xl md:text-4xl font-black text-white mb-2 tracking-tight">ROOT ACCESS<br /><span className="text-cyan-400">GRANTED</span></h2>
+                            <p className="text-sm md:text-base text-gray-300 mb-4 border-y border-white/10 py-4">
+                                You have successfully bypassed the perimeter firewall. Your AI Survivability Rating: <span className="text-cyan-400 font-black text-xl">S-TIER</span>
                             </p>
+
+                            {/* VIRAL SHARE BUTTONS */}
+                            <div className="flex flex-col sm:flex-row gap-2 mb-6">
+                                <button
+                                    onClick={() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('🧠 AI is replacing jobs NOW. I scored S-TIER on cognitive fitness — are YOU ready for the AI age? Free test:')}&url=${encodeURIComponent('https://ai.yokaizencampus.com/play/neural-hack')}`, '_blank')}
+                                    className="flex-1 py-2.5 bg-[#1DA1F2] text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 hover:brightness-110 transition-all"
+                                >
+                                    <Twitter size={14} /> Share on X
+                                </button>
+                                <button
+                                    onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent('🧠 68% of Gen Z will need AI skills by 2027. I just scored S-TIER — take the free test before it\'s too late: https://ai.yokaizencampus.com/play/neural-hack')}`, '_blank')}
+                                    className="flex-1 py-2.5 bg-[#25D366] text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 hover:brightness-110 transition-all"
+                                >
+                                    <MessageCircle size={14} /> WhatsApp
+                                </button>
+                            </div>
 
                             <button
                                 onClick={onComplete}

@@ -120,7 +120,11 @@ export class PaymentService {
 
     switch (event.type) {
       case 'checkout.session.completed':
-        await this.handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+        if (event.data.object.mode === 'payment' && event.data.object.metadata?.type === 'override_tokens') {
+          await this.handleCheckoutCompletedTokens(event.data.object as Stripe.Checkout.Session);
+        } else {
+          await this.handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+        }
         break;
 
       case 'invoice.payment_succeeded':
@@ -218,6 +222,36 @@ export class PaymentService {
       aiLabsAccess: user.aiLabsAccess,
       subscriptionProduct: user.subscriptionProduct,
     });
+  }
+
+  private async handleCheckoutCompletedTokens(session: Stripe.Checkout.Session): Promise<void> {
+    const customerId = session.customer as string;
+
+    const user = await this.userRepository.findOne({
+      where: { stripeCustomerId: customerId },
+    });
+
+    if (!user) {
+      logger.warn('User not found for token checkout', { customerId });
+      return;
+    }
+
+    // Update transaction
+    const transaction = await this.transactionRepository.findOne({
+      where: { referenceId: session.id },
+    });
+
+    if (transaction) {
+      transaction.status = TransactionStatus.COMPLETED;
+      transaction.metadata = { ...transaction.metadata, stripePaymentId: session.payment_intent as string };
+      await this.transactionRepository.save(transaction);
+    }
+
+    // Grant 50 credits
+    user.credits = (user.credits || 0) + 50;
+    await this.userRepository.save(user);
+
+    paymentLogger.info('Override Tokens (50 Credits) granted to user', user.id);
   }
 
   private async handleInvoiceSucceeded(invoice: Stripe.Invoice): Promise<void> {
@@ -390,6 +424,54 @@ export class PaymentService {
       status: TransactionStatus.PENDING,
       referenceId: session.id,
       metadata: { credits: packages[amount], stripeSessionId: session.id },
+    } as any);
+    await this.transactionRepository.save(transaction);
+
+    return {
+      sessionId: session.id,
+      url: session.url!,
+    };
+  }
+
+  async purchaseOverrideTokens(userId: string): Promise<CheckoutResult> {
+    const user = await this.userRepository.findOneBy({ id: userId });
+    if (!user) throw ApiError.notFound('User not found');
+
+    let customerId = user.stripeCustomerId;
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        metadata: { userId: user.id },
+      });
+      customerId = customer.id;
+      user.stripeCustomerId = customerId;
+      await this.userRepository.save(user);
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode: 'payment',
+      line_items: [{
+        price: config.stripe.overrideTokenPriceId,
+        quantity: 1,
+      }],
+      success_url: `${config.app.frontendUrl}/?payment=success&type=tokens`,
+      cancel_url: `${config.app.frontendUrl}/`,
+      metadata: {
+        type: 'override_tokens',
+        userId: user.id,
+        credits: '50',
+      },
+    });
+
+    // Create pending transaction
+    const transaction = this.transactionRepository.create({
+      userId: user.id,
+      type: TransactionType.CREDIT_PURCHASE,
+      amount: 2.99,
+      currency: 'USD',
+      status: TransactionStatus.PENDING,
+      referenceId: session.id,
+      metadata: { credits: 50, stripeSessionId: session.id },
     } as any);
     await this.transactionRepository.save(transaction);
 

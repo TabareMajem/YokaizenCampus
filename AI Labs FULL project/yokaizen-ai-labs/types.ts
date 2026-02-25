@@ -111,6 +111,7 @@ export interface Agent {
   avatar: string;
   creatorId: string;
   modelPref?: AIModel; // Backend compatible
+  model?: AIModel;     // Frontend compatible
   category?: 'COACH' | 'COMPANION' | 'TUTOR' | 'THERAPIST' | 'MENTOR' | 'ASSISTANT' | 'CREATIVE' | 'GAMING' | 'CUSTOM';
   isPublic?: boolean;
   isActive?: boolean;

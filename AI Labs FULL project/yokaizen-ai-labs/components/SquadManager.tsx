@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Squad, SquadMember, UserStats } from '../types';
 import { Button } from './ui/Button';
 import { useToast } from '../contexts/ToastContext';
@@ -7,6 +7,14 @@ import { Users, Plus, Search, Crown, Shield, Globe, Link as LinkIcon, Check, Loc
 import { GlassCard } from './ui/GlassCard';
 import { audio } from '../services/audioService';
 import { squadsService } from '../services/squadsService';
+import { useFocusMode } from '../hooks/useFocusMode';
+import { FPSGrader } from './ui/FPSGrader';
+
+// --- 3D Imports ---
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, Sphere, MeshDistortMaterial, Float, Stars, Sparkles } from '@react-three/drei';
+import { EffectComposer, Bloom, ChromaticAberration, Noise } from '@react-three/postprocessing';
+import * as THREE from 'three';
 
 interface SquadManagerProps {
     squads: Squad[];
@@ -23,7 +31,46 @@ interface SquadManagerProps {
 
 const SQUAD_ICONS = ['🦁', '🐉', '🤖', '👽', '👾', '🚀', '⚔️', '🧬', '👁️', '🔥'];
 
+// --- 3D Components ---
+const TacticalGlobe = ({ isAttacking, hpRatio }: { isAttacking: boolean; hpRatio: number }) => {
+    const meshRef = useRef<THREE.Mesh>(null);
+    useFrame((state) => {
+        if (meshRef.current) {
+            meshRef.current.rotation.y = state.clock.elapsedTime * (isAttacking ? 2 : 0.2);
+            if (isAttacking) {
+                meshRef.current.scale.setScalar(1 + Math.sin(state.clock.elapsedTime * 30) * 0.08);
+            } else {
+                meshRef.current.scale.lerp(new THREE.Vector3(1, 1, 1), 0.1);
+            }
+        }
+    });
+
+    const isCritical = hpRatio < 0.3;
+    const color = isAttacking ? "#ef4444" : isCritical ? "#f59e0b" : "#0891b2";
+    const emissive = isAttacking ? "#dc2626" : isCritical ? "#d97706" : "#0284c7";
+
+    return (
+        <Float speed={2} rotationIntensity={isAttacking ? 5 : 1} floatIntensity={isAttacking ? 2 : 0.5}>
+            <Sphere ref={meshRef} args={[2.5, 64, 64]}>
+                <MeshDistortMaterial
+                    color={color}
+                    emissive={emissive}
+                    emissiveIntensity={isAttacking ? 4 : isCritical ? 2 : 1}
+                    wireframe={!isAttacking && !isCritical}
+                    distort={isAttacking ? 0.6 : isCritical ? 0.3 : 0.1}
+                    speed={isAttacking ? 10 : isCritical ? 5 : 2}
+                    roughness={0.1}
+                    metalness={0.9}
+                    clearcoat={1}
+                />
+            </Sphere>
+            <Sparkles count={isAttacking ? 300 : 50} scale={8} size={isAttacking ? 6 : 2} speed={isAttacking ? 2 : 0.2} color={color} />
+        </Float>
+    );
+};
+
 export const SquadManager: React.FC<SquadManagerProps> = ({ squads, userSquadId, onJoinSquad, onCreateSquad, isPro, onTriggerPaywall, t, user, onUpdateUser, onUpdateSquads }) => {
+    const { focusMode } = useFocusMode();
     const [view, setView] = useState<'MY_SQUAD' | 'BROWSE' | 'CREATE' | 'WAR_ROOM' | 'REPORT'>('MY_SQUAD');
     const [newSquadName, setNewSquadName] = useState('');
     const [newSquadIcon, setNewSquadIcon] = useState(SQUAD_ICONS[0]);
@@ -200,12 +247,12 @@ export const SquadManager: React.FC<SquadManagerProps> = ({ squads, userSquadId,
 
     if (!userSquadId && view === 'MY_SQUAD') {
         return (
-            <div className="p-6 text-center space-y-6 animate-in fade-in h-full flex flex-col justify-center">
-                <div className="w-24 h-24 bg-gray-800 rounded-full mx-auto flex items-center justify-center border border-gray-700 shadow-[0_0_20px_rgba(0,0,0,0.5)]">
-                    <Users size={40} className="text-gray-400" />
+            <div className="p-6 text-center space-y-6 animate-in fade-in h-full flex flex-col justify-center bg-black/40 backdrop-blur-sm rounded-2xl border border-white/5 m-4">
+                <div className="w-24 h-24 bg-gray-900/80 rounded-full mx-auto flex items-center justify-center border border-white/10 shadow-[0_0_30px_rgba(196,95,255,0.2)]">
+                    <Users size={40} className="text-electric animate-pulse" />
                 </div>
                 <div>
-                    <h3 className="text-2xl font-black text-white uppercase italic">{t('squad.no_assigned')}</h3>
+                    <h3 className="text-3xl font-black text-white uppercase italic drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">{t('squad.no_assigned')}</h3>
                     <p className="text-sm text-gray-400 mt-2 max-w-xs mx-auto">{t('squad.join_desc')}</p>
                 </div>
                 <div className="space-y-3 w-full max-w-xs mx-auto">
@@ -220,8 +267,8 @@ export const SquadManager: React.FC<SquadManagerProps> = ({ squads, userSquadId,
 
     if (view === 'CREATE') {
         return (
-            <div className="p-6 space-y-6 animate-in slide-in-from-right bg-black/80 h-full overflow-y-auto">
-                <h3 className="text-lg font-bold text-white flex items-center"><Plus className="mr-2" size={20} /> {t('squad.establish')}</h3>
+            <div className="p-6 space-y-6 animate-in slide-in-from-right bg-black/60 backdrop-blur-md h-full overflow-y-auto rounded-2xl border border-white/10 m-4">
+                <h3 className="text-2xl font-black text-white flex items-center uppercase italic drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]"><Plus className="mr-3 text-electric" size={28} /> {t('squad.establish')}</h3>
 
                 <div>
                     <label className="text-xs font-bold text-gray-500 uppercase mb-3 block">{t('squad.icon_label')}</label>
@@ -266,7 +313,7 @@ export const SquadManager: React.FC<SquadManagerProps> = ({ squads, userSquadId,
     if (view === 'BROWSE') {
         return (
             <div className="p-4 space-y-4 animate-in slide-in-from-right h-full overflow-y-auto">
-                <div className="flex items-center justify-between mb-4 bg-black/60 p-3 rounded-xl border border-white/10 sticky top-0 backdrop-blur z-10">
+                <div className="flex items-center justify-between mb-6 bg-black/40 backdrop-blur-md p-4 rounded-xl border border-white/10 sticky top-0 z-10 shadow-lg">
                     <div className="flex items-center space-x-2">
                         <Button variant="ghost" size="sm" onClick={() => setView('MY_SQUAD')}>←</Button>
                         <h3 className="text-lg font-bold text-white">{t('squad.recruit')}</h3>
@@ -309,8 +356,8 @@ export const SquadManager: React.FC<SquadManagerProps> = ({ squads, userSquadId,
 
     if (view === 'WAR_ROOM') {
         return (
-            <div className={`p-4 h-full flex flex-col bg-black/90 animate-in zoom-in relative overflow-hidden transition-transform duration-100 ${screenShake ? 'translate-x-1 translate-y-1' : ''}`}>
-                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 pointer-events-none"></div>
+            <div className={`p-6 h-full flex flex-col bg-black/80 backdrop-blur-md animate-in zoom-in relative overflow-hidden transition-transform duration-100 ${screenShake ? 'translate-x-1 translate-y-1' : ''}`}>
+                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 pointer-events-none mix-blend-overlay"></div>
                 {/* Red Flash on Attack */}
                 <div className={`absolute inset-0 bg-red-500/20 pointer-events-none transition-opacity duration-100 ${screenShake ? 'opacity-100' : 'opacity-0'} z-50`}></div>
 
@@ -326,39 +373,52 @@ export const SquadManager: React.FC<SquadManagerProps> = ({ squads, userSquadId,
                     </div>
                 </div>
 
-                {/* BOSS ARENA */}
-                <div className="flex-1 flex flex-col items-center justify-center relative z-10">
-                    <div className="w-full max-w-sm mb-8">
-                        <div className="flex justify-between text-xs font-bold text-red-400 mb-1">
-                            <span>{t('squad.boss_hp')}</span>
+                {/* BOSS ARENA (3D) */}
+                <div className="flex-1 flex flex-col items-center justify-center relative z-10 w-full">
+                    {/* Absolute 3D Canvas Background */}
+                    <div className="absolute inset-x-0 top-10 bottom-0 z-0 pointer-events-none">
+                        <Canvas camera={{ position: [0, 0, 8], fov: 60 }} dpr={[1, 2]}>
+                            <ambientLight intensity={0.5} />
+                            <pointLight position={[10, 10, 10]} intensity={1} color={isDeploying ? "#ef4444" : "#0891b2"} />
+                            <TacticalGlobe isAttacking={isDeploying} hpRatio={bossHp / maxBossHp} />
+                            <Stars radius={50} depth={50} count={isDeploying ? 2000 : 1000} factor={4} saturation={1} fade speed={isDeploying ? 3 : 1} />
+                            <FPSGrader />
+                            {!focusMode && (
+                                <EffectComposer>
+                                    <Bloom luminanceThreshold={0.2} mipmapBlur intensity={isDeploying ? 3 : 1.5} />
+                                    <ChromaticAberration offset={new THREE.Vector2(isDeploying ? 0.005 : 0.002, isDeploying ? 0.005 : 0)} radialModulation={false} modulationOffset={0} />
+                                    <Noise opacity={0.1} />
+                                </EffectComposer>
+                            )}
+                        </Canvas>
+                    </div>
+
+                    <div className="w-full max-w-sm mb-auto mt-4 relative z-10 bg-black/60 backdrop-blur-md p-4 rounded-2xl border border-red-900/30">
+                        <div className="flex justify-between text-xs font-bold text-red-400 mb-2 uppercase tracking-widest">
+                            <span className="flex items-center"><Target size={14} className="mr-2" /> {t('squad.boss_hp')}</span>
                             <span>{bossHp.toLocaleString()} / {maxBossHp.toLocaleString()}</span>
                         </div>
-                        <div className="w-full h-6 bg-gray-900 rounded-full overflow-hidden border-2 border-red-900/50 relative">
-                            <div className="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(0,0,0,0.2)_10px,rgba(0,0,0,0.2)_20px)] z-10"></div>
-                            <div className="h-full bg-red-600 transition-all duration-1000" style={{ width: `${(bossHp / maxBossHp) * 100}%` }}></div>
+                        <div className="w-full h-8 bg-gray-950 rounded-full overflow-hidden border border-red-900/50 relative shadow-inner">
+                            <div className="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(0,0,0,0.4)_10px,rgba(0,0,0,0.4)_20px)] z-10 mix-blend-overlay"></div>
+                            <div className="absolute inset-0 bg-red-500/10 z-20 animate-pulse"></div>
+                            <div className="h-full bg-gradient-to-r from-red-900 via-red-600 to-red-400 transition-all duration-1000 relative z-0" style={{ width: `${(bossHp / maxBossHp) * 100}%` }}>
+                                <div className="absolute right-0 top-0 bottom-0 w-2 bg-white/50 blur-[2px]"></div>
+                            </div>
                         </div>
                     </div>
 
-                    <div className={`relative w-64 h-64 flex items-center justify-center ${isDeploying ? 'scale-110' : ''} transition-transform duration-1000`}>
-                        <div className="absolute inset-0 bg-red-500/10 rounded-full animate-pulse blur-xl"></div>
-                        <div className="absolute inset-0 border-2 border-dashed border-red-500/30 rounded-full animate-spin-slow"></div>
-                        <Skull size={128} className="text-red-500 drop-shadow-[0_0_20px_rgba(220,38,38,0.5)] z-10" />
-
-                        {/* Attack Visuals */}
-                        {isDeploying && (
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <Target size={200} className="text-cyan-400 animate-ping absolute opacity-50" />
-                                <div className="absolute w-full h-1 bg-cyan-400 rotate-45"></div>
-                                <div className="absolute w-full h-1 bg-cyan-400 -rotate-45"></div>
-                            </div>
-                        )}
-                    </div>
+                    {/* Temporary Overlay during Attack */}
+                    {isDeploying && (
+                        <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+                            <Target size={300} className="text-red-500 animate-ping opacity-30" />
+                        </div>
+                    )}
 
                     {bossHp <= 0 && (
-                        <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-20 animate-in zoom-in">
-                            <div className="text-center">
-                                <h2 className="text-4xl text-green-500 font-black glitch-text mb-2">{t('squad.target_destroyed')}</h2>
-                                <p className="text-green-400 font-mono">{t('squad.reward_xp').replace('{amount}', '5000')}</p>
+                        <div className="absolute inset-0 bg-black/90 flex items-center justify-center z-30 animate-in zoom-in backdrop-blur-md">
+                            <div className="text-center p-8 border border-green-500/50 rounded-2xl bg-green-950/20 shadow-[0_0_50px_rgba(34,197,94,0.2)]">
+                                <h2 className="text-5xl text-green-400 font-black glitch-text mb-4 uppercase tracking-widest">{t('squad.target_destroyed')}</h2>
+                                <p className="text-green-300 font-mono text-xl">{t('squad.reward_xp').replace('{amount}', '5,000')}</p>
                             </div>
                         </div>
                     )}
@@ -382,9 +442,9 @@ export const SquadManager: React.FC<SquadManagerProps> = ({ squads, userSquadId,
 
     if (view === 'REPORT' && missionResult) {
         return (
-            <div className="p-6 h-full flex flex-col items-center justify-center bg-black animate-in zoom-in text-center">
-                <Trophy size={80} className="text-yellow-400 mb-6 animate-bounce drop-shadow-[0_0_25px_rgba(250,204,21,0.5)]" />
-                <h2 className="text-4xl font-black text-white mb-2 uppercase italic">{t('squad.mission_success')}</h2>
+            <div className="p-6 h-full flex flex-col items-center justify-center bg-black/80 backdrop-blur-lg animate-in zoom-in text-center relative z-20">
+                <Trophy size={96} className="text-amber-400 mb-8 animate-bounce drop-shadow-[0_0_30px_rgba(251,191,36,0.6)]" />
+                <h2 className="text-5xl font-black text-white mb-4 uppercase italic tracking-widest drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">{t('squad.mission_success')}</h2>
 
                 <div className="w-full max-w-xs bg-gray-900 border border-white/10 rounded-xl p-6 mt-8 space-y-4">
                     <div className="flex justify-between items-center border-b border-gray-800 pb-2">
@@ -410,10 +470,11 @@ export const SquadManager: React.FC<SquadManagerProps> = ({ squads, userSquadId,
     // My Squad View
     return (
         <div className="p-4 space-y-6 animate-in fade-in h-full overflow-y-auto">
-            <div className="bg-gradient-to-br from-gray-900 to-black rounded-2xl p-6 border border-white/10 text-center relative overflow-hidden shadow-2xl">
-                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
+            <div className="bg-black/40 backdrop-blur-md rounded-2xl p-8 border border-white/10 text-center relative overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.5)] group">
+                <div className="absolute inset-0 bg-[url('/assets/aaa/grid-pattern.png')] opacity-10 mix-blend-overlay pointer-events-none"></div>
+                <div className="absolute top-0 right-0 w-64 h-64 bg-electric/10 blur-[100px] rounded-full group-hover:bg-electric/20 transition-all duration-700 pointer-events-none"></div>
                 <div className="relative z-10">
-                    <div className="w-20 h-20 mx-auto bg-electric/10 rounded-2xl flex items-center justify-center mb-4 border border-electric/50 shadow-[0_0_30px_rgba(196,95,255,0.2)]">
+                    <div className="w-24 h-24 mx-auto bg-black/60 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-6 border border-white/20 shadow-[0_0_30px_rgba(196,95,255,0.3)] hover:scale-110 transition-transform duration-500">
                         <span className="text-4xl">{userSquad?.avatar || '🛡️'}</span>
                     </div>
                     <h2 className="text-2xl font-black text-white uppercase tracking-tight">{userSquad?.name}</h2>
@@ -434,7 +495,7 @@ export const SquadManager: React.FC<SquadManagerProps> = ({ squads, userSquadId,
                 </div>
             </div>
 
-            <div className="bg-gray-900/30 border border-white/5 rounded-xl p-4">
+            <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-lg hover:border-white/20 transition-all">
                 <div className="flex justify-between items-end mb-3">
                     <h3 className="text-xs font-bold text-gray-400 uppercase flex items-center"><Zap size={14} className="mr-2 text-electric" /> {t('squad.contribution')}</h3>
                     <button onClick={handleContribute} className="text-[10px] text-electric font-bold bg-electric/10 px-2 py-1 rounded hover:bg-electric/20 transition-colors">
@@ -462,9 +523,9 @@ export const SquadManager: React.FC<SquadManagerProps> = ({ squads, userSquadId,
                         </button>
                     </div>
                 </div>
-                <div className="space-y-2.5">
+                <div className="space-y-3">
                     {userSquad?.members.map(m => (
-                        <div key={m.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5">
+                        <div key={m.id} className="flex items-center justify-between p-4 rounded-xl bg-black/40 backdrop-blur-md border border-white/5 hover:border-white/10 hover:bg-black/60 transition-all group">
                             <div className="flex items-center space-x-3">
                                 <img src={m.avatar} className="w-8 h-8 rounded-lg bg-black object-cover" />
                                 <span className="text-sm font-bold text-gray-200">{m.name}</span>
@@ -473,7 +534,7 @@ export const SquadManager: React.FC<SquadManagerProps> = ({ squads, userSquadId,
                         </div>
                     ))}
                     {Array.from({ length: Math.max(0, 10 - (userSquad?.members.length || 0)) }).map((_, i) => (
-                        <div key={i} className="p-3 rounded-xl border border-dashed border-gray-800 flex items-center justify-center text-[10px] text-gray-700 uppercase font-mono tracking-widest">
+                        <div key={i} className="p-4 rounded-xl border border-dashed border-white/10 bg-black/20 flex items-center justify-center text-xs text-gray-600 uppercase font-mono tracking-widest">
                             {t('squad.empty_slot')}
                         </div>
                     ))}

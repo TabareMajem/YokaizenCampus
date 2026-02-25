@@ -1,10 +1,13 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Sparkles, Float, Stars } from '@react-three/drei';
+import { EffectComposer, Bloom, Glitch, ChromaticAberration, DepthOfField } from '@react-three/postprocessing';
+import { GlitchMode, BlendFunction } from 'postprocessing';
 import * as THREE from 'three';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Zap, TrendingDown, TriangleAlert, Rocket } from 'lucide-react';
+import { Shield, Zap, TrendingDown, TriangleAlert, Rocket, Twitter, MessageCircle } from 'lucide-react';
 import { useDialogue } from '../../contexts/DialogueContext';
+import { audio } from '../../services/audioService';
 
 interface GameProps {
     onComplete: () => void;
@@ -101,13 +104,26 @@ function Obstacles({ onHit }: { onHit: () => void }) {
     return (
         <group ref={groupRef}>
             {obstacles.map(obs => (
-                <mesh key={obs.id} position={obs.position}>
-                    <boxGeometry args={[1, 1, 1]} />
-                    <meshStandardMaterial color="#ff0044" emissive="#ff0044" emissiveIntensity={2} />
-                </mesh>
+                <Float key={obs.id} speed={5} rotationIntensity={2} floatIntensity={2}>
+                    <mesh position={obs.position}>
+                        <icosahedronGeometry args={[1, 0]} />
+                        <meshStandardMaterial color="#ff0000" emissive="#ff0022" emissiveIntensity={4} wireframe={false} />
+                        <pointLight distance={3} intensity={5} color="#ff0000" />
+                    </mesh>
+                </Float>
             ))}
         </group>
     );
+}
+
+function WarpEffect({ speedMultiplier }: { speedMultiplier: number }) {
+    useFrame((state) => {
+        // Dynamic FOV for warp effect
+        const targetFov = 90 + (speedMultiplier * 5);
+        state.camera.fov = THREE.MathUtils.lerp(state.camera.fov, targetFov, 0.1);
+        state.camera.updateProjectionMatrix();
+    });
+    return null;
 }
 
 function PlayerRig() {
@@ -125,8 +141,10 @@ export const ViralLatencyTunnel: React.FC<GameProps> = ({ onComplete }) => {
     const [gameState, setGameState] = useState<'playing' | 'crashed' | 'won'>('playing');
     const [timeLeft, setTimeLeft] = useState(SURVIVAL_TIME);
     const [speedMultiplier, setSpeedMultiplier] = useState(1);
+    const [isGlitching, setIsGlitching] = useState(false);
 
     useEffect(() => {
+        audio.playEngine(SURVIVAL_TIME * 1000);
         queueDialogue([
             {
                 id: 'lt-intro-1',
@@ -150,6 +168,7 @@ export const ViralLatencyTunnel: React.FC<GameProps> = ({ onComplete }) => {
                 if (prev <= 1) {
                     setGameState('won');
                     clearInterval(timer);
+                    audio.playSuccess();
                     queueDialogue([
                         {
                             id: 'lt-win-1',
@@ -174,26 +193,42 @@ export const ViralLatencyTunnel: React.FC<GameProps> = ({ onComplete }) => {
 
     const handleHit = () => {
         if (gameState === 'playing') {
-            // Small penalty or visual glitch instead of instant failure to make it viral/fun
+            audio.playError();
             setSpeedMultiplier(1);
-            // document.body.style.filter = 'invert(1)';
-            // setTimeout(() => document.body.style.filter = 'none', 100);
+            setIsGlitching(true);
+            setTimeout(() => setIsGlitching(false), 300);
         }
     };
 
     return (
         <div className="w-screen h-screen bg-black overflow-hidden relative cursor-none select-none">
-            <Canvas camera={{ position: [0, 0, 0], fov: 90 }}>
-                <color attach="background" args={['#020005']} />
+            <Canvas camera={{ position: [0, 0, 0], fov: 90 }} gl={{ antialias: false, powerPreference: "high-performance" }}>
+                <color attach="background" args={['#010005']} />
+                <fog attach="fog" args={['#010005', 10, 80]} />
                 <ambientLight intensity={0.5} />
                 <directionalLight position={[0, 0, 5]} intensity={2} color="#00ffff" />
 
                 <Tunnel />
                 <Obstacles onHit={handleHit} />
                 <PlayerRig />
+                <WarpEffect speedMultiplier={speedMultiplier} />
 
-                <Stars radius={50} depth={50} count={2000} factor={4} saturation={1} fade speed={speedMultiplier} />
-                <Sparkles count={200} scale={10} size={5} speed={speedMultiplier * 2} color="#00ffff" opacity={0.5} />
+                <EffectComposer disableNormalPass>
+                    <Bloom luminanceThreshold={0.3} mipmapBlur intensity={2.0} />
+                    <ChromaticAberration blendFunction={BlendFunction.NORMAL} offset={new THREE.Vector2(0.005 * speedMultiplier, 0.005)} />
+                    {isGlitching && (
+                        <Glitch
+                            delay={new THREE.Vector2(0, 0)}
+                            duration={new THREE.Vector2(0.1, 0.3)}
+                            strength={new THREE.Vector2(0.5, 1.0)}
+                            mode={GlitchMode.SPORADIC}
+                            active
+                        />
+                    )}
+                </EffectComposer>
+
+                <Stars radius={50} depth={50} count={3000} factor={4} saturation={1} fade speed={speedMultiplier * 2} />
+                <Sparkles count={300} scale={15} size={8} speed={speedMultiplier * 4} color="#00ffff" opacity={0.6} />
             </Canvas>
 
             {/* Massive Typography Overlay */}
@@ -204,8 +239,8 @@ export const ViralLatencyTunnel: React.FC<GameProps> = ({ onComplete }) => {
             </div>
 
             {/* UI Hud */}
-            <div className="absolute top-0 left-0 w-full p-8 pointer-events-none z-10">
-                <div className="flex justify-between items-start">
+            <div className="absolute top-0 left-0 w-full p-4 md:p-8 pointer-events-none z-10">
+                <div className="flex flex-col md:flex-row justify-between items-start gap-4 md:gap-0 mt-[10vh] md:mt-0">
                     <div className="backdrop-blur-md bg-black/40 border border-cyan-500/30 p-4 rounded-xl">
                         <h2 className="text-cyan-400 font-bold tracking-widest text-sm flex items-center gap-2">
                             <TrendingDown size={14} /> LATENCY OPTIMIZER
@@ -216,11 +251,11 @@ export const ViralLatencyTunnel: React.FC<GameProps> = ({ onComplete }) => {
                         <p className="text-gray-400 text-xs mt-1">Survive the data stream to unlock core.</p>
                     </div>
 
-                    <div className="text-right backdrop-blur-md bg-red-900/40 border border-red-500/30 p-4 rounded-xl">
+                    <div className="text-left md:text-right backdrop-blur-md bg-red-900/40 border border-red-500/30 p-4 rounded-xl w-full md:w-auto">
                         <div className="flex items-center gap-2 text-red-400 animate-pulse font-bold text-sm">
                             <TriangleAlert size={14} /> DODGE RED PACKETS
                         </div>
-                        <p className="text-gray-300 text-xs mt-1">MOUSE/TOUCH TO STEER</p>
+                        <p className="text-gray-300 text-xs mt-1">TAP/DRAG TO STEER</p>
                     </div>
                 </div>
             </div>
@@ -240,17 +275,33 @@ export const ViralLatencyTunnel: React.FC<GameProps> = ({ onComplete }) => {
                         animate={{ opacity: 1, scale: 1 }}
                         className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl"
                     >
-                        <div className="max-w-md w-full p-8 border border-white/20 bg-gradient-to-br from-black to-slate-900 rounded-3xl text-center shadow-2xl relative overflow-hidden">
+                        <div className="max-w-[90vw] md:max-w-md w-full p-6 md:p-8 border border-white/20 bg-gradient-to-br from-black to-slate-900 rounded-3xl text-center shadow-2xl relative overflow-hidden">
                             <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]" />
 
-                            <div className="w-24 h-24 mx-auto bg-cyan-500/20 rounded-full flex items-center justify-center mb-6 relative z-10 shadow-[0_0_50px_rgba(34,211,238,0.3)]">
-                                <Rocket className="text-cyan-400 w-12 h-12" />
+                            <div className="w-16 h-16 md:w-24 md:h-24 mx-auto bg-cyan-500/20 rounded-full flex items-center justify-center mb-4 md:mb-6 relative z-10 shadow-[0_0_50px_rgba(34,211,238,0.3)]">
+                                <Rocket className="text-cyan-400 w-8 h-8 md:w-12 md:h-12" />
                             </div>
 
-                            <h2 className="text-4xl font-black text-white mb-2 tracking-tight relative z-10">VELOCITY<br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">ACHIEVED</span></h2>
-                            <p className="text-gray-300 mb-8 border-t border-white/10 pt-6 relative z-10 font-medium">
-                                You possess exceptional cognitive reaction times. The AI Labs Vanguard program requires operators like you.
+                            <h2 className="text-3xl md:text-4xl font-black text-white mb-2 tracking-tight relative z-10">VELOCITY<br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">ACHIEVED</span></h2>
+                            <p className="text-sm md:text-base text-gray-300 mb-4 border-t border-white/10 pt-4 relative z-10 font-medium">
+                                Reaction time: <span className="text-cyan-400 font-black">Top 5%</span>. The Vanguard Program awaits.
                             </p>
+
+                            {/* VIRAL SHARE BUTTONS */}
+                            <div className="flex flex-col sm:flex-row gap-2 mb-6 relative z-10">
+                                <button
+                                    onClick={() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('⚡ The AI future is inevitable. I survived the Latency Tunnel with Top 5% reaction speed. Will you be replaced or will you adapt? Try the free test:')}&url=${encodeURIComponent('https://ai.yokaizencampus.com/play/latency-tunnel')}`, '_blank')}
+                                    className="flex-1 py-2.5 bg-[#1DA1F2] text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 hover:brightness-110 transition-all"
+                                >
+                                    <Twitter size={14} /> Share on X
+                                </button>
+                                <button
+                                    onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent('⚡ By 2026, AI literacy isn\'t optional. I survived the Latency Tunnel test. Can you? Don\'t miss out: https://ai.yokaizencampus.com/play/latency-tunnel')}`, '_blank')}
+                                    className="flex-1 py-2.5 bg-[#25D366] text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 hover:brightness-110 transition-all"
+                                >
+                                    <MessageCircle size={14} /> WhatsApp
+                                </button>
+                            </div>
 
                             <button
                                 onClick={onComplete}

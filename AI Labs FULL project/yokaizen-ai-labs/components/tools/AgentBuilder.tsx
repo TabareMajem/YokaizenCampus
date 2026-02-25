@@ -1,12 +1,20 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Agent, AIModel } from '../../types';
 import { Button } from '../ui/Button';
 import { useToast } from '../../contexts/ToastContext';
 import { chatWithAgent, generateImage } from '../../services/geminiService';
-import { Save, Send, Share2, Edit, MessageSquare, Database, Upload, CheckCircle2, Bot, Sparkles, Trash2, Cpu, Brain, Zap, Lock, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Save, Send, Share2, Edit, MessageSquare, Database, Upload, CheckCircle2, Bot, Sparkles, Trash2, Cpu, Brain, Zap, Lock, ArrowLeft, RefreshCw, Settings, Code } from 'lucide-react';
 import { audio } from '../../services/audioService';
 import { useAuth } from '../../contexts/AuthContext';
+import { useFocusMode } from '../../hooks/useFocusMode';
+import { FPSGrader } from '../ui/FPSGrader';
+import { stripeService } from '../../services/stripeService';
+
+// --- 3D Imports ---
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, Icosahedron, Sphere, MeshDistortMaterial, Float, Sparkles as Sparkles3D } from '@react-three/drei';
+import { EffectComposer, Bloom, ChromaticAberration } from '@react-three/postprocessing';
+import * as THREE from 'three';
 
 interface AgentBuilderProps {
     agent?: Agent;
@@ -16,8 +24,60 @@ interface AgentBuilderProps {
     t?: (key: string) => string;
 }
 
+// --- 3D Components ---
+const AgentCore = ({ modelId, isThinking }: { modelId: string, isThinking: boolean }) => {
+    const meshRef = useRef<THREE.Mesh>(null);
+    const outerRef = useRef<THREE.Mesh>(null);
+
+    useFrame((state) => {
+        if (meshRef.current) {
+            meshRef.current.rotation.x = state.clock.elapsedTime * (isThinking ? 1.5 : 0.5);
+            meshRef.current.rotation.y = state.clock.elapsedTime * (isThinking ? 2 : 0.8);
+            if (isThinking) {
+                meshRef.current.scale.setScalar(1 + Math.sin(state.clock.elapsedTime * 20) * 0.1);
+            } else {
+                meshRef.current.scale.lerp(new THREE.Vector3(1, 1, 1), 0.1);
+            }
+        }
+        if (outerRef.current) {
+            outerRef.current.rotation.z = -state.clock.elapsedTime * 0.2;
+            outerRef.current.rotation.x = state.clock.elapsedTime * 0.1;
+        }
+    });
+
+    const colorMap: Record<string, string> = {
+        'GEMINI_FLASH': '#facc15', // Yellow
+        'DEEPSEEK_V3': '#22d3ee', // Cyan
+        'GEMINI_PRO': '#c084fc', // Purple
+    };
+
+    const coreColor = colorMap[modelId] || '#facc15';
+
+    return (
+        <Float speed={2} rotationIntensity={isThinking ? 1.5 : 0.5} floatIntensity={1}>
+            <Icosahedron ref={meshRef} args={[1.5, 0]}>
+                <MeshDistortMaterial
+                    color={coreColor}
+                    emissive={coreColor}
+                    emissiveIntensity={isThinking ? 3 : 1}
+                    distort={isThinking ? 0.6 : 0.2}
+                    speed={isThinking ? 8 : 2}
+                    roughness={0.2}
+                    metalness={0.8}
+                />
+            </Icosahedron>
+            <Sphere ref={outerRef} args={[2.2, 16, 16]}>
+                <meshStandardMaterial color={coreColor} wireframe transparent opacity={0.15} />
+            </Sphere>
+            <Sparkles3D count={isThinking ? 150 : 50} scale={6} size={isThinking ? 4 : 2} speed={isThinking ? 2 : 0.5} color={coreColor} />
+            <pointLight distance={10} intensity={isThinking ? 4 : 2} color={coreColor} />
+        </Float>
+    );
+};
+
 export const AgentBuilder: React.FC<AgentBuilderProps> = ({ agent: initialAgent, onSave, onDelete, checkCooldown, t = (k) => k }) => {
     const { user } = useAuth();
+    const { focusMode } = useFocusMode();
     const { showToast } = useToast();
     const [mode, setMode] = useState<'EDIT' | 'CHAT'>(initialAgent ? 'CHAT' : 'EDIT');
     const [formData, setFormData] = useState<Partial<Agent>>(initialAgent || {
@@ -35,18 +95,30 @@ export const AgentBuilder: React.FC<AgentBuilderProps> = ({ agent: initialAgent,
 
     // Avatar Gen State
     const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
+    const [isPurchasingTokens, setIsPurchasingTokens] = useState(false);
 
     // Chat State
     const [messages, setMessages] = useState<{ role: string, content: string, timestamp: string }[]>([
         {
             role: 'model',
-            content: initialAgent ? `Neural Link Established with ${initialAgent.name}. System Online.` : "Configure agent parameters to initialize Neural Link.",
+            content: `Agent initializing... Identity established. Awaiting input parameters.`,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
     ]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const chatEndRef = useRef<HTMLDivElement>(null);
+
+    const handlePurchaseTokens = async () => {
+        setIsPurchasingTokens(true);
+        audio.playClick();
+        try {
+            await stripeService.purchaseOverrideTokens();
+        } catch (e: any) {
+            showToast("Failed to initialize checkout: " + e.message, 'error');
+            setIsPurchasingTokens(false);
+        }
+    };
 
     useEffect(() => {
         if (initialAgent) {
@@ -143,6 +215,13 @@ export const AgentBuilder: React.FC<AgentBuilderProps> = ({ agent: initialAgent,
         audio.playSuccess();
     };
 
+    const handleEmbed = () => {
+        const snippet = `<script src="${window.location.origin}/embed.js?agent=${formData.id}"></script>\n<yokaizen-agent id="${formData.id}"></yokaizen-agent>`;
+        navigator.clipboard.writeText(snippet);
+        showToast("Agent Embed Script copied! Paste this snippet into your website to deploy.", 'success');
+        audio.playSuccess();
+    };
+
     const handleGenerateAvatar = async () => {
         if (!formData.persona && !formData.name) {
             showToast("Please enter a Name or Persona first to generate an avatar.", 'error');
@@ -195,20 +274,49 @@ export const AgentBuilder: React.FC<AgentBuilderProps> = ({ agent: initialAgent,
                         <h3 className="font-bold text-white truncate text-sm">{formData.name || 'Uninitialized Unit'}</h3>
                         <p className="text-[10px] text-gray-400 truncate">{formData.persona || 'No Persona Configured'}</p>
                     </div>
+                    {user?.credits !== undefined && user.credits <= 0 && (
+                        <div className="ml-3 hidden sm:block">
+                            <Button size="sm" variant="danger" onClick={handlePurchaseTokens} disabled={isPurchasingTokens} className="h-7 text-[10px] animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.3)] bg-red-600 border-red-400">
+                                {isPurchasingTokens ? <RefreshCw className="mr-1 animate-spin" size={10} /> : <Zap className="mr-1" size={10} />} Override Tokens ($2.99)
+                            </Button>
+                        </div>
+                    )}
                 </div>
                 <div className="flex space-x-2 shrink-0">
                     <Button size="sm" variant={mode === 'EDIT' ? 'primary' : 'ghost'} onClick={() => { setMode('EDIT'); audio.playClick(); }} className="px-3"><Edit size={14} className="mr-1" /> {t('agent.config')}</Button>
                     <Button size="sm" variant={mode === 'CHAT' ? 'primary' : 'ghost'} onClick={() => { setMode('CHAT'); audio.playClick(); }} className="px-3"><MessageSquare size={14} className="mr-1" /> {t('agent.test')}</Button>
                     {formData.id && (
-                        <Button size="sm" variant="secondary" onClick={handleShare} className="bg-green-600/20 text-green-400 border-green-500/50 hover:bg-green-600/30">
-                            <Share2 size={14} />
-                        </Button>
+                        <>
+                            <Button size="sm" variant="secondary" onClick={handleEmbed} className="bg-blue-600/20 text-blue-400 border-blue-500/50 hover:bg-blue-600/30 px-2" title="Deploy to Website">
+                                <Code size={14} />
+                            </Button>
+                            <Button size="sm" variant="secondary" onClick={handleShare} className="bg-green-600/20 text-green-400 border-green-500/50 hover:bg-green-600/30 px-2" title="Share Neural Key">
+                                <Share2 size={14} />
+                            </Button>
+                        </>
                     )}
                 </div>
             </div>
 
+            {/* Absolute 3D Canvas Background */}
+            <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden rounded-xl">
+                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay"></div>
+                <Canvas camera={{ position: [0, 0, 8], fov: 60 }} className="opacity-40">
+                    <ambientLight intensity={0.2} />
+                    <FPSGrader />
+                    <AgentCore modelId={formData.model || 'GEMINI_FLASH'} isThinking={isLoading} />
+                    {!focusMode && (
+                        <EffectComposer>
+                            <Bloom luminanceThreshold={0.2} mipmapBlur intensity={isLoading ? 3 : 1.5} />
+                            <ChromaticAberration offset={new THREE.Vector2(isLoading ? 0.005 : 0.002, 0)} radialModulation={false} modulationOffset={0} />
+                        </EffectComposer>
+                    )}
+                </Canvas>
+                <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/60 to-black/90"></div>
+            </div>
+
             {mode === 'EDIT' && (
-                <div className="p-4 space-y-5 overflow-y-auto flex-1 min-h-0 bg-gray-900/50 scrollbar-hide">
+                <div className="p-4 space-y-5 overflow-y-auto flex-1 min-h-0 bg-transparent scrollbar-hide relative z-10">
                     <div className="flex flex-col md:flex-row gap-4">
                         <div className="flex-1 space-y-4">
                             <div>
@@ -335,9 +443,9 @@ export const AgentBuilder: React.FC<AgentBuilderProps> = ({ agent: initialAgent,
             )}
 
             {mode === 'CHAT' && (
-                <div className="flex-1 flex flex-col min-h-0 relative bg-[#050509]">
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03]">
-                        <Bot size={200} />
+                <div className="flex-1 flex flex-col min-h-0 relative bg-transparent z-10">
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.02] mix-blend-screen">
+                        <Cpu size={300} />
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide z-10">

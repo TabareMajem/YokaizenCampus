@@ -55,7 +55,7 @@ export const AuthScreen = () => {
 
         let delay = 0;
         logs.forEach((log, i) => {
-            delay += 300;
+            delay += 50; // Ultra fast boot
             setTimeout(() => {
                 setBootLog(prev => [...prev, log]);
                 if (i < 2) audio.playTyping();
@@ -65,7 +65,7 @@ export const AuthScreen = () => {
         setTimeout(() => {
             setBootSequence(false);
             audio.playSuccess(); // Boot sound
-        }, delay + 500);
+        }, delay + 200);
     }, []);
 
     // --- MOUSE PARALLAX ---

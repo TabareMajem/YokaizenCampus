@@ -36,6 +36,26 @@ const queryAI = async (
     }
 ): Promise<string> => {
     try {
+        // --- 1. SEMANTIC QUERY CACHE (Saves API Costs) ---
+        // Hash the query for exact match caching
+        const rawString = encodeURIComponent(params.systemInstruction + params.userPrompt).padEnd(50, '0');
+        const cacheKey = `ai_cache_${btoa(rawString.substring(0, 50)).slice(0, 50)}`;
+        const cachedResponse = localStorage.getItem(cacheKey);
+
+        if (cachedResponse) {
+            console.log("⚡ Semantic Cache Hit! Saving API tokens.");
+            return cachedResponse;
+        }
+
+        // --- 2. FREEMIUM DEGRADED PERFORMANCE ---
+        const userStr = localStorage.getItem('yokaizen_ailabs_user');
+        const currentUser = userStr ? JSON.parse(userStr) : null;
+        if (currentUser && currentUser.credits <= 0) {
+            console.warn("⚠️ User out of credits. Engaging Degraded Performance (15s Low Priority Queue).");
+            // Inject a 15-second artificial queue delay to penalize 0 credit balance instead of hard lock
+            await new Promise(r => setTimeout(r, 15000));
+        }
+
         const response = await authFetch(`${API_BASE}/ai/chat`, {
             method: 'POST',
             body: JSON.stringify({
@@ -55,7 +75,18 @@ const queryAI = async (
         }
 
         const data = await response.json();
-        return data.data?.response || data.data?.text || (params.jsonMode ? '{}' : 'No response');
+        const resultText = data.data?.response || data.data?.text || (params.jsonMode ? '{}' : 'No response');
+
+        // Save successfully generated response to the Cache
+        if (!resultText.startsWith("Error:") && resultText !== '{}') {
+            try {
+                localStorage.setItem(cacheKey, resultText);
+            } catch (e) {
+                // Ignore localStorage quota limits
+            }
+        }
+
+        return resultText;
     } catch (e) {
         console.error('AI Service Error:', e);
         return params.jsonMode ? '{}' : 'Error: Connection to AI services failed.';

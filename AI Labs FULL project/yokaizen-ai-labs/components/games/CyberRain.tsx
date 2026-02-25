@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Stars, Box } from '@react-three/drei';
+import { OrbitControls, Stars, Box, MeshReflectorMaterial } from '@react-three/drei';
 import * as THREE from 'three';
 import { Button } from '../ui/Button';
 import { interactWithCyberRain } from '../../services/geminiService';
@@ -55,34 +55,55 @@ interface CyberRainProps {
 
 interface BuildingProps {
     position: [number, number, number];
+    width: number;
     height: number;
+    depth: number;
     neonColor: string;
 }
 
-const Building: React.FC<BuildingProps> = ({ position, height, neonColor }) => {
-    const hasNeon = useMemo(() => Math.random() > 0.5, []);
+const Building: React.FC<BuildingProps> = ({ position, width, height, depth, neonColor }) => {
+    const hasNeon = useMemo(() => Math.random() > 0.4, []);
+    const neonLevels = useMemo(() => Math.floor(Math.random() * 3) + 1, []);
+
     return (
         <group position={position}>
-            <Box args={[1, height, 1]} position={[0, height / 2, 0]}>
-                <meshStandardMaterial color="#1a1a1a" roughness={0.2} metalness={0.8} />
+            {/* Core Building Structure */}
+            <Box args={[width, height, depth]} position={[0, height / 2, 0]}>
+                <meshStandardMaterial color="#0c0c0e" roughness={0.15} metalness={0.8} />
             </Box>
-            {hasNeon && (
-                <Box args={[1.05, 0.1, 1.05]} position={[0, height * 0.8, 0]}>
-                    <meshStandardMaterial color={neonColor} emissive={neonColor} emissiveIntensity={2} />
+
+            {/* Outline / Windows Emulation */}
+            <Box args={[width * 1.01, height * 0.98, depth * 1.01]} position={[0, height / 2, 0]}>
+                <meshStandardMaterial color="#000000" wireframe opacity={0.3} transparent />
+            </Box>
+
+            {/* Neon Rings */}
+            {hasNeon && Array.from({ length: neonLevels }).map((_, i) => (
+                <Box
+                    key={i}
+                    args={[width * 1.05, 0.05, depth * 1.05]}
+                    position={[0, height * (0.3 + (i * 0.2)), 0]}
+                >
+                    <meshStandardMaterial color={neonColor} emissive={neonColor} emissiveIntensity={3} toneMapped={false} />
                 </Box>
-            )}
+            ))}
         </group>
     );
 };
 
 const CityScape = ({ neonColor }: { neonColor: string }) => {
     const buildings = useMemo(() => {
-        const b: { position: [number, number, number]; height: number }[] = [];
-        for (let x = -5; x <= 5; x++) {
-            for (let z = -5; z <= 5; z++) {
-                if (Math.random() > 0.3) {
-                    const height = Math.random() * 4 + 1;
-                    b.push({ position: [x * 2, 0, z * 2] as [number, number, number], height });
+        const b: { position: [number, number, number]; width: number; height: number; depth: number }[] = [];
+        for (let x = -8; x <= 8; x++) {
+            for (let z = -8; z <= 8; z++) {
+                // Leave a path in the middle
+                if (Math.abs(x) < 2 && Math.abs(z) < 2) continue;
+
+                if (Math.random() > 0.4) {
+                    const height = Math.random() * 8 + 2;
+                    const width = Math.random() * 1.5 + 0.8;
+                    const depth = Math.random() * 1.5 + 0.8;
+                    b.push({ position: [x * 2.5, 0, z * 2.5] as [number, number, number], width, height, depth });
                 }
             }
         }
@@ -92,11 +113,25 @@ const CityScape = ({ neonColor }: { neonColor: string }) => {
     return (
         <group>
             {buildings.map((b, i) => (
-                <Building key={i} position={b.position} height={b.height} neonColor={neonColor} />
+                <Building key={i} position={b.position} width={b.width} height={b.height} depth={b.depth} neonColor={neonColor} />
             ))}
+
+            {/* Highly reflective wet ground */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-                <planeGeometry args={[50, 50]} />
-                <meshStandardMaterial color="#050505" roughness={0.1} metalness={0.9} />
+                <planeGeometry args={[100, 100]} />
+                <MeshReflectorMaterial
+                    blur={[300, 100]}
+                    resolution={1024}
+                    mixBlur={1}
+                    mixStrength={80}
+                    roughness={0.1}
+                    depthScale={1.2}
+                    minDepthThreshold={0.4}
+                    maxDepthThreshold={1.4}
+                    color="#050505"
+                    metalness={0.8}
+                    mirror={0.9} // required
+                />
             </mesh>
         </group>
     );

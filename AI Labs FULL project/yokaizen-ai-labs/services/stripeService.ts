@@ -206,6 +206,45 @@ export const stripeService = {
     },
 
     /**
+     * Purchase override tokens ($2.99 for 50 credits)
+     */
+    async purchaseOverrideTokens(): Promise<string> {
+        const token = authService.getToken();
+
+        if (!token) {
+            throw new Error('Not authenticated');
+        }
+
+        try {
+            const response = await fetch(`${API_BASE}/payments/override-tokens`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Failed to purchase override tokens');
+            }
+
+            const data = await response.json();
+            const { url } = data.data;
+
+            if (url) {
+                window.location.href = url;
+                return url;
+            }
+
+            throw new Error('No checkout URL returned');
+        } catch (error: any) {
+            console.error('Override token purchase error:', error);
+            throw error;
+        }
+    },
+
+    /**
      * Get transaction history
      */
     async getTransactions(page: number = 1, limit: number = 20): Promise<{

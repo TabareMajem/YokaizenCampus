@@ -61,6 +61,15 @@ export class PaymentController {
   });
 
   /**
+   * POST /payments/override-tokens
+   * Purchase 50 override tokens for $2.99
+   */
+  purchaseOverrideTokens = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const result = await paymentService.purchaseOverrideTokens(req.user!.userId);
+    res.json(successResponse(result));
+  });
+
+  /**
    * GET /payments/transactions
    * Get transaction history
    */

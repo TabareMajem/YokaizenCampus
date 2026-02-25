@@ -64,7 +64,7 @@ export const DialogueBox: React.FC = () => {
                 animate={{ opacity: 1, y: 0, rotateX: 0 }}
                 exit={{ opacity: 0, y: 20, scale: 0.95 }}
                 transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-                className="fixed bottom-8 left-1/2 -translate-x-1/2 w-full max-w-4xl z-[100] px-4 pointer-events-auto"
+                className="fixed bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 w-[95vw] md:w-full max-w-4xl z-[100] px-2 md:px-4 pointer-events-auto"
                 style={{ perspective: 1000 }}
                 onClick={() => {
                     if (isTyping) {
@@ -75,23 +75,23 @@ export const DialogueBox: React.FC = () => {
                 }}
             >
                 {/* Persona 5 Angular Styling with Glitch Potential */}
-                <div className={`relative ${charConfig.bg} backdrop-blur-xl border-t-4 border-l-4 shadow-[20px_20px_0px_rgba(0,0,0,0.5)] p-1 ${currentLine.isGlitchy ? 'animate-pulse' : ''} cursor-pointer`}>
+                <div className={`relative ${charConfig.bg} backdrop-blur-xl border-t-2 md:border-t-4 border-l-2 md:border-l-4 shadow-[10px_10px_0px_rgba(0,0,0,0.5)] md:shadow-[20px_20px_0px_rgba(0,0,0,0.5)] p-0.5 md:p-1 ${currentLine.isGlitchy ? 'animate-pulse' : ''} cursor-pointer`}>
 
                     {/* Character Name Tag (Slanted) */}
-                    <div className={`absolute -top-8 -left-4 ${charConfig.bg.replace('/40', '')} px-6 py-2 border font-black tracking-widest text-lg flex items-center gap-3 transform -skew-x-12 shadow-lg z-10`} style={{ backdropFilter: 'none' }}>
+                    <div className={`absolute -top-10 left-4 md:-top-8 md:-left-4 ${charConfig.bg.replace('/40', '')} px-4 md:px-6 py-1 md:py-2 border font-black tracking-widest text-xs md:text-lg flex items-center gap-2 md:gap-3 transform -skew-x-12 shadow-lg z-10`} style={{ backdropFilter: 'none' }}>
                         <span className={`transform skew-x-12 ${charConfig.color}`}>{charConfig.icon}</span>
                         <span className={`transform skew-x-12 ${charConfig.color} filter drop-shadow-[0_0_5px_currentColor]`}>{charConfig.name}</span>
                     </div>
 
                     {/* Content Area */}
-                    <div className="bg-black/80 w-full h-full p-6 md:p-8 min-h-[160px] flex gap-6 relative overflow-hidden">
+                    <div className="bg-black/80 w-full h-full p-4 sm:p-6 md:p-8 min-h-[120px] md:min-h-[160px] flex flex-col sm:flex-row gap-4 md:gap-6 relative overflow-hidden">
 
                         {/* Scanline Overlay */}
                         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-20 pointer-events-none"></div>
                         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/[0.02] to-transparent animate-scanline pointer-events-none"></div>
 
                         {/* Portrait Placeholder / Real URL */}
-                        <div className="w-24 h-24 md:w-32 md:h-32 rounded-xl border-2 border-white/10 shrink-0 bg-slate-900 overflow-hidden relative filter grayscale contrast-125">
+                        <div className="w-16 h-16 sm:w-24 sm:h-24 md:w-32 md:h-32 rounded-xl border-2 border-white/10 shrink-0 bg-slate-900 overflow-hidden relative filter grayscale contrast-125 self-start sm:self-center">
                             {currentLine.portraitUrl ? (
                                 <img src={currentLine.portraitUrl} alt={charConfig.name} className="w-full h-full object-cover mix-blend-screen" />
                             ) : (
@@ -105,7 +105,7 @@ export const DialogueBox: React.FC = () => {
 
                         {/* Dialogue Text */}
                         <div className="flex-1 relative z-10">
-                            <p className="text-xl md:text-3xl font-bold leading-relaxed text-white tracking-tight" style={{ textShadow: '2px 2px 0 #000' }}>
+                            <p className="text-base sm:text-xl md:text-3xl font-bold leading-relaxed text-white tracking-tight" style={{ textShadow: '2px 2px 0 #000' }}>
                                 {isTyping ? (
                                     <TypewriterText text={currentLine.text} onComplete={() => setIsTyping(false)} />
                                 ) : (
@@ -119,7 +119,7 @@ export const DialogueBox: React.FC = () => {
                             <motion.div
                                 animate={{ y: [0, 5, 0] }}
                                 transition={{ repeat: Infinity, duration: 1 }}
-                                className={`absolute bottom-4 right-6 ${charConfig.color} font-black text-2xl`}
+                                className={`absolute bottom-2 right-4 md:bottom-4 md:right-6 ${charConfig.color} font-black text-xl md:text-2xl`}
                             >
                                 ▼
                             </motion.div>

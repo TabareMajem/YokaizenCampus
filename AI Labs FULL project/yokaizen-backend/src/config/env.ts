@@ -56,6 +56,7 @@ const envSchema = z.object({
   STRIPE_WEBHOOK_SECRET: z.string(),
   STRIPE_OPERATIVE_PRICE_ID: z.string(),
   STRIPE_PRO_PRICE_ID: z.string(),
+  STRIPE_OVERRIDE_TOKEN_PRICE_ID: z.string().optional().default('price_1T4HUaCm2Xw209Q2piaHgqFp'),
 
   // AWS S3
   AWS_ACCESS_KEY_ID: z.string().optional(),
@@ -165,6 +166,7 @@ export const config = {
     webhookSecret: env.STRIPE_WEBHOOK_SECRET,
     operativePriceId: env.STRIPE_OPERATIVE_PRICE_ID,
     proPriceId: env.STRIPE_PRO_PRICE_ID,
+    overrideTokenPriceId: env.STRIPE_OVERRIDE_TOKEN_PRICE_ID,
   },
   aws: {
     accessKeyId: env.AWS_ACCESS_KEY_ID,

@@ -41,6 +41,13 @@ router.post(
   paymentController.purchaseCredits
 );
 
+// Purchase Override Tokens
+router.post(
+  '/override-tokens',
+  rateLimit({ keyPrefix: 'payment:override', maxRequests: 5, windowMs: 60000 }),
+  paymentController.purchaseOverrideTokens
+);
+
 // Get transaction history
 router.get('/transactions', validatePagination, paymentController.getTransactions);
 

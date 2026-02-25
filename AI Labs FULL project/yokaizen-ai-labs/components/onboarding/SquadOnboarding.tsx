@@ -78,7 +78,7 @@ export const SquadOnboarding: React.FC<SquadOnboardingProps> = ({ isOpen, onClos
                                             <div className="text-2xl">{squad.avatar}</div>
                                             <div>
                                                 <div className="font-bold text-white group-hover:text-electric transition-colors">{squad.name}</div>
-                                                <div className="text-xs text-gray-500">{squad.members.length}/10 Operatives</div>
+                                                <div className="text-xs text-gray-500">{squad.members?.length || 0}/10 Operatives</div>
                                             </div>
                                         </div>
                                         <Button size="sm" variant="secondary">Join</Button>

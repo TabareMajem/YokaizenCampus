@@ -1,7 +1,7 @@
 import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Icosahedron, MeshDistortMaterial, Float, Text, Trail, Sparkles } from '@react-three/drei';
-import { EffectComposer, Bloom, ChromaticAberration, Glitch } from '@react-three/postprocessing';
+import { EffectComposer, Bloom, ChromaticAberration, Glitch, Vignette, Noise } from '@react-three/postprocessing';
 import { GlitchMode, BlendFunction } from 'postprocessing';
 import * as THREE from 'three';
 import { Activity, Shield, Cpu, AlertTriangle, Zap, Terminal } from 'lucide-react';
@@ -24,17 +24,20 @@ const CoreEntity = ({ isActive }: { isActive: boolean }) => {
     });
 
     return (
-        <Float speed={2} floatIntensity={1} rotationIntensity={isActive ? 2 : 0.5}>
-            <Icosahedron ref={meshRef} args={[1.5, 0]} scale={isActive ? 1.2 : 1}>
+        <Float speed={2} floatIntensity={1.5} rotationIntensity={isActive ? 2.5 : 0.5}>
+            <Icosahedron ref={meshRef} args={[1.5, isActive ? 2 : 0]} scale={isActive ? 1.3 : 1}>
                 <MeshDistortMaterial
-                    color={new THREE.Color().setHSL(0.5, 0.8, isActive ? 0.6 : 0.3)}
+                    color={new THREE.Color('#06b6d4')}
+                    emissive={new THREE.Color('#0891b2')}
+                    emissiveIntensity={isActive ? 1.5 : 0.4}
                     envMapIntensity={1}
                     clearcoat={1}
                     clearcoatRoughness={0}
-                    metalness={0.8}
-                    roughness={0.2}
-                    distort={isActive ? 0.4 : 0.1}
-                    speed={isActive ? 5 : 1}
+                    metalness={0.9}
+                    roughness={0.1}
+                    distort={isActive ? 0.5 : 0.15}
+                    speed={isActive ? 6 : 1.5}
+                    wireframe={!isActive}
                 />
             </Icosahedron>
         </Float>
@@ -46,7 +49,7 @@ export const PromptArchitect: React.FC<PromptArchitectProps> = ({ onComplete, di
     const [timeLeft, setTimeLeft] = useState(60);
     const [gameState, setGameState] = useState<'PLAYING' | 'SUCCESS' | 'FAILED'>('PLAYING');
     const [activeNode, setActiveNode] = useState(false);
-    
+
     // Multi-Agent Flow Logic State
     const [advisorMsg, setAdvisorMsg] = useState('Analyzing parameters...');
     const [adversaryMsg, setAdversaryMsg] = useState('System vulnerable.');
@@ -110,7 +113,7 @@ export const PromptArchitect: React.FC<PromptArchitectProps> = ({ onComplete, di
         setActiveNode(true);
         setScore(s => s + 50);
         setTimeout(() => setActiveNode(false), 300);
-        
+
         if (score + 50 >= 1000) {
             setGameState('SUCCESS');
             onComplete(1000, { completionTime: 60 - timeLeft, difficulty });
@@ -118,48 +121,48 @@ export const PromptArchitect: React.FC<PromptArchitectProps> = ({ onComplete, di
     };
 
     return (
-        <div className="relative w-full h-[600px] rounded-xl overflow-hidden border border-white/10 bg-black shadow-2xl">
+        <div className="relative w-full h-[600px] rounded-2xl overflow-hidden border border-cyan-500/20 bg-gradient-to-b from-slate-950 to-black shadow-[0_0_60px_rgba(6,182,212,0.1)]">
             {/* UI Overlay */}
             <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-start z-10 pointer-events-none">
                 <div className="flex flex-col gap-4">
-                    <div className="bg-black/40 backdrop-blur-md rounded-lg p-3 border border-indigo-500/30">
-                        <div className="flex items-center gap-2 text-indigo-400 mb-1">
+                    <div className="bg-black/60 backdrop-blur-xl rounded-xl p-4 border border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.15)]">
+                        <div className="flex items-center gap-2 text-cyan-400 mb-1">
                             <Activity className="w-4 h-4" />
-                            <span className="text-xs uppercase tracking-widest font-bold">Signal</span>
+                            <span className="text-[10px] uppercase tracking-[0.2em] font-bold">Blueprint Signal</span>
                         </div>
-                        <div className="text-2xl font-mono text-white">{score} / 1000</div>
+                        <div className="text-2xl font-mono text-white">{score} <span className="text-sm text-cyan-600">/ 1000</span></div>
                     </div>
                 </div>
 
-                <div className="bg-black/40 backdrop-blur-md rounded-lg p-3 border border-blue-500/30 flex flex-col items-end">
-                     <div className="flex items-center gap-2 text-blue-400 mb-1">
+                <div className="bg-black/60 backdrop-blur-xl rounded-xl p-4 border border-cyan-500/30 flex flex-col items-end shadow-[0_0_20px_rgba(6,182,212,0.15)]">
+                    <div className="flex items-center gap-2 text-cyan-400 mb-1">
                         <AlertTriangle className="w-4 h-4" />
-                        <span className="text-xs uppercase tracking-widest font-bold">Time</span>
+                        <span className="text-[10px] uppercase tracking-[0.2em] font-bold">Deadline</span>
                     </div>
-                    <div className="text-3xl font-mono text-white tracking-widest">{timeLeft}s</div>
+                    <div className={`text-3xl font-mono tracking-widest ${timeLeft <= 10 ? 'text-red-400 animate-pulse' : 'text-white'}`}>{timeLeft}s</div>
                 </div>
             </div>
 
             {/* Multi-Agent Comm Panel */}
             <div className="absolute bottom-6 left-6 right-6 flex gap-4 z-10 pointer-events-none">
-                <div className="flex-1 bg-black/60 backdrop-blur-md rounded-lg p-4 border-l-4 border-indigo-500">
-                    <div className="text-xs text-indigo-400 mb-1 uppercase tracking-widest font-bold flex items-center gap-2"><Shield className="w-3 h-3"/> Advisor Agent</div>
-                    <div className="text-sm text-indigo-100 font-mono tracking-wide">{advisorMsg}</div>
+                <div className="flex-1 bg-black/60 backdrop-blur-xl rounded-xl p-4 border-l-4 border-cyan-500 shadow-lg">
+                    <div className="text-[10px] text-cyan-400 mb-1 uppercase tracking-[0.2em] font-bold flex items-center gap-2"><Shield className="w-3 h-3" /> Blueprint Advisor</div>
+                    <div className="text-sm text-cyan-100 font-mono tracking-wide">{advisorMsg}</div>
                 </div>
-                <div className="flex-1 bg-black/60 backdrop-blur-md rounded-lg p-4 border-l-4 border-red-500">
-                    <div className="text-xs text-red-500 mb-1 uppercase tracking-widest font-bold flex items-center gap-2"><Zap className="w-3 h-3"/> Adversary AI</div>
+                <div className="flex-1 bg-black/60 backdrop-blur-xl rounded-xl p-4 border-l-4 border-red-500 shadow-lg">
+                    <div className="text-[10px] text-red-500 mb-1 uppercase tracking-[0.2em] font-bold flex items-center gap-2"><Zap className="w-3 h-3" /> Adversary AI</div>
                     <div className="text-sm text-red-200 font-mono tracking-wide">{adversaryMsg}</div>
                 </div>
             </div>
 
             {/* Game Over States */}
             {gameState !== 'PLAYING' && (
-                <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/90 backdrop-blur-xl">
                     <div className="text-center">
-                        <div className={`text-6xl font-black uppercase tracking-widest mb-4 ${gameState === 'SUCCESS' ? 'text-green-500' : 'text-red-500'}`}>
-                            {gameState === 'SUCCESS' ? 'SYSTEM SECURED' : 'BREACH DETECTED'}
+                        <div className={`text-5xl md:text-7xl font-black uppercase tracking-[0.3em] mb-4 drop-shadow-[0_0_30px_currentColor] ${gameState === 'SUCCESS' ? 'text-cyan-400' : 'text-red-500'}`}>
+                            {gameState === 'SUCCESS' ? 'BLUEPRINT COMPLETE' : 'DESIGN FAILED'}
                         </div>
-                        <div className="text-xl text-white/60 font-mono">Final Score: {score}</div>
+                        <div className="text-xl text-white/60 font-mono tracking-widest">Final Score: {score}</div>
                     </div>
                 </div>
             )}
@@ -167,19 +170,21 @@ export const PromptArchitect: React.FC<PromptArchitectProps> = ({ onComplete, di
             {/* Interaction Layer */}
             <div className="absolute inset-0 z-0 cursor-crosshair" onClick={handleInteract}>
                 <Canvas camera={{ position: [0, 0, 10], fov: 60 }}>
-                    <ambientLight intensity={0.5} />
-                    <pointLight position={[10, 10, 10]} intensity={1} color={new THREE.Color().setHSL(0.5, 1, 0.5)} />
+                    <ambientLight intensity={0.3} />
+                    <pointLight position={[10, 10, 10]} intensity={1.5} color="#06b6d4" />
                     <pointLight position={[-10, -10, -10]} intensity={0.5} color="#4f46e5" />
-                    
-                    <Sparkles count={200} scale={12} size={2} speed={0.4} opacity={0.5} color={new THREE.Color().setHSL(0.5, 1, 0.8)} />
-                    
+
+                    <Sparkles count={300} scale={14} size={3} speed={0.5} opacity={0.6} color="#22d3ee" />
+
                     <CoreEntity isActive={activeNode} />
-                    
+
                     <OrbitControls enableZoom={false} enablePan={false} autoRotate autoRotateSpeed={0.5} />
-                    
+
                     <EffectComposer>
-                        <Bloom luminanceThreshold={0.2} luminanceSmoothing={0.9} height={300} intensity={1.5} />
-                        <ChromaticAberration blendFunction={BlendFunction.NORMAL} offset={new THREE.Vector2(0.002, 0.002)} />
+                        <Bloom luminanceThreshold={0.15} mipmapBlur intensity={2} />
+                        <ChromaticAberration blendFunction={BlendFunction.NORMAL} offset={new THREE.Vector2(0.003, 0.003)} />
+                        <Vignette eskil={false} offset={0.1} darkness={1.2} />
+                        <Noise opacity={0.08} blendFunction={BlendFunction.OVERLAY} />
                         {glitchActive && (
                             <Glitch delay={new THREE.Vector2(0, 0)} duration={new THREE.Vector2(0.1, 0.3)} mode={GlitchMode.SPORADIC} active ratio={0.5} />
                         )}

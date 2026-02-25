@@ -78,7 +78,7 @@ const SynapseNode = ({ position, type, isActive, onClick, powerLevel }: any) => 
             </Sphere>
             {type !== 'SOURCE' && type !== 'TARGET' && (
                 <Text position={[position[0], position[1] + 1.5, position[2]]} fontSize={0.5} color="white" outlineColor="black" outlineWidth={0.05}>
-                    {powerLevel}
+                    {powerLevel?.toString() || ''}
                 </Text>
             )}
         </Float>

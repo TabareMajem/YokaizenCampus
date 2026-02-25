@@ -39,7 +39,8 @@ export const squadsService = {
             }
 
             const data = await response.json();
-            return data.data.squads || [];
+            const squads = data.data.squads || [];
+            return squads.map((s: any) => ({ ...s, members: s.members || [] }));
         } catch (error) {
             console.error('Error fetching squads:', error);
             return [];
