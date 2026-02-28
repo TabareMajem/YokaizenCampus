@@ -309,6 +309,7 @@ export enum AppTab {
   LEARN = 'LEARN',
   LAB = 'LAB',
   LEADERBOARD = 'LEADERBOARD',
+  GROWTH = 'GROWTH',
   PROFILE = 'PROFILE',
   ADMIN = 'ADMIN',
   REWARDS = 'REWARDS'
@@ -365,4 +366,60 @@ export interface AgentSchedule {
   isActive: boolean;
   input?: any;
   createdAt: string;
+}
+
+// ── Growth Mechanism Types ──
+
+export interface ReferralTier {
+  id: number;
+  label: string;
+  emoji: string;
+  required: number;
+  reward: number;
+  perks: string[];
+  color: string;
+}
+
+export interface ReferralStats {
+  referralCode: string;
+  totalReferrals: number;
+  activeReferrals: number;
+  currentTier: ReferralTier | null;
+  nextTier: ReferralTier | null;
+  tokensEarned: number;
+  tokensAvailable: number;
+}
+
+export interface GauntletQuestion {
+  q: string;
+  options: string[];
+  correct: number;
+  points: number;
+  speed?: boolean;
+}
+
+export interface SquadGauntletConfig {
+  squadLeader: {
+    name: string;
+    avatar: string;
+    tier: string;
+    tierColor: string;
+    squadName: string;
+    members: number;
+    maxMembers: number;
+    requirements: { minScore: number; label: string };
+  };
+  questions: GauntletQuestion[];
+}
+
+export interface AgentUseCase {
+  id: number;
+  emoji: string;
+  title: string;
+  category: string;
+  color: string;
+  hook: string;
+  what: string;
+  tokens: number;
+  wow: string;
 }

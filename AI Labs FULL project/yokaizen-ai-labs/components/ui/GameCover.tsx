@@ -108,6 +108,8 @@ export const GameCover: React.FC<GameCoverProps> = ({ game, className = '', icon
     return { background: `linear-gradient(135deg, ${start}, ${end})` };
   };
 
+  const [useFallback, setUseFallback] = useState(false);
+
   // Engine Cover Mapping
   const getEngineCover = () => {
     switch (game.type) {
@@ -178,7 +180,7 @@ export const GameCover: React.FC<GameCoverProps> = ({ game, className = '', icon
     }
   };
 
-  const imageUrl = getEngineCover();
+  const imageUrl = useFallback ? getEngineCover() : `/assets/aaa/covers/${game.type}.png`;
 
   return (
     <div className={`relative overflow-hidden bg-gray-900 ${className}`}>
@@ -190,7 +192,13 @@ export const GameCover: React.FC<GameCoverProps> = ({ game, className = '', icon
             alt=""
             className="w-full h-full object-cover transition-transform duration-700 hover:scale-[1.15]"
             style={{ filter: 'contrast(105%) brightness(1.1)' }}
-            onError={() => setImgError(true)}
+            onError={() => {
+              if (!useFallback) {
+                setUseFallback(true);
+              } else {
+                setImgError(true);
+              }
+            }}
             loading="lazy"
           />
         </div>

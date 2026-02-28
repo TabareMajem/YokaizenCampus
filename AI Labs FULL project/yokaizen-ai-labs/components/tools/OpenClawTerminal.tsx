@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Terminal, Bot, Sparkles, ChevronRight, Share, Zap, X, ShieldAlert, Cpu } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { audio } from '../../services/audioService';
+import { streamAIResponse } from '../../services/geminiService';
 
 interface OpenClawTerminalProps {
     onClose?: () => void;
@@ -23,30 +24,40 @@ export const OpenClawTerminal: React.FC<OpenClawTerminalProps> = ({ onClose, t }
     ]);
     const [input, setInput] = useState('');
     const [isRunning, setIsRunning] = useState(false);
+    const [streamingContent, setStreamingContent] = useState('');
+    const [streamingType, setStreamingType] = useState<LogEntry['type']>('SYSTEM');
     const bottomRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [logs]);
+    }, [logs, streamingContent]);
 
     const addLog = (type: LogEntry['type'], content: string) => {
         setLogs(prev => [...prev, { id: Date.now().toString() + Math.random(), type, content, timestamp: new Date() }]);
     };
 
+    const streamLine = async (type: LogEntry['type'], fullText: string, speed: 'fast' | 'normal' | 'slow' = 'fast') => {
+        setStreamingType(type);
+        setStreamingContent('');
+        audio.playTyping();
+        await streamAIResponse(fullText, (chunk) => setStreamingContent(chunk), speed);
+        setStreamingContent('');
+        addLog(type, fullText);
+    };
+
     const handleExecute = async () => {
         if (!input.trim() || isRunning) return;
-        audio.playTyping();
         const objective = input.trim();
         setInput('');
         addLog('USER', `Objective: ${objective}`);
         setIsRunning(true);
 
         // Simulated Autonomous Execution Flow (Mega Epic)
-        addLog('SYSTEM', 'Compiling execution plan...');
-        await new Promise(r => setTimeout(r, 1000));
+        await streamLine('SYSTEM', 'Compiling execution plan...');
+        await new Promise(r => setTimeout(r, 500));
 
         const steps = [
-            'Analyzing environment variables and constraints.',
+            `Analyzing environment variables for objective: ${objective.substring(0, 20)}...`,
             'Spawning sub-agent threads for parallel data retrieval.',
             'Accessing external APIs via secure proxy tunnel.',
             'Bypassing cognitive load limiters...',
@@ -56,13 +67,13 @@ export const OpenClawTerminal: React.FC<OpenClawTerminalProps> = ({ onClose, t }
 
         for (let i = 0; i < steps.length; i++) {
             audio.playClick();
-            addLog('ACTION', steps[i]);
+            await streamLine('ACTION', steps[i], 'fast');
             addLog('SYSTEM', `[Thread ${Math.floor(Math.random() * 100)}] Status: OK`);
-            await new Promise(r => setTimeout(r, 1200 + Math.random() * 800));
+            await new Promise(r => setTimeout(r, 300 + Math.random() * 500));
         }
 
         audio.playSuccess();
-        addLog('AGENT', `Objective Complete: "${objective}". Task successfully executed via autonomous recursion.`);
+        await streamLine('AGENT', `Objective Complete: "${objective}". Task successfully executed via autonomous recursion.`, 'normal');
         setIsRunning(false);
     };
 
@@ -119,7 +130,28 @@ export const OpenClawTerminal: React.FC<OpenClawTerminalProps> = ({ onClose, t }
                         </div>
                     </div>
                 ))}
-                {isRunning && (
+
+                {/* Active Streaming Line */}
+                {streamingContent && (
+                    <div className="text-sm flex items-start gap-3 animate-in fade-in">
+                        <span className="text-gray-600 shrink-0 select-none">[{new Date().toLocaleTimeString()}]</span>
+                        <div className="flex-1">
+                            {streamingType === 'SYSTEM' && <div className="text-gray-400">{streamingContent}<span className="inline-block w-2 h-4 bg-gray-400 animate-pulse ml-1" /></div>}
+                            {streamingType === 'ACTION' && (
+                                <div className="text-indigo-400 ml-4 border-l border-indigo-500/30 pl-3 py-0.5">
+                                    <span className="mr-2">↳</span>{streamingContent}<span className="inline-block w-2 h-4 bg-indigo-400 animate-pulse ml-1" />
+                                </div>
+                            )}
+                            {streamingType === 'AGENT' && (
+                                <div className="text-green-400 font-bold bg-green-900/20 border border-green-500/30 p-2 rounded w-fit my-1">
+                                    {streamingContent}<span className="inline-block w-2 h-4 bg-green-400 animate-pulse ml-1" />
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {isRunning && !streamingContent && (
                     <div className="text-indigo-400 text-sm py-2 ml-4 flex items-center gap-2">
                         <div className="w-2 h-4 bg-indigo-500 animate-pulse"></div>
                         <span>Processing autonomous loop...</span>

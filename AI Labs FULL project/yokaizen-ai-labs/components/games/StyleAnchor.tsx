@@ -1,10 +1,10 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, MeshDistortMaterial, Float, Sparkles } from '@react-three/drei';
-import { EffectComposer, Bloom, ChromaticAberration, Glitch, Vignette } from '@react-three/postprocessing';
+import { OrbitControls, Float, Sparkles, Environment, ContactShadows, MeshTransmissionMaterial, Ring, Stars } from '@react-three/drei';
+import { EffectComposer, Bloom, ChromaticAberration, Glitch, Vignette, DepthOfField } from '@react-three/postprocessing';
 import { GlitchMode, BlendFunction } from 'postprocessing';
 import * as THREE from 'three';
-import { Activity, Shield, Zap, AlertTriangle, Flame, Target, Trophy, SkullIcon } from 'lucide-react';
+import { Activity, Shield, Zap, AlertTriangle, Flame, Target, Trophy, SkullIcon, Scissors } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { audio } from '../../services/audioService';
 import { useDialogue } from '../../contexts/DialogueContext';
@@ -15,58 +15,121 @@ export interface StyleAnchorProps {
     t: (key: string) => string;
 }
 
-// --- 3D Target Node ---
-const TargetNode = ({ position, color, scale, onClick, id }: {
+// --- 3D Gallery Environment ---
+const GalleryRoom = () => {
+    return (
+        <group>
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -4, 0]}>
+                <planeGeometry args={[100, 100]} />
+                <meshStandardMaterial color="#050505" roughness={0.1} metalness={0.8} />
+            </mesh>
+            <ContactShadows position={[0, -3.99, 0]} scale={50} blur={2} far={10} opacity={0.5} />
+            <gridHelper args={[100, 40, '#ffffff', '#ffffff']} position={[0, -3.99, 0]} material-opacity={0.05} material-transparent />
+        </group>
+    );
+};
+
+// --- 3D Target Node (Glass Prism) ---
+const StylePrism = ({ position, color, scale, onClick, id }: {
     position: [number, number, number]; color: string; scale: number; onClick: (id: string) => void; id: string;
 }) => {
     const meshRef = useRef<THREE.Mesh>(null);
+    const ringRef = useRef<THREE.Mesh>(null);
     const [hovered, setHovered] = useState(false);
+
     useFrame((state) => {
         if (meshRef.current) {
-            meshRef.current.rotation.x = state.clock.elapsedTime * 2;
-            meshRef.current.rotation.z = state.clock.elapsedTime * 1.5;
-            const pulse = 1 + Math.sin(state.clock.elapsedTime * 6) * 0.12;
-            meshRef.current.scale.setScalar(scale * pulse * (hovered ? 1.3 : 1));
+            meshRef.current.rotation.x = state.clock.elapsedTime * 0.5;
+            meshRef.current.rotation.y = state.clock.elapsedTime * 0.8;
+            const pulse = 1 + Math.sin(state.clock.elapsedTime * 5 + position[0]) * 0.05;
+            meshRef.current.scale.setScalar(scale * pulse * (hovered ? 1.1 : 1));
+        }
+        if (ringRef.current) {
+            ringRef.current.rotation.z = state.clock.elapsedTime * -1;
+            ringRef.current.scale.setScalar(hovered ? 1.5 : 1.2);
         }
     });
+
     return (
-        <Float speed={3} rotationIntensity={2} floatIntensity={2}>
-            <mesh ref={meshRef} position={position}
-                onClick={(e) => { e.stopPropagation(); onClick(id); }}
-                onPointerOver={() => { setHovered(true); document.body.style.cursor = 'crosshair'; }}
-                onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default'; }}>
-                <dodecahedronGeometry args={[0.5]} />
-                <MeshDistortMaterial color={color} emissive={color} emissiveIntensity={hovered ? 5 : 3}
-                    clearcoat={1} metalness={0.9} roughness={0} distort={hovered ? 0.6 : 0.25} speed={hovered ? 8 : 4} />
-                <pointLight distance={5} intensity={3} color={color} />
-            </mesh>
+        <Float speed={2} rotationIntensity={1} floatIntensity={1}>
+            <group position={position}>
+                {hovered && (
+                    <Ring ref={ringRef} args={[0.7, 0.75, 32]} rotation={[Math.PI / 2, 0, 0]}>
+                        <meshBasicMaterial color={color} side={THREE.DoubleSide} transparent opacity={0.5} />
+                    </Ring>
+                )}
+                <mesh
+                    ref={meshRef}
+                    onClick={(e) => { e.stopPropagation(); onClick(id); }}
+                    onPointerOver={() => { setHovered(true); document.body.style.cursor = 'crosshair'; }}
+                    onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default'; }}
+                >
+                    <octahedronGeometry args={[0.6, 0]} />
+                    <MeshTransmissionMaterial
+                        backside
+                        samples={4}
+                        thickness={1}
+                        chromaticAberration={1}
+                        anisotropy={0.5}
+                        distortion={0}
+                        color={color}
+                        roughness={0}
+                        clearcoat={1}
+                        metalness={0.1}
+                    />
+                    <pointLight distance={3} intensity={hovered ? 3 : 1} color={color} />
+                </mesh>
+            </group>
         </Float>
     );
 };
 
-// --- 3D Hazard Node ---
-const HazardNode = ({ position, onClick, id }: {
+// --- 3D Hazard Node (Shattered Glass Shard) ---
+const HazardShard = ({ position, onClick, id }: {
     position: [number, number, number]; onClick: (id: string) => void; id: string;
 }) => {
     const meshRef = useRef<THREE.Mesh>(null);
+    const [hovered, setHovered] = useState(false);
+
     useFrame((state) => {
         if (meshRef.current) {
-            meshRef.current.rotation.x = state.clock.elapsedTime * 5;
+            meshRef.current.rotation.x = state.clock.elapsedTime * 2;
             meshRef.current.rotation.y = state.clock.elapsedTime * 3;
-            const s = 0.7 + Math.sin(state.clock.elapsedTime * 10) * 0.15;
-            meshRef.current.scale.setScalar(s);
+            meshRef.current.rotation.z += 0.05;
+            meshRef.current.scale.setScalar(hovered ? 1.3 : 1);
         }
     });
+
     return (
-        <mesh ref={meshRef} position={position}
-            onClick={(e) => { e.stopPropagation(); onClick(id); }}
-            onPointerOver={() => { document.body.style.cursor = 'not-allowed'; }}
-            onPointerOut={() => { document.body.style.cursor = 'default'; }}>
-            <octahedronGeometry args={[0.45]} />
-            <meshStandardMaterial color="#ff3300" emissive="#ff3300" emissiveIntensity={4}
-                wireframe transparent opacity={0.85} roughness={0.3} metalness={0.8} />
-            <pointLight distance={4} intensity={2.5} color="#ff3300" />
-        </mesh>
+        <Float speed={4} rotationIntensity={2} floatIntensity={2}>
+            <mesh
+                ref={meshRef}
+                position={position}
+                onClick={(e) => { e.stopPropagation(); onClick(id); }}
+                onPointerOver={() => { setHovered(true); document.body.style.cursor = 'not-allowed'; }}
+                onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default'; }}
+            >
+                <tetrahedronGeometry args={[0.4, 0]} />
+                <meshStandardMaterial
+                    color="#050505"
+                    emissive="#ff0044"
+                    emissiveIntensity={hovered ? 4 : 2}
+                    roughness={0.1}
+                    metalness={0.9}
+                    wireframe={!hovered}
+                />
+                {!hovered && (
+                    <meshStandardMaterial
+                        color="#ff0044"
+                        transparent
+                        opacity={0.3}
+                        roughness={0}
+                        metalness={1}
+                    />
+                )}
+                <pointLight distance={3} intensity={2} color="#ff0044" />
+            </mesh>
+        </Float>
     );
 };
 
@@ -74,9 +137,9 @@ const HazardNode = ({ position, onClick, id }: {
 const CameraRig = ({ intensity }: { intensity: number }) => {
     useFrame((state) => {
         const t = state.clock.elapsedTime;
-        const shake = intensity > 0.5 ? (Math.random() - 0.5) * intensity * 0.3 : 0;
-        state.camera.position.x = THREE.MathUtils.lerp(state.camera.position.x, Math.sin(t * 0.2) * 2 + shake, 0.05);
-        state.camera.position.y = THREE.MathUtils.lerp(state.camera.position.y, Math.cos(t * 0.15) * 1.5 + shake, 0.05);
+        const shake = intensity > 0.5 ? (Math.random() - 0.5) * intensity * 0.1 : 0;
+        state.camera.position.x = THREE.MathUtils.lerp(state.camera.position.x, Math.sin(t * 0.3) * 1.5 + shake, 0.05);
+        state.camera.position.y = THREE.MathUtils.lerp(state.camera.position.y, Math.cos(t * 0.2) * 0.5 + Math.abs(shake), 0.05);
         state.camera.lookAt(0, 0, 0);
     });
     return null;
@@ -85,8 +148,8 @@ const CameraRig = ({ intensity }: { intensity: number }) => {
 // --- Types ---
 interface GameNode { id: string; position: [number, number, number]; type: 'target' | 'hazard'; color: string; spawnedAt: number; lifetime: number; }
 
-const TARGET_COLORS = ['#ff88ff', '#88ffff', '#ffff88', '#ffffff'];
-const genPos = (): [number, number, number] => [(Math.random() - 0.5) * 12, (Math.random() - 0.5) * 8, (Math.random() - 0.5) * 6];
+const TARGET_COLORS = ['#ffffff', '#fdfbf7', '#c2f0f0', '#ffe6f2']; // High fashion, soft lighting colors
+const genPos = (): [number, number, number] => [(Math.random() - 0.5) * 14, (Math.random() - 0.5) * 6, (Math.random() - 0.5) * 4];
 
 // --- Main Component ---
 export const StyleAnchor: React.FC<StyleAnchorProps> = ({ onComplete, difficulty, t }) => {
@@ -121,10 +184,15 @@ export const StyleAnchor: React.FC<StyleAnchorProps> = ({ onComplete, difficulty
             setNodes(prev => {
                 const now = Date.now();
                 const active = prev.filter(n => now - n.spawnedAt < n.lifetime);
-                if (active.length >= 6) return active;
+                if (active.length >= 8) return active;
                 const isHazard = Math.random() < hazardChance;
+
+                // Keep hazards slightly behind targets
+                const pos = genPos();
+                if (isHazard) pos[2] -= 1;
+
                 return [...active, {
-                    id: `${Date.now()}-${Math.random()}`, position: genPos(),
+                    id: `${Date.now()}-${Math.random()}`, position: pos,
                     type: isHazard ? 'hazard' : 'target',
                     color: TARGET_COLORS[Math.floor(Math.random() * TARGET_COLORS.length)],
                     spawnedAt: now, lifetime: Math.max(1500, 3000 - (score / 200) * 500),
@@ -180,102 +248,155 @@ export const StyleAnchor: React.FC<StyleAnchorProps> = ({ onComplete, difficulty
         audio.playClick();
         const nc = combo + 1; setCombo(nc); setMaxCombo(c => Math.max(c, nc));
         setScore(s => s + Math.floor(50 * Math.min(nc, 10) * diffMul));
-        setScreenFlash('#ff88ff'); setTimeout(() => setScreenFlash(null), 80);
+        setScreenFlash('#ffffff'); setTimeout(() => setScreenFlash(null), 60);
     }, [gameState, combo, diffMul]);
 
     const handleHazardClick = useCallback((id: string) => {
         if (gameState !== 'PLAYING') return;
         setNodes(prev => prev.filter(n => n.id !== id));
         audio.playError(); setCombo(0); setScore(s => Math.max(0, s - 200));
-        setGlitchActive(true); setScreenFlash('#ff0000');
+        setGlitchActive(true); setScreenFlash('#ff0044');
         setTimeout(() => { setGlitchActive(false); setScreenFlash(null); }, 400);
     }, [gameState]);
 
     return (
-        <div className="relative w-full h-[600px] rounded-xl overflow-hidden border border-white/10 bg-black shadow-2xl">
-            <AnimatePresence>{screenFlash && (<motion.div initial={{ opacity: 0.6 }} animate={{ opacity: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="absolute inset-0 z-30 pointer-events-none" style={{ backgroundColor: screenFlash }} />)}</AnimatePresence>
+        <div className="relative w-full h-[600px] rounded-xl overflow-hidden border border-white/5 bg-[#0a0a0c] shadow-2xl">
+            <AnimatePresence>{screenFlash && (<motion.div initial={{ opacity: 0.8 }} animate={{ opacity: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.4, ease: "easeOut" }} className="absolute inset-0 z-30 pointer-events-none" style={{ backgroundColor: screenFlash, mixBlendMode: 'overlay' }} />)}</AnimatePresence>
 
-            {/* HUD */}
-            <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-start z-10 pointer-events-none">
-                <div className="flex flex-col gap-3">
-                    <div className="bg-black/60 backdrop-blur-md rounded-lg p-3 border border-white/20">
-                        <div className="flex items-center gap-2 text-emerald-400 mb-1"><Activity className="w-4 h-4" /><span className="text-xs uppercase tracking-widest font-bold">{t('game.hud.score')}</span></div>
-                        <div className="text-3xl font-mono font-black text-white tabular-nums">{score}</div>
+            {/* High-Fashion Minimalist HUD */}
+            <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-start z-10 pointer-events-none">
+                <div className="flex flex-col gap-4 w-48">
+                    <div>
+                        <div className="flex items-center gap-2 text-white/50 mb-1">
+                            <Activity className="w-3 h-3" />
+                            <span className="text-[10px] uppercase tracking-[0.3em] font-light">{t('game.hud.score')}</span>
+                        </div>
+                        <div className="text-4xl font-light tracking-tighter text-white tabular-nums drop-shadow-md">{score}</div>
                     </div>
-                    <AnimatePresence>{combo > 1 && (<motion.div initial={{ scale: 0, x: -50 }} animate={{ scale: 1, x: 0 }} exit={{ scale: 0 }} className="bg-black/60 backdrop-blur-md rounded-lg p-3 border border-orange-500/50">
-                        <div className="flex items-center gap-2"><Flame className="w-5 h-5 text-orange-500 animate-pulse" /><span className="text-orange-400 font-black text-2xl italic">{combo}x</span></div>
-                        <div className="text-[10px] text-orange-300/60 uppercase tracking-widest mt-1">{t('game.hud.combo_chain')}</div>
-                    </motion.div>)}</AnimatePresence>
+
+                    <AnimatePresence>
+                        {combo > 1 && (
+                            <motion.div
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                className="relative py-2 pl-4 border-l border-white/20"
+                            >
+                                <div className="text-[10px] text-white/40 uppercase tracking-[0.2em] font-light mb-1">{t('game.hud.combo_chain')}</div>
+                                <div className="text-2xl font-light italic text-white/90 tabular-nums">x{combo}</div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
-                <div className="flex flex-col items-end gap-3">
-                    <div className="bg-black/60 backdrop-blur-md rounded-lg p-3 border border-blue-500/40">
-                        <div className="flex items-center gap-2 text-blue-400 mb-1"><AlertTriangle className="w-4 h-4" /><span className="text-xs uppercase tracking-widest font-bold">{t('game.hud.time')}</span></div>
-                        <div className={`text-3xl font-mono font-black tabular-nums ${timeLeft <= 10 ? 'text-red-500 animate-pulse' : 'text-white'}`}>{timeLeft}s</div>
+
+                <div className="flex flex-col items-end gap-3 text-right">
+                    <div>
+                        <div className="flex items-center justify-end gap-2 text-white/50 mb-1">
+                            <span className="text-[10px] uppercase tracking-[0.3em] font-light">{t('game.hud.time')}</span>
+                            <AlertTriangle className="w-3 h-3" />
+                        </div>
+                        <div className={`text-5xl font-light tabular-nums tracking-tighter ${timeLeft <= 10 ? 'text-[#ff0044]' : 'text-white'} drop-shadow-md`}>
+                            {timeLeft}<span className="text-xl text-white/40 ml-1">s</span>
+                        </div>
                     </div>
-                    <div className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest border ${difficulty === 'HARD' ? 'border-red-500 text-red-400 bg-red-500/10' : difficulty === 'MEDIUM' ? 'border-yellow-500 text-yellow-400 bg-yellow-500/10' : 'border-green-500 text-green-400 bg-green-500/10'}`}>{t(`game.difficulty.${difficulty.toLowerCase()}`)}</div>
+                    <div className={`mt-2 text-[10px] tracking-[0.3em] uppercase ${difficulty === 'HARD' ? 'text-[#ff0044]' : difficulty === 'MEDIUM' ? 'text-[#ffaa00]' : 'text-white/40'}`}>
+                        {t(`game.difficulty.${difficulty.toLowerCase()}`)}
+                    </div>
                 </div>
             </div>
 
-            {/* Instructions */}
-            {timeLeft > 45 && gameState === 'PLAYING' && (
-                <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none text-center">
-                    <div className="bg-black/80 backdrop-blur-xl p-6 rounded-2xl border border-cyan-500/30">
-                        <div className="text-cyan-400 font-black text-xl uppercase tracking-widest mb-2"><Target className="inline w-6 h-6 mr-2" /> {t('game.instructions.click_targets')}</div>
-                        <div className="text-red-400 font-bold text-sm"><SkullIcon className="inline w-4 h-4 mr-1" /> {t('game.instructions.avoid_hazards')}</div>
-                    </div>
-                </motion.div>
-            )}
+            {/* Subtle Instructions */}
+            <AnimatePresence>
+                {timeLeft > 45 && gameState === 'PLAYING' && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute bottom-1/4 left-1/2 -translate-x-1/2 z-20 pointer-events-none text-center flex flex-col items-center gap-2">
+                        <div className="text-white/80 font-light text-sm tracking-[0.2em] uppercase bg-black/40 backdrop-blur-md px-6 py-2 rounded-full border border-white/10">
+                            {t('game.instructions.click_targets')}
+                        </div>
+                        <div className="text-[#ff0044] font-light text-xs tracking-[0.2em] uppercase bg-black/40 backdrop-blur-md px-4 py-1 rounded-full border border-[#ff0044]/20">
+                            {t('game.instructions.avoid_hazards')}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
-            {/* Agent Panel */}
-            <div className="absolute bottom-4 left-4 right-4 flex flex-col sm:flex-row gap-2 sm:gap-3 z-10 pointer-events-none">
-                <div className="flex-1 bg-black/70 backdrop-blur-xl rounded-lg p-3 border-l-4 border-indigo-500">
-                    <div className="text-[10px] text-indigo-400 mb-1 uppercase tracking-widest font-bold flex items-center gap-1"><Shield className="w-3 h-3" /> {t('game.advisor.label')}</div>
-                    <div className="text-xs text-indigo-100 font-mono leading-relaxed">{advisorMsg}</div>
+            {/* Minimalist Agent Panel */}
+            <div className="absolute bottom-6 left-6 right-6 flex flex-col md:flex-row gap-8 z-10 pointer-events-none border-t border-white/10 pt-4">
+                <div className="flex-1">
+                    <div className="text-[9px] text-white/40 mb-2 uppercase tracking-[0.3em] flex items-center gap-2">
+                        <Shield className="w-3 h-3 stroke-1" /> {t('game.advisor.label')}
+                    </div>
+                    <div className="text-sm text-white/80 font-light tracking-wide">{advisorMsg}</div>
                 </div>
-                <div className="flex-1 bg-black/70 backdrop-blur-xl rounded-lg p-3 border-l-4 border-red-500">
-                    <div className="text-[10px] text-red-500 mb-1 uppercase tracking-widest font-bold flex items-center gap-1"><Zap className="w-3 h-3" /> {t('game.adversary.label')}</div>
-                    <div className="text-xs text-red-100 font-mono leading-relaxed">{adversaryMsg}</div>
+                <div className="flex-1 md:text-right">
+                    <div className="text-[9px] text-[#ff0044]/60 mb-2 uppercase tracking-[0.3em] flex items-center md:justify-end gap-2">
+                        <Zap className="w-3 h-3 stroke-1" /> {t('game.adversary.label')}
+                    </div>
+                    <div className="text-sm text-white/80 font-light tracking-wide">{adversaryMsg}</div>
                 </div>
             </div>
 
-            {/* Game Over */}
-            <AnimatePresence>{gameState !== 'PLAYING' && (
-                <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="absolute inset-0 z-20 flex items-center justify-center p-4 sm:p-0 bg-black/90 backdrop-blur-md">
-                    <div className="text-center p-6 sm:p-10 w-full sm:w-auto rounded-2xl border border-white/10 bg-black/50 shadow-2xl max-w-[90vw] sm:max-w-md">
-                        <div className={`w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center ${gameState === 'SUCCESS' ? 'bg-cyan-500/20 border border-cyan-500/30' : 'bg-red-500/20 border border-red-500/30'}`}>
-                            {gameState === 'SUCCESS' ? <Trophy className="w-10 h-10 text-cyan-400" /> : <SkullIcon className="w-10 h-10 text-red-400" />}
-                        </div>
-                        <div className={`text-3xl sm:text-5xl font-black uppercase tracking-widest mb-4 ${gameState === 'SUCCESS' ? 'text-cyan-400' : 'text-red-500'} drop-shadow-[0_0_15px_currentColor]`}>
-                            {gameState === 'SUCCESS' ? t('game.state.waves_analyzed') : t('game.state.breach_detected')}
-                        </div>
-                        <div className="text-2xl text-white/80 font-mono mb-2">{t('game.hud.final_score')}: {score}</div>
-                        <div className="text-sm text-orange-400 font-bold mb-6">{t('game.hud.max_combo')}: {maxCombo}x</div>
-                    </div>
-                </motion.div>
-            )}</AnimatePresence>
+            {/* High-End Game Over Status */}
+            <AnimatePresence>
+                {gameState !== 'PLAYING' && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 z-30 flex items-center justify-center p-6 bg-[#050505]/95 backdrop-blur-xl">
+                        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.2, duration: 0.5, ease: "easeOut" }} className="w-full max-w-2xl text-center">
 
-            {/* 3D Canvas */}
-            <div className="absolute inset-0 z-0 cursor-crosshair">
-                <Canvas camera={{ position: [0, 0, 12], fov: 60 }} gl={{ antialias: false, powerPreference: "high-performance" }}>
-                    <color attach="background" args={['#040408']} />
-                    <fog attach="fog" args={['#040408', 8, 25]} />
-                    <ambientLight intensity={0.3} />
-                    <pointLight position={[10, 10, 10]} intensity={2} color="#ff88ff" />
-                    <pointLight position={[-10, -10, -10]} intensity={1} color="#88ffff" />
+                            <div className="mb-8 font-light tracking-[0.5em] text-white/40 text-sm uppercase">Style Score</div>
+
+                            <div className="text-8xl md:text-9xl font-light tracking-tighter text-white mb-12 drop-shadow-[0_0_30px_rgba(255,255,255,0.2)]">
+                                {score}
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-8 max-w-md mx-auto mb-16 border-t border-b border-white/10 py-8">
+                                <div>
+                                    <div className="text-[10px] uppercase tracking-[0.3em] text-white/40 mb-2">{t('game.hud.max_combo')}</div>
+                                    <div className="text-3xl font-light text-white italic">x{maxCombo}</div>
+                                </div>
+                                <div className="border-l border-white/10">
+                                    <div className="text-[10px] uppercase tracking-[0.3em] text-white/40 mb-2">Status</div>
+                                    <div className={`text-lg font-light uppercase tracking-widest mt-2 ${gameState === 'SUCCESS' ? 'text-white' : 'text-[#ff0044]'}`}>
+                                        {gameState === 'SUCCESS' ? t('game.state.waves_analyzed') : t('game.state.breach_detected')}
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* 3D Glass Gallery Layer */}
+            <div className="absolute inset-0 z-0">
+                <Canvas camera={{ position: [0, 2, 12], fov: 45 }} gl={{ antialias: false, powerPreference: "high-performance" }}>
+                    <color attach="background" args={['#020202']} />
+                    <fog attach="fog" args={['#020202', 10, 30]} />
+                    <ambientLight intensity={0.5} />
+                    <directionalLight position={[10, 10, 5]} intensity={2} color="#ffffff" />
+                    <directionalLight position={[-10, 5, -5]} intensity={1} color="#e6f2ff" />
+
+                    <Environment preset="studio" intensity={0.5} />
+                    <GalleryRoom />
+
                     <CameraRig intensity={combo / 10} />
+
                     {nodes.map(node => node.type === 'target' ? (
-                        <TargetNode key={node.id} id={node.id} position={node.position} color={node.color} scale={1} onClick={handleTargetClick} />
+                        <StylePrism key={node.id} id={node.id} position={node.position} color={node.color} scale={1} onClick={handleTargetClick} />
                     ) : (
-                        <HazardNode key={node.id} id={node.id} position={node.position} onClick={handleHazardClick} />
+                        <HazardShard key={node.id} id={node.id} position={node.position} onClick={handleHazardClick} />
                     ))}
-                    <Sparkles count={300} scale={20} size={3} speed={0.5 + combo * 0.2} opacity={0.5} color="#ff88ff" />
-                    <Sparkles count={100} scale={15} size={6} speed={1} opacity={0.3} color="#88ffff" />
-                    <OrbitControls enableZoom={false} enablePan={false} autoRotate autoRotateSpeed={0.5 + combo * 0.1} />
-                    <EffectComposer >
-                        <Bloom luminanceThreshold={0.15} mipmapBlur intensity={1.5 + combo * 0.15} />
-                        <ChromaticAberration blendFunction={BlendFunction.NORMAL} offset={new THREE.Vector2(0.002 + combo * 0.001, 0.002 + combo * 0.001)} />
-                        <Vignette eskil={false} offset={0.1} darkness={1.1} />
-                        {glitchActive && (<Glitch delay={new THREE.Vector2(0, 0)} duration={new THREE.Vector2(0.1, 0.4)} mode={GlitchMode.SPORADIC} active ratio={0.8} />)}
+
+                    <Sparkles count={50} scale={20} size={2} speed={0.1} opacity={0.3} color="#ffffff" position={[0, 4, 0]} />
+
+                    <EffectComposer disableNormalPass>
+                        <DepthOfField focusDistance={0.02} focalLength={0.1} bokehScale={2} height={480} />
+                        <Bloom luminanceThreshold={0.5} luminanceSmoothing={0.9} mipmapBlur intensity={1.5} />
+                        <ChromaticAberration
+                            blendFunction={BlendFunction.NORMAL}
+                            offset={new THREE.Vector2(0.002 + combo * 0.001, 0.002 + combo * 0.001)}
+                            radialModulation={false}
+                            modulationOffset={0}
+                        />
+                        <Vignette eskil={false} offset={0.15} darkness={1.0} />
+                        {glitchActive && (<Glitch delay={new THREE.Vector2(0, 0)} duration={new THREE.Vector2(0.2, 0.4)} mode={GlitchMode.SPORADIC} active ratio={0.5} />)}
                     </EffectComposer>
                 </Canvas>
             </div>

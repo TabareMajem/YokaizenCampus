@@ -8,7 +8,8 @@ import { VisionEye } from './tools/VisionEye';
 import { GameCreator } from './tools/GameCreator';
 import { OmniSight } from './tools/OmniSight';
 import { OpenClawTerminal } from './tools/OpenClawTerminal';
-import { Bot, Image as ImageIcon, Mic, Eye, Lock, Sparkles, Grid, ArrowLeft, Gamepad2, Scan, Code, Workflow, Info, X, Check, Clock, Trophy, Plus, Share2, ShoppingBag, Cpu } from 'lucide-react';
+import { AgentMarketplace } from './tools/AgentMarketplace';
+import { Bot, Image as ImageIcon, Mic, Eye, Lock, Sparkles, Grid, ArrowLeft, Gamepad2, Scan, Code, Workflow, Info, X, Check, Clock, Trophy, Plus, Share2, ShoppingBag, Cpu, Globe } from 'lucide-react';
 import { TOOLS, COMPETITION_TEMPLATES } from '../constants';
 import { audio } from '../services/audioService';
 import { useDialogue } from '../contexts/DialogueContext';
@@ -57,7 +58,7 @@ export const LabScreen: React.FC<LabScreenProps> = ({ user, onUpdateUser, initia
     const { showToast } = useToast();
 
     // Agent Lab State
-    const [agentMode, setAgentMode] = useState<'CHAT' | 'BUILD'>('CHAT');
+    const [agentMode, setAgentMode] = useState<'CHAT' | 'BUILD' | 'MARKET'>('CHAT');
     const [activeAgent, setActiveAgent] = useState<Agent | null>(null);
     const [lastAgentAction, setLastAgentAction] = useState<number>(0);
     const [importAgentData, setImportAgentData] = useState<Agent | null>(null);
@@ -343,6 +344,15 @@ export const LabScreen: React.FC<LabScreenProps> = ({ user, onUpdateUser, initia
                                 >
                                     Architect Node
                                 </button>
+                                <button
+                                    onClick={() => setAgentMode('MARKET')}
+                                    className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider flex items-center justify-center ${agentMode === 'MARKET'
+                                        ? 'bg-cyan-500/10 text-cyan-400 border-b-2 border-cyan-500'
+                                        : 'text-gray-500 hover:text-gray-300'
+                                        }`}
+                                >
+                                    <Globe size={14} className="mr-2" /> Marketplace
+                                </button>
                             </div>
 
                             <div className="flex-1 overflow-hidden relative bg-gray-900/20 flex flex-col min-h-0">
@@ -406,7 +416,7 @@ export const LabScreen: React.FC<LabScreenProps> = ({ user, onUpdateUser, initia
                                             )}
                                         </div>
                                     )
-                                ) : (
+                                ) : agentMode === 'BUILD' ? (
                                     <div className="h-full overflow-hidden min-h-0 relative">
                                         <AgentStudio
                                             onSave={handleSaveAgent}
@@ -414,7 +424,13 @@ export const LabScreen: React.FC<LabScreenProps> = ({ user, onUpdateUser, initia
                                             checkCooldown={checkAgentCooldown}
                                         />
                                     </div>
-                                )}
+                                ) : agentMode === 'MARKET' ? (
+                                    <AgentMarketplace
+                                        user={user}
+                                        onImportAgent={handleSaveAgent}
+                                        t={t}
+                                    />
+                                ) : null}
                             </div>
                         </div>
                     )}
@@ -461,6 +477,6 @@ export const LabScreen: React.FC<LabScreenProps> = ({ user, onUpdateUser, initia
                     )}
                 </div>
             </div>
-        </div>
+        </div >
     );
 };

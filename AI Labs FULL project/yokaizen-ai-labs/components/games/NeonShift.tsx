@@ -1,10 +1,11 @@
-import React, { useRef, useState, useMemo, useEffect, useCallback } from 'react';
+/// <reference types="@react-three/fiber" />
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, Box, MeshDistortMaterial, Float, Sparkles, Text, Sphere } from '@react-three/drei';
-import { EffectComposer, Bloom, ChromaticAberration, Glitch, Vignette } from '@react-three/postprocessing';
+import { OrbitControls, Box, MeshDistortMaterial, Float, Sparkles, Text, Sphere, Torus, Cylinder, Edges } from '@react-three/drei';
+import { EffectComposer, Bloom, ChromaticAberration, Glitch, Vignette, Noise } from '@react-three/postprocessing';
 import { GlitchMode, BlendFunction } from 'postprocessing';
 import * as THREE from 'three';
-import { Activity, Shield, Zap, AlertTriangle, Flame, Target, Trophy, SkullIcon } from 'lucide-react';
+import { Activity, Shield, Zap, AlertTriangle, Flame, Target, Trophy, SkullIcon, TargetCenter } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { audio } from '../../services/audioService';
 import { useDialogue } from '../../contexts/DialogueContext';
@@ -15,168 +16,274 @@ export interface NeonShiftProps {
     t: (key: string) => string;
 }
 
-// --- 3D Target Node ---
-const TargetNode = ({ position, color, scale, onClick, id }: {
-    position: [number, number, number];
-    color: string;
-    scale: number;
-    onClick: (id: string) => void;
-    id: string;
-}) => {
-    const meshRef = useRef<THREE.Mesh>(null);
+// --------------------------------------------------------
+// AAA 3D Components
+// --------------------------------------------------------
+
+const HyperTunnel = ({ speedMultiplier }: { speedMultiplier: number }) => {
+    const gridRef = useRef<THREE.Group>(null);
+
+    useFrame((state, delta) => {
+        if (gridRef.current) {
+            gridRef.current.position.z += delta * 15 * speedMultiplier;
+            if (gridRef.current.position.z > 20) {
+                gridRef.current.position.z -= 20;
+            }
+        }
+    });
+
+    return (
+        <group ref={gridRef}>
+            {[...Array(5)].map((_, i) => (
+                <mesh key={i} position={[0, 0, -i * 20]} rotation-x={Math.PI / 2}>
+                    <cylinderGeometry args={[25, 25, 20, 16, 1, true]} />
+                    <meshBasicMaterial color="#0066ff" wireframe transparent opacity={0.15} />
+                </mesh>
+            ))}
+        </group>
+    );
+};
+
+const TargetNode = ({ position, color, onClick, id, combo }: any) => {
+    const groupRef = useRef<THREE.Group>(null);
+    const coreRef = useRef<THREE.Mesh>(null);
     const [hovered, setHovered] = useState(false);
+    const [scale, setScale] = useState(0);
 
-    useFrame((state) => {
-        if (meshRef.current) {
-            meshRef.current.rotation.x = state.clock.elapsedTime * 2;
-            meshRef.current.rotation.z = state.clock.elapsedTime * 1.5;
-            // Pulsing scale
-            const pulse = 1 + Math.sin(state.clock.elapsedTime * 6) * 0.1;
-            meshRef.current.scale.setScalar(scale * pulse * (hovered ? 1.3 : 1));
+    useFrame((state, delta) => {
+        setScale(s => Math.min(1, s + delta * 5)); // Spawn pop-in
+
+        const t = state.clock.elapsedTime;
+        if (groupRef.current) {
+            const hoverPulse = hovered ? 1.2 : 1.0;
+            const comboPulse = 1 + Math.sin(t * 10) * Math.min(combo * 0.02, 0.2); // Pulse faster with combo
+            groupRef.current.scale.setScalar(scale * hoverPulse * comboPulse);
+
+            groupRef.current.rotation.y = t * 2;
+            groupRef.current.rotation.x = Math.sin(t) * 0.5;
+        }
+
+        if (coreRef.current) {
+            coreRef.current.scale.setScalar(1 + Math.sin(t * 8) * 0.1);
         }
     });
 
     return (
-        <Float speed={3} rotationIntensity={2} floatIntensity={2}>
-            <mesh
-                ref={meshRef}
-                position={position}
-                onClick={(e) => { e.stopPropagation(); onClick(id); }}
-                onPointerOver={() => { setHovered(true); document.body.style.cursor = 'crosshair'; }}
-                onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default'; }}
-            >
-                <icosahedronGeometry args={[0.5, 1]} />
-                <MeshDistortMaterial
-                    color={color}
-                    emissive={color}
-                    emissiveIntensity={hovered ? 5 : 3}
-                    clearcoat={1}
-                    clearcoatRoughness={0}
-                    metalness={0.9}
-                    roughness={0}
-                    distort={hovered ? 0.6 : 0.3}
-                    speed={hovered ? 8 : 4}
-                />
-                <pointLight distance={5} intensity={3} color={color} />
-            </mesh>
-        </Float>
-    );
-};
-
-// --- Hazard Node (Red - lose combo if clicked) ---
-const HazardNode = ({ position, onClick, id }: {
-    position: [number, number, number];
-    onClick: (id: string) => void;
-    id: string;
-}) => {
-    const meshRef = useRef<THREE.Mesh>(null);
-
-    useFrame((state) => {
-        if (meshRef.current) {
-            meshRef.current.rotation.y = state.clock.elapsedTime * 3;
-            const pulse = 1 + Math.sin(state.clock.elapsedTime * 10) * 0.15;
-            meshRef.current.scale.setScalar(pulse);
-        }
-    });
-
-    return (
-        <mesh
-            ref={meshRef}
+        <group
+            ref={groupRef}
             position={position}
-            onClick={(e) => { e.stopPropagation(); onClick(id); }}
-            onPointerOver={() => { document.body.style.cursor = 'not-allowed'; }}
-            onPointerOut={() => { document.body.style.cursor = 'default'; }}
+            onClick={(e) => { e.stopPropagation(); onClick(id, position, color); }}
+            onPointerOver={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'crosshair'; }}
+            onPointerOut={(e) => { e.stopPropagation(); setHovered(false); document.body.style.cursor = 'default'; }}
         >
-            <octahedronGeometry args={[0.4]} />
-            <meshStandardMaterial
-                color="#ff0000"
-                emissive="#ff0000"
-                emissiveIntensity={4}
-                wireframe
-            />
-            <pointLight distance={3} intensity={2} color="#ff0033" />
-        </mesh>
+            {/* Outer Energy Shell */}
+            <mesh>
+                <icosahedronGeometry args={[1, 1]} />
+                <meshPhysicalMaterial
+                    color={color} transmission={0.9} ior={1.5} thickness={1}
+                    roughness={0.1} metalness={0.5} clearcoat={1}
+                    transparent opacity={0.8}
+                />
+                <Edges threshold={15} color={hovered ? '#ffffff' : color} />
+            </mesh>
+
+            {/* Inner Core */}
+            <mesh ref={coreRef}>
+                <sphereGeometry args={[0.4, 16, 16]} />
+                <meshStandardMaterial color={color} emissive={color} emissiveIntensity={hovered ? 5 : 2} />
+            </mesh>
+
+            {/* Spinning Rings */}
+            {[0, 1].map(i => (
+                <mesh key={i} rotation={[i * Math.PI / 2, 0, 0]}>
+                    <torusGeometry args={[1.3, 0.02, 16, 64]} />
+                    <meshBasicMaterial color={color} transparent opacity={0.5} blending={THREE.AdditiveBlending} />
+                </mesh>
+            ))}
+
+            <pointLight distance={8} intensity={hovered ? 5 : 2} color={color} />
+        </group>
     );
 };
 
-// --- Camera Rig ---
+const HazardNode = ({ position, onClick, id }: any) => {
+    const groupRef = useRef<THREE.Group>(null);
+    const [scale, setScale] = useState(0);
+
+    useFrame((state, delta) => {
+        setScale(s => Math.min(1, s + delta * 5));
+        const t = state.clock.elapsedTime;
+        if (groupRef.current) {
+            groupRef.current.scale.setScalar(scale * (1 + Math.sin(t * 15) * 0.1));
+            groupRef.current.rotation.x = t * 5;
+            groupRef.current.rotation.y = t * 4;
+        }
+    });
+
+    return (
+        <group
+            ref={groupRef}
+            position={position}
+            onClick={(e) => { e.stopPropagation(); onClick(id, position); }}
+            onPointerOver={(e) => { e.stopPropagation(); document.body.style.cursor = 'not-allowed'; }}
+            onPointerOut={(e) => { e.stopPropagation(); document.body.style.cursor = 'default'; }}
+        >
+            <mesh>
+                <octahedronGeometry args={[1, 0]} />
+                <MeshDistortMaterial
+                    color="#ff0022"
+                    emissive="#ff0022"
+                    emissiveIntensity={4}
+                    wireframe
+                    distort={0.4}
+                    speed={10}
+                />
+            </mesh>
+            <mesh scale={0.5}>
+                <boxGeometry args={[1, 1, 1]} />
+                <meshBasicMaterial color="#ffffff" />
+            </mesh>
+            <pointLight distance={6} intensity={4} color="#ff0022" />
+        </group>
+    );
+};
+
+const ExplosionEffect = ({ position, color, onComplete }: any) => {
+    const groupRef = useRef<THREE.Group>(null);
+    const [life, setLife] = useState(0);
+    const particles = useRef(Array.from({ length: 12 }).map(() => ({
+        dir: new THREE.Vector3((Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2).normalize(),
+        speed: 5 + Math.random() * 10
+    })));
+
+    useFrame((_, d) => {
+        if (!groupRef.current) return;
+        setLife(l => l + d * 2);
+
+        groupRef.current.children.forEach((child, i) => {
+            if (i === 0) {
+                // Flash Ring
+                child.scale.setScalar(1 + life * 5);
+                (child as THREE.Mesh).material.opacity = Math.max(0, 1 - life);
+            } else {
+                // Particles
+                const p = particles.current[i - 1];
+                child.position.addScaledVector(p.dir, p.speed * d);
+                child.scale.setScalar(Math.max(0, 1 - life));
+            }
+        });
+
+        if (life > 1) onComplete();
+    });
+
+    return (
+        <group ref={groupRef} position={position}>
+            {/* Shockwave Ring */}
+            <mesh rotation-x={Math.PI / 2}>
+                <torusGeometry args={[1, 0.1, 16, 32]} />
+                <meshBasicMaterial color={color} transparent opacity={1} blending={THREE.AdditiveBlending} />
+            </mesh>
+            {/* Shrapnel */}
+            {particles.current.map((_, i) => (
+                <mesh key={i}>
+                    <icosahedronGeometry args={[0.2, 0]} />
+                    <meshBasicMaterial color={color} transparent opacity={0.8} blending={THREE.AdditiveBlending} />
+                </mesh>
+            ))}
+        </group>
+    );
+};
+
+const FloatingScore = ({ position, text, color, onComplete }: any) => {
+    const ref = useRef<THREE.Group>(null);
+    const [life, setLife] = useState(0);
+    useFrame((_, d) => {
+        if (!ref.current) return;
+        setLife(l => l + d * 2);
+        ref.current.position.y += d * 4;
+        ref.current.scale.setScalar(Math.max(0, 1 - life * 0.5));
+        if (life > 2) onComplete();
+    });
+    return (
+        <group ref={ref} position={position}>
+            <Text color={color} fontSize={1.2} font="https://fonts.gstatic.com/s/syncopate/v13/pe0sMIuPIYBCpEV5eFdCBfe_m_s.woff" anchorX="center" anchorY="middle" outlineWidth={0.08} outlineColor="#000000">{text}</Text>
+        </group>
+    );
+};
+
 const CameraRig = ({ intensity }: { intensity: number }) => {
     useFrame((state) => {
         const t = state.clock.elapsedTime;
-        state.camera.position.x = THREE.MathUtils.lerp(state.camera.position.x, Math.sin(t * 0.3) * (2 + intensity * 2), 0.02);
-        state.camera.position.y = THREE.MathUtils.lerp(state.camera.position.y, Math.cos(t * 0.2) * 1.5 + 2, 0.02);
+        // Dynamic camera shake based on combo/intensity
+        const shake = intensity * 0.1;
+        state.camera.position.x = THREE.MathUtils.lerp(state.camera.position.x, Math.sin(t * 2) * shake, 0.1);
+        state.camera.position.y = THREE.MathUtils.lerp(state.camera.position.y, Math.cos(t * 3) * shake, 0.1);
         state.camera.lookAt(0, 0, 0);
     });
     return null;
 };
 
-// --- Game Types ---
-interface GameNode {
-    id: string;
-    position: [number, number, number];
-    type: 'target' | 'hazard';
-    color: string;
-    spawnedAt: number;
-    lifetime: number; // ms before it disappears
-}
-
-const TARGET_COLORS = ['#00ffff', '#ff00ff', '#00ff88', '#ffaa00', '#88aaff'];
-
-const generateRandomPosition = (): [number, number, number] => [
-    (Math.random() - 0.5) * 12,
-    (Math.random() - 0.5) * 8,
-    (Math.random() - 0.5) * 6,
-];
-
-// --- Main Component ---
+// --------------------------------------------------------
+// Main Game Component
+// --------------------------------------------------------
 export const NeonShift: React.FC<NeonShiftProps> = ({ onComplete, difficulty, t }) => {
     const { queueDialogue } = useDialogue();
     const [score, setScore] = useState(0);
     const [timeLeft, setTimeLeft] = useState(45);
     const [gameState, setGameState] = useState<'PLAYING' | 'SUCCESS' | 'FAILED'>('PLAYING');
+
     const [combo, setCombo] = useState(0);
     const [maxCombo, setMaxCombo] = useState(0);
-    const [nodes, setNodes] = useState<GameNode[]>([]);
+
+    const [nodes, setNodes] = useState<any[]>([]);
+    const [effects, setEffects] = useState<any[]>([]);
+
     const [glitchActive, setGlitchActive] = useState(false);
     const [screenFlash, setScreenFlash] = useState<string | null>(null);
 
-    // Multi-Agent Flow
-    const [advisorMsg, setAdvisorMsg] = useState(t('game.advisor.flow_stable'));
-    const [adversaryMsg, setAdversaryMsg] = useState(t('game.adversary.inevitability'));
+    const [advisorMsg, setAdvisorMsg] = useState(t('game.advisor.flow_stable') || 'Neural interface linked. Engage targets.');
+    const [adversaryMsg, setAdversaryMsg] = useState(t('game.adversary.inevitability') || 'Your reflexes are insufficient.');
 
-    // Narrative: Mission Briefing
+    // Narrative Briefing
     useEffect(() => {
         queueDialogue([
-            { id: `ns-brief-${Date.now()}`, character: 'ATHENA', text: t('game.instructions.click_targets') },
-            { id: `ns-brief2-${Date.now()}`, character: 'BYTE', text: t('game.instructions.avoid_hazards'), isGlitchy: true },
+            { id: `ns-brief-${Date.now()}`, character: 'ATHENA', text: t('game.instructions.click_targets') || 'Destroy the Neon Cores. Build your combo multiplier.' },
+            { id: `ns-brief2-${Date.now()}`, character: 'SYNTAX', text: t('game.instructions.avoid_hazards') || 'Avoid red glitch hazards. They will shatter your combo.', isGlitchy: true },
         ]);
     }, [queueDialogue, t]);
 
-    // Difficulty scaling
     const difficultyMultiplier = difficulty === 'HARD' ? 1.5 : difficulty === 'MEDIUM' ? 1.2 : 1;
-    const spawnInterval = Math.max(400, 1200 - (score / 100) * 80); // Gets faster as score increases
-    const hazardChance = Math.min(0.4, 0.15 + (score / 2000)); // More hazards over time
+    const spawnInterval = Math.max(300, 1000 - (score / 150) * 80); // Speed ramps up 
+    const hazardChance = Math.min(0.35, 0.1 + (score / 3000));
+    const targetColors = ['#00ffff', '#ff00aa', '#00ffaa', '#ffaa00', '#aa00ff'];
 
-    // Node spawner
+    // Node Spawner
     useEffect(() => {
         if (gameState !== 'PLAYING') return;
         const interval = setInterval(() => {
             setNodes(prev => {
-                // Remove expired nodes
                 const now = Date.now();
                 const active = prev.filter(n => now - n.spawnedAt < n.lifetime);
-
-                // Limit concurrent nodes
-                if (active.length >= 6) return active;
+                if (active.length >= 7) return active; // Max on screen
 
                 const isHazard = Math.random() < hazardChance;
-                const newNode: GameNode = {
+                const r = 10 + Math.random() * 5; // Distance
+                const theta = Math.random() * Math.PI * 2; // Angle around
+                const phi = Math.random() * Math.PI * 0.5 - Math.PI * 0.25; // Height angle
+
+                const posStr: [number, number, number] = [
+                    r * Math.cos(phi) * Math.cos(theta),
+                    r * Math.sin(phi) * 1.5,
+                    r * Math.cos(phi) * Math.sin(theta) - 5 // Offset slightly away
+                ];
+
+                const newNode = {
                     id: `${Date.now()}-${Math.random()}`,
-                    position: generateRandomPosition(),
+                    position: posStr,
                     type: isHazard ? 'hazard' : 'target',
-                    color: TARGET_COLORS[Math.floor(Math.random() * TARGET_COLORS.length)],
+                    color: targetColors[Math.floor(Math.random() * targetColors.length)],
                     spawnedAt: now,
-                    lifetime: Math.max(1500, 3000 - (score / 200) * 500), // Shorter lifetime as difficulty ramps
+                    lifetime: Math.max(1200, 2500 - (score / 300) * 400),
                 };
                 return [...active, newNode];
             });
@@ -184,265 +291,267 @@ export const NeonShift: React.FC<NeonShiftProps> = ({ onComplete, difficulty, t 
         return () => clearInterval(interval);
     }, [gameState, spawnInterval, hazardChance, score]);
 
-    // Agent messages
+    // Agent Chatter
     useEffect(() => {
         if (gameState !== 'PLAYING') return;
-        const advisorLines = [
-            t('game.advisor.flow_stable'),
-            t('game.advisor.target_rate_optimal'),
-            t('game.advisor.adversary_breach'),
-            `${t('game.hud.combo_chain')}: ${combo}x`,
-            t('game.advisor.reflexes_exceed'),
-        ];
-        const adversaryLines = [
-            t('game.adversary.dare_click'),
-            t('game.adversary.predictable'),
-            `${combo}x ${t('game.hud.combo')}...`,
-            t('game.adversary.tempting'),
-            t('game.adversary.hesitate'),
-        ];
-
         const agentInterval = setInterval(() => {
-            const isAdversary = Math.random() > 0.6;
-            if (isAdversary) {
-                setAdversaryMsg(adversaryLines[Math.floor(Math.random() * adversaryLines.length)]);
-                audio.playSystemMessage?.({ type: 'warning' });
-            } else {
-                setAdvisorMsg(advisorLines[Math.floor(Math.random() * advisorLines.length)]);
+            if (Math.random() > 0.5) {
+                setAdvisorMsg(combo > 5 ? `Reflex threshold optimal. Combo at ${combo}x.` : `Maintain focus. Destroy cores.`);
                 audio.playSystemMessage?.({ type: 'success' });
+            } else {
+                setAdversaryMsg(combo > 0 ? `Your momentum is temporary.` : `Pathetic performance.`);
+                audio.playSystemMessage?.({ type: 'warning' });
             }
-        }, 5000);
-
+        }, 6000);
         return () => clearInterval(agentInterval);
     }, [gameState, combo]);
 
-    // Countdown timer
+    // Timer & End Game Check
     useEffect(() => {
         if (gameState !== 'PLAYING') return;
         const timer = setInterval(() => {
             setTimeLeft(prev => {
                 if (prev <= 1) {
                     clearInterval(timer);
-                    const finalState = score >= 300 ? 'SUCCESS' : 'FAILED';
-                    setGameState(finalState);
-                    if (finalState === 'SUCCESS') {
+                    const isWin = score >= 500 * difficultyMultiplier;
+                    setGameState(isWin ? 'SUCCESS' : 'FAILED');
+
+                    if (isWin) {
                         audio.playSuccess();
-                        queueDialogue([
-                            { id: `ns-win-${Date.now()}`, character: 'SYNTAX', text: `${t('game.hud.final_score')}: ${score}. ${t('game.hud.max_combo')}: ${maxCombo}x.` },
-                            { id: `ns-win2-${Date.now()}`, character: 'ATHENA', text: t('game.state.system_secured') },
-                        ]);
+                        setScreenFlash('rgba(0,255,170,0.5)');
+                        queueDialogue([{ id: `ns-win-${Date.now()}`, character: 'ATHENA', text: `System secured. Final score: ${score}` }]);
                     } else {
                         audio.playError();
-                        queueDialogue([
-                            { id: `ns-fail-${Date.now()}`, character: 'BYTE', text: t('game.state.breach_detected'), isGlitchy: true },
-                        ]);
+                        setGlitchActive(true);
+                        setScreenFlash('rgba(255,0,85,0.7)');
+                        queueDialogue([{ id: `ns-fail-${Date.now()}`, character: 'BYTE', text: `Breach detected. Simulation failed.`, isGlitchy: true }]);
                     }
-                    onComplete(score, { completionTime: 45 - prev, difficulty, maxCombo });
+                    setTimeout(() => onComplete(score, { completionTime: 45, difficulty, maxCombo }), 2000);
                     return 0;
+                }
+                if (prev === 10) {
+                    audio.playSystemMessage?.({ type: 'warning' });
+                    setAdversaryMsg('Time running out. Speed up.');
                 }
                 return prev - 1;
             });
         }, 1000);
         return () => clearInterval(timer);
-    }, [gameState, score, onComplete, difficulty, maxCombo]);
+    }, [gameState, score, difficultyMultiplier, maxCombo, difficulty, onComplete, queueDialogue]);
 
-    // Handle target click
-    const handleTargetClick = useCallback((id: string) => {
+    // Interactions
+    const handleTargetClick = useCallback((id: string, pos: [number, number, number], color: string) => {
         if (gameState !== 'PLAYING') return;
-        setNodes(prev => prev.filter(n => n.id !== id));
         audio.playClick();
+
+        setNodes(prev => prev.filter(n => n.id !== id));
 
         const newCombo = combo + 1;
         setCombo(newCombo);
         setMaxCombo(c => Math.max(c, newCombo));
 
-        const comboMultiplier = Math.min(newCombo, 10);
-        const points = 50 * comboMultiplier * difficultyMultiplier;
-        setScore(s => s + Math.floor(points));
+        const pts = Math.floor(50 * Math.min(newCombo, 10) * difficultyMultiplier);
+        setScore(s => s + pts);
 
-        // Visual feedback
-        setScreenFlash('#00ffff');
-        setTimeout(() => setScreenFlash(null), 80);
+        const effId = `${Date.now()}`;
+        setEffects(prev => [...prev,
+        { id: `ex-${effId}`, type: 'explode', position: pos, color },
+        { id: `sc-${effId}`, type: 'score', position: [pos[0], pos[1] + 2, pos[2]], text: `+${pts}`, color }
+        ]);
+
+        setScreenFlash(`${color}33`);
+        setTimeout(() => setScreenFlash(null), 100);
     }, [gameState, combo, difficultyMultiplier]);
 
-    // Handle hazard click (PENALTY)
-    const handleHazardClick = useCallback((id: string) => {
+    const handleHazardClick = useCallback((id: string, pos: [number, number, number]) => {
         if (gameState !== 'PLAYING') return;
-        setNodes(prev => prev.filter(n => n.id !== id));
         audio.playError();
 
-        setCombo(0); // Break combo!
-        setScore(s => Math.max(0, s - 200));
+        setNodes(prev => prev.filter(n => n.id !== id));
+        setCombo(0);
+        setScore(s => Math.max(0, s - 300));
 
-        // Nasty glitch feedback
+        const effId = `${Date.now()}`;
+        setEffects(prev => [...prev,
+        { id: `ex-${effId}`, type: 'explode', position: pos, color: '#ff0022' },
+        { id: `sc-${effId}`, type: 'score', position: [pos[0], pos[1] + 2, pos[2]], text: `MISS`, color: '#ff0022' }
+        ]);
+
         setGlitchActive(true);
-        setScreenFlash('#ff0000');
+        setScreenFlash('rgba(255,0,34,0.6)');
         setTimeout(() => { setGlitchActive(false); setScreenFlash(null); }, 400);
+
+        setAdversaryMsg('A fatal miscalculation.');
     }, [gameState]);
 
+    const removeEffect = useCallback((id: string) => setEffects(p => p.filter(e => e.id !== id)), []);
+
     return (
-        <div className="relative w-full h-[600px] rounded-xl overflow-hidden border border-white/10 bg-black shadow-2xl">
-            {/* Screen Flash Overlay */}
+        <div className="relative w-full h-[700px] rounded-[32px] overflow-hidden border border-[#0066ff]/20 bg-[#000005] shadow-[0_0_80px_rgba(0,102,255,0.1)] font-sans">
             <AnimatePresence>
-                {screenFlash && (
-                    <motion.div
-                        initial={{ opacity: 0.6 }}
-                        animate={{ opacity: 0 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.3 }}
-                        className="absolute inset-0 z-30 pointer-events-none"
-                        style={{ backgroundColor: screenFlash }}
-                    />
-                )}
+                {screenFlash && (<motion.div initial={{ opacity: 1 }} animate={{ opacity: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }} className="absolute inset-0 z-30 pointer-events-none mix-blend-screen" style={{ backgroundColor: screenFlash }} />)}
             </AnimatePresence>
 
-            {/* UI Overlay */}
-            <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-start z-10 pointer-events-none">
-                <div className="flex flex-col gap-3">
-                    <div className="bg-black/60 backdrop-blur-md rounded-lg p-3 border border-indigo-500/40 shadow-[0_0_15px_rgba(79,70,229,0.3)]">
-                        <div className="flex items-center gap-2 text-indigo-400 mb-1">
-                            <Activity className="w-4 h-4" />
-                            <span className="text-xs uppercase tracking-widest font-bold">{t('game.hud.score')}</span>
+            {/* AAA Glassmorphic HUD */}
+            <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-start z-10 pointer-events-none">
+                <div className="flex flex-col gap-4 filter drop-shadow-xl w-72 pointer-events-auto">
+                    {/* Score Panel */}
+                    <div className="bg-[#020510]/80 backdrop-blur-2xl rounded-2xl p-4 border border-[#00ffff]/30 shadow-[0_10px_30px_rgba(0,255,255,0.15)] relative overflow-hidden group">
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#00ffff]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <div className="flex items-center gap-2 text-[#00ffff] mb-1">
+                            <Activity className="w-5 h-5 animate-pulse" />
+                            <span className="text-xs uppercase tracking-[0.2em] font-black">{t('game.hud.score') || 'SCORE'}</span>
                         </div>
-                        <div className="text-3xl font-mono font-black text-white tabular-nums">{score}</div>
+                        <div className="text-4xl font-black tabular-nums tracking-tighter uppercase text-transparent bg-clip-text bg-gradient-to-r from-white to-[#00ffff]" style={{ textShadow: '0 0 20px rgba(0,255,255,0.4)' }}>
+                            {score.toLocaleString()}
+                        </div>
                     </div>
 
-                    {/* Combo Display */}
+                    {/* Combo Panel */}
                     <AnimatePresence>
                         {combo > 1 && (
-                            <motion.div
-                                initial={{ scale: 0, x: -50 }}
-                                animate={{ scale: 1, x: 0 }}
-                                exit={{ scale: 0, x: -50 }}
-                                className="bg-black/60 backdrop-blur-md rounded-lg p-3 border border-orange-500/50 shadow-[0_0_20px_rgba(255,165,0,0.4)]"
-                            >
-                                <div className="flex items-center gap-2">
-                                    <Flame className="w-5 h-5 text-orange-500 animate-pulse" />
-                                    <span className="text-orange-400 font-black text-2xl italic">{combo}x</span>
+                            <motion.div initial={{ x: -50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="bg-[#020510]/80 backdrop-blur-2xl rounded-2xl p-4 border border-[#ffaa00]/40 shadow-[0_0_30px_rgba(255,170,0,0.3)] relative overflow-hidden">
+                                <div className="absolute inset-0 bg-[#ffaa00]/10 animate-pulse"></div>
+                                <div className="flex items-center justify-between relative z-10">
+                                    <div className="flex items-center gap-2">
+                                        <Flame className="w-6 h-6 text-[#ffaa00] animate-bounce" />
+                                        <span className="text-3xl font-black italic text-transparent bg-clip-text bg-gradient-to-r from-white to-[#ffaa00] drop-shadow-[0_0_10px_rgba(255,170,0,0.8)]">{combo}x</span>
+                                    </div>
+                                    <span className="text-[10px] uppercase font-black tracking-widest text-[#ffaa00]/80">{t('game.hud.combo_chain') || 'CHAIN'}</span>
                                 </div>
-                                <div className="text-[10px] text-orange-300/60 uppercase tracking-widest mt-1">{t('game.hud.combo_chain')}</div>
                             </motion.div>
                         )}
                     </AnimatePresence>
                 </div>
 
-                <div className="flex flex-col items-end gap-3">
-                    <div className="bg-black/60 backdrop-blur-md rounded-lg p-3 border border-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
-                        <div className="flex items-center gap-2 text-blue-400 mb-1">
+                <div className="flex flex-col items-end gap-4 filter drop-shadow-xl">
+                    {/* Time Panel */}
+                    <div className="bg-[#020510]/80 backdrop-blur-2xl rounded-2xl p-4 border border-[#bb88ff]/30 shadow-[0_10px_30px_rgba(187,136,255,0.15)] min-w-[140px] text-right">
+                        <div className="flex items-center justify-end gap-2 text-[#bb88ff] mb-1">
+                            <span className="text-xs uppercase tracking-[0.2em] font-black">{t('game.hud.time') || 'TIME'}</span>
                             <AlertTriangle className="w-4 h-4" />
-                            <span className="text-xs uppercase tracking-widest font-bold">{t('game.hud.time')}</span>
                         </div>
-                        <div className={`text-3xl font-mono font-black tabular-nums tracking-widest ${timeLeft <= 10 ? 'text-red-500 animate-pulse' : 'text-white'}`}>{timeLeft}s</div>
+                        <div className={`text-4xl font-black tabular-nums tracking-tighter ${timeLeft <= 10 ? 'text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-red-300 animate-pulse' : 'text-transparent bg-clip-text bg-gradient-to-r from-white to-[#bb88ff]'}`} style={{ textShadow: timeLeft <= 10 ? '0 0 20px rgba(255,0,0,0.6)' : '0 0 20px rgba(187,136,255,0.4)' }}>
+                            {timeLeft}s
+                        </div>
                     </div>
-
                     {/* Difficulty Badge */}
-                    <div className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest border ${difficulty === 'HARD' ? 'border-red-500 text-red-400 bg-red-500/10' :
-                        difficulty === 'MEDIUM' ? 'border-yellow-500 text-yellow-400 bg-yellow-500/10' :
-                            'border-green-500 text-green-400 bg-green-500/10'
-                        }`}>
-                        {t(`game.difficulty.${difficulty.toLowerCase()}`)}
+                    <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border backdrop-blur-md ${difficulty === 'HARD' ? 'border-[#ff0055]/50 text-[#ff0055] bg-[#ff0055]/10 shadow-[0_0_15px_rgba(255,0,85,0.4)]' : 'border-[#00ffff]/50 text-[#00ffff] bg-[#00ffff]/10 shadow-[0_0_15px_rgba(0,255,255,0.4)]'}`}>
+                        {difficulty}
                     </div>
                 </div>
             </div>
 
-            {/* Instructions Banner */}
-            {timeLeft > 40 && gameState === 'PLAYING' && (
-                <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none text-center"
-                >
-                    <div className="bg-black/80 backdrop-blur-xl p-6 rounded-2xl border border-cyan-500/30">
-                        <div className="text-cyan-400 font-black text-xl uppercase tracking-widest mb-2">
-                            <Target className="inline w-6 h-6 mr-2" /> {t('game.instructions.click_targets')}
-                        </div>
-                        <div className="text-red-400 font-bold text-sm">
-                            <SkullIcon className="inline w-4 h-4 mr-1" /> {t('game.instructions.avoid_hazards')}
-                        </div>
-                    </div>
-                </motion.div>
-            )}
-
-            {/* Multi-Agent Comm Panel */}
-            <div className="absolute bottom-4 left-4 right-4 flex flex-col sm:flex-row gap-2 sm:gap-3 z-10 pointer-events-none">
-                <div className="flex-1 bg-black/70 backdrop-blur-xl rounded-lg p-3 border-l-4 border-indigo-500 shadow-[0_0_20px_rgba(0,0,0,0.8)]">
-                    <div className="text-[10px] text-indigo-400 mb-1 uppercase tracking-widest font-bold flex items-center gap-1"><Shield className="w-3 h-3" /> {t('game.advisor.label')}</div>
-                    <div className="text-xs text-indigo-100 font-mono leading-relaxed">{advisorMsg}</div>
-                </div>
-                <div className="flex-1 bg-black/70 backdrop-blur-xl rounded-lg p-3 border-l-4 border-red-500 shadow-[0_0_20px_rgba(0,0,0,0.8)]">
-                    <div className="text-[10px] text-red-500 mb-1 uppercase tracking-widest font-bold flex items-center gap-1"><Zap className="w-3 h-3" /> {t('game.adversary.label')}</div>
-                    <div className="text-xs text-red-100 font-mono leading-relaxed">{adversaryMsg}</div>
-                </div>
-            </div>
-
-            {/* Game Over / Success States */}
+            {/* Cinematic Instructions */}
             <AnimatePresence>
-                {gameState !== 'PLAYING' && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="absolute inset-0 z-20 flex items-center justify-center p-4 sm:p-0 bg-black/90 backdrop-blur-md"
-                    >
-                        <div className="text-center p-6 sm:p-10 w-full sm:w-auto rounded-2xl border border-white/10 bg-black/50 shadow-2xl max-w-[90vw] sm:max-w-md">
-                            <div className={`w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center ${gameState === 'SUCCESS' ? 'bg-cyan-500/20 border border-cyan-500/30' : 'bg-red-500/20 border border-red-500/30'}`}>
-                                {gameState === 'SUCCESS' ? <Trophy className="w-10 h-10 text-cyan-400" /> : <SkullIcon className="w-10 h-10 text-red-400" />}
+                {timeLeft > 40 && gameState === 'PLAYING' && (
+                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, filter: 'blur(10px)' }} transition={{ duration: 0.5 }} className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                        <div className="bg-[#000510]/90 backdrop-blur-3xl p-8 rounded-[32px] border border-[#00ffff]/40 shadow-[0_30px_80px_rgba(0,255,255,0.3)] text-center relative overflow-hidden">
+                            <div className="text-[#00ffff] font-black text-3xl uppercase tracking-widest mb-4 drop-shadow-[0_0_15px_rgba(0,255,255,0.8)]">
+                                <TargetCenter className="inline w-10 h-10 mr-3 -mt-2 animate-pulse" /> NEON SHIFT
                             </div>
-                            <div className={`text-3xl sm:text-5xl font-black uppercase tracking-widest mb-4 ${gameState === 'SUCCESS' ? 'text-cyan-400' : 'text-red-500'} drop-shadow-[0_0_15px_currentColor]`}>
-                                {gameState === 'SUCCESS' ? t('game.state.system_secured') : t('game.state.breach_detected')}
+                            <div className="flex gap-8 justify-center">
+                                <div className="text-center">
+                                    <div className="w-12 h-12 mx-auto mb-2 rounded-full border-2 border-[#00ffff] bg-[#00ffff]/20 flex items-center justify-center shadow-[0_0_15px_rgba(0,255,255,0.5)]">
+                                        <Target className="w-6 h-6 text-[#00ffff]" />
+                                    </div>
+                                    <div className="text-[#aaffff] font-bold text-xs uppercase tracking-wider">Click Targets</div>
+                                </div>
+                                <div className="text-center">
+                                    <div className="w-12 h-12 mx-auto mb-2 rounded-full border-2 border-[#ff0055] bg-[#ff0055]/20 flex items-center justify-center shadow-[0_0_15px_rgba(255,0,85,0.5)]">
+                                        <SkullIcon className="w-6 h-6 text-[#ff0055]" />
+                                    </div>
+                                    <div className="text-[#ffcccc] font-bold text-xs uppercase tracking-wider">Avoid Hazards</div>
+                                </div>
                             </div>
-                            <div className="text-2xl text-white/80 font-mono mb-2">{t('game.hud.final_score')}: {score}</div>
-                            <div className="text-sm text-orange-400 font-bold mb-6">{t('game.hud.max_combo')}: {maxCombo}x</div>
                         </div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* 3D Canvas */}
-            <div className="absolute inset-0 z-0 cursor-crosshair">
-                <Canvas camera={{ position: [0, 0, 12], fov: 60 }} gl={{ antialias: false, powerPreference: "high-performance" }}>
-                    <color attach="background" args={['#020008']} />
-                    <fog attach="fog" args={['#020008', 8, 25]} />
-                    <ambientLight intensity={0.3} />
-                    <pointLight position={[10, 10, 10]} intensity={2} color="#4f46e5" />
+            {/* Agent Comms Panel */}
+            <div className="absolute bottom-6 left-6 right-6 flex flex-col sm:flex-row gap-4 z-10 pointer-events-none">
+                <div className="flex-1 bg-[#020510]/80 backdrop-blur-2xl rounded-2xl p-4 border border-[#00ffff]/20 border-l-4 border-l-[#00ffff] shadow-xl relative overflow-hidden">
+                    <div className="text-[10px] text-[#00ffff] mb-2 uppercase tracking-[0.2em] font-black flex items-center gap-2"><Shield className="w-4 h-4" /> {t('game.advisor.label') || 'ADVISOR'}</div>
+                    <div className="text-sm text-[#ccffff]/90 font-mono leading-relaxed relative z-10">{advisorMsg}</div>
+                </div>
+                <div className="flex-1 bg-[#020510]/80 backdrop-blur-2xl rounded-2xl p-4 border border-[#ff0055]/20 border-l-4 border-l-[#ff0055] shadow-xl relative overflow-hidden">
+                    <div className="text-[10px] text-[#ff0055] mb-2 uppercase tracking-[0.2em] font-black flex items-center gap-2"><Zap className="w-4 h-4" /> {t('game.adversary.label') || 'ADVERSARY'}</div>
+                    <div className="text-sm text-[#ffcccc]/90 font-mono leading-relaxed relative z-10">{adversaryMsg}</div>
+                </div>
+            </div>
+
+            {/* Game Over Cinematic Screen */}
+            <AnimatePresence>
+                {gameState !== 'PLAYING' && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 z-40 flex items-center justify-center bg-[#00000a]/95 backdrop-blur-2xl">
+                        <motion.div initial={{ scale: 0.8, y: 50 }} animate={{ scale: 1, y: 0 }} transition={{ type: "spring", damping: 20 }} className="text-center p-12 w-full max-w-xl rounded-[40px] border border-[#00ffff]/30 bg-gradient-to-b from-[#020510]/90 to-black shadow-[0_50px_100px_rgba(0,102,255,0.2)] relative overflow-hidden pointer-events-auto">
+
+                            <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-full h-1/2 blur-[100px] opacity-40 ${gameState === 'SUCCESS' ? 'bg-[#00ffaa]' : 'bg-[#ff0055]'}`}></div>
+
+                            <div className={`w-32 h-32 mx-auto mb-8 rounded-full flex items-center justify-center relative z-10 ${gameState === 'SUCCESS' ? 'bg-[#00ffaa]/20 border-2 border-[#00ffaa] shadow-[0_0_50px_rgba(0,255,170,0.5)]' : 'bg-[#ff0055]/20 border-2 border-[#ff0055] shadow-[0_0_50px_rgba(255,0,85,0.4)]'}`}>
+                                {gameState === 'SUCCESS' ? <Trophy className="w-16 h-16 text-[#00ffaa] drop-shadow-md" /> : <SkullIcon className="w-16 h-16 text-[#ff0055] drop-shadow-md" />}
+                            </div>
+
+                            <h2 className={`text-4xl sm:text-5xl font-black uppercase tracking-tighter mb-4 relative z-10 ${gameState === 'SUCCESS' ? 'text-transparent bg-clip-text bg-gradient-to-b from-white to-[#00ffaa]' : 'text-transparent bg-clip-text bg-gradient-to-b from-white to-[#ff0055]'}`} style={{ textShadow: gameState === 'SUCCESS' ? '0 10px 30px rgba(0,255,170,0.4)' : '0 10px 30px rgba(255,0,85,0.4)' }}>
+                                {gameState === 'SUCCESS' ? 'SYSTEM SECURED' : 'BREACH DETECTED'}
+                            </h2>
+
+                            <div className="bg-black/60 rounded-3xl p-8 border border-white/10 mb-8 relative z-10 backdrop-blur-md">
+                                <div className="text-sm text-gray-400 uppercase tracking-widest font-bold mb-2">Final Evaluation</div>
+                                <div className="text-6xl text-white font-mono font-black tabular-nums">{score.toLocaleString()}</div>
+                                <div className="mt-4 pt-4 border-t border-white/10 flex justify-between items-center text-sm font-mono text-[#ffaa00]">
+                                    <span>Max Combo Maintained:</span>
+                                    <span className="font-bold text-lg">{maxCombo}x</span>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Premium 3D Canvas */}
+            <div className={`absolute inset-0 z-0 ${gameState !== 'PLAYING' ? 'pointer-events-none' : ''}`}>
+                <Canvas camera={{ position: [0, 0, 15], fov: 70 }} gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.2 }}>
+                    <color attach="background" args={['#00000a']} />
+                    <fog attach="fog" args={['#00000a', 5, 40]} />
+
+                    <ambientLight intensity={0.4} />
+                    <pointLight position={[10, 10, 10]} intensity={2} color="#00ffff" />
                     <pointLight position={[-10, -10, -10]} intensity={1} color="#ff00ff" />
 
-                    <CameraRig intensity={combo / 10} />
+                    <CameraRig intensity={combo} />
+                    <HyperTunnel speedMultiplier={1 + combo * 0.05} />
 
-                    {/* Render Nodes */}
-                    {nodes.map(node => node.type === 'target' ? (
-                        <TargetNode
-                            key={node.id}
-                            id={node.id}
-                            position={node.position}
-                            color={node.color}
-                            scale={1}
-                            onClick={handleTargetClick}
-                        />
+                    <group>
+                        {nodes.map(node => node.type === 'target' ? (
+                            <TargetNode key={node.id} id={node.id} position={node.position} color={node.color} combo={combo} onClick={handleTargetClick} />
+                        ) : (
+                            <HazardNode key={node.id} id={node.id} position={node.position} onClick={handleHazardClick} />
+                        ))}
+                    </group>
+
+                    {effects.map(eff => eff.type === 'explode' ? (
+                        <ExplosionEffect key={eff.id} position={eff.position} color={eff.color} onComplete={() => removeEffect(eff.id)} />
                     ) : (
-                        <HazardNode
-                            key={node.id}
-                            id={node.id}
-                            position={node.position}
-                            onClick={handleHazardClick}
-                        />
+                        <FloatingScore key={eff.id} position={eff.position} text={eff.text} color={eff.color} onComplete={() => removeEffect(eff.id)} />
                     ))}
 
-                    <Sparkles count={300} scale={20} size={3} speed={0.5 + combo * 0.2} opacity={0.5} color="#4f46e5" />
-                    <Sparkles count={100} scale={15} size={6} speed={1} opacity={0.3} color="#ff00ff" />
+                    <Sparkles count={500} scale={[40, 40, 40]} size={2} speed={1 + combo * 0.1} opacity={0.6} color="#00ffff" noise={2} />
+                    {glitchActive && <Sparkles count={200} scale={[30, 30, 30]} size={8} speed={3} opacity={0.8} color="#ff0055" noise={4} />}
 
-                    <OrbitControls enableZoom={false} enablePan={false} autoRotate autoRotateSpeed={0.5 + combo * 0.1} />
-
-                    <EffectComposer >
-                        <Bloom luminanceThreshold={0.15} mipmapBlur intensity={1.5 + combo * 0.15} />
-                        <ChromaticAberration blendFunction={BlendFunction.NORMAL} offset={new THREE.Vector2(0.002 + combo * 0.001, 0.002 + combo * 0.001)} />
-                        <Vignette eskil={false} offset={0.1} darkness={1.1} />
-                        {glitchActive && (
-                            <Glitch delay={new THREE.Vector2(0, 0)} duration={new THREE.Vector2(0.1, 0.4)} mode={GlitchMode.SPORADIC} active ratio={0.8} />
-                        )}
+                    <EffectComposer enableNormalPass={false}>
+                        <Bloom luminanceThreshold={0.2} mipmapBlur intensity={1.5 + combo * 0.1} />
+                        <DepthOfField focusDistance={0.06} focalLength={0.05} bokehScale={4} height={480} />
+                        <ChromaticAberration blendFunction={BlendFunction.NORMAL} offset={new THREE.Vector2(0.003 + combo * 0.0005, 0.003 + combo * 0.0005)} />
+                        {(glitchActive || timeLeft <= 10) && <Noise opacity={0.2} />}
+                        <Vignette eskil={false} offset={0.1} darkness={1.2} />
+                        {(glitchActive) && (<Glitch delay={new THREE.Vector2(0, 0)} duration={new THREE.Vector2(0.2, 0.5)} mode={GlitchMode.SPORADIC} active ratio={0.8} />)}
                     </EffectComposer>
                 </Canvas>
             </div>
         </div>
     );
 };
+
+export default NeonShift;

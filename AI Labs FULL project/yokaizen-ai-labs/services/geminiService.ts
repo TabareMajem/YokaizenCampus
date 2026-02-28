@@ -93,6 +93,30 @@ const queryAI = async (
     }
 };
 
+// --- SIMULATED STREAMING UX ---
+export const streamAIResponse = async (fullText: string, onChunk: (text: string) => void, speed: 'fast' | 'normal' | 'slow' = 'normal') => {
+    let currentText = '';
+    const words = fullText.split(' ');
+    const baseDelay = speed === 'fast' ? 15 : speed === 'slow' ? 60 : 35;
+
+    for (let i = 0; i < words.length; i++) {
+        const word = words[i];
+        currentText += (i === 0 ? '' : ' ') + word;
+        onChunk(currentText);
+
+        // Simulate realistic generation delays (longer pauses on punctuation)
+        let delay = baseDelay + Math.random() * 20;
+        if (word.endsWith('.') || word.endsWith('!') || word.endsWith('?')) {
+            delay += 150 + Math.random() * 100;
+        } else if (word.endsWith(',') || word.endsWith(':')) {
+            delay += 50 + Math.random() * 50;
+        }
+
+        await new Promise(r => setTimeout(r, delay));
+    }
+    return currentText;
+};
+
 // --- GENERAL CHAT ---
 export const chatWithAgent = async (agent: Agent, history: any[], input: string) => {
     let systemPrompt = `Persona: ${agent.persona}. System Instruction: ${agent.systemInstruction}.`;

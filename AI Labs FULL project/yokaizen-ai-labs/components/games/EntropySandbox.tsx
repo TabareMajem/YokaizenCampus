@@ -1,11 +1,13 @@
-import React, { useRef, useState, useMemo, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Dodecahedron, MeshDistortMaterial, Float, Text, Trail, Sparkles } from '@react-three/drei';
-import { EffectComposer, Bloom, ChromaticAberration, Glitch } from '@react-three/postprocessing';
+import { OrbitControls, Icosahedron, MeshDistortMaterial, Float, Sparkles, MeshTransmissionMaterial, Torus } from '@react-three/drei';
+import { EffectComposer, Bloom, ChromaticAberration, Glitch, Vignette, Noise } from '@react-three/postprocessing';
 import { GlitchMode, BlendFunction } from 'postprocessing';
 import * as THREE from 'three';
-import { Activity, Shield, Cpu, AlertTriangle, Zap, Terminal } from 'lucide-react';
+import { Activity, Shield, Zap, AlertTriangle, Crosshair, Cpu, TerminalSquare } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { audio } from '../../services/audioService';
+import { useDialogue } from '../../contexts/DialogueContext';
 
 export interface EntropySandboxProps {
     onComplete: (score: number, metrics?: any) => void;
@@ -13,175 +15,429 @@ export interface EntropySandboxProps {
     t: (key: string) => string;
 }
 
-// Advanced WebGL Node Component
-const CoreEntity = ({ isActive }: { isActive: boolean }) => {
+// --- 3D Components ---
+
+const EntropyCore = ({ entropyLevel }: { entropyLevel: number }) => {
+    const coreRef = useRef<THREE.Mesh>(null);
+    const ring1Ref = useRef<THREE.Mesh>(null);
+    const ring2Ref = useRef<THREE.Mesh>(null);
+
+    // Normalize entropy (0 to 1)
+    const normalizedEntropy = Math.min(Math.max(entropyLevel / 100, 0), 1);
+
+    useFrame((state) => {
+        const time = state.clock.elapsedTime;
+        const speedMultiplier = 1 + normalizedEntropy * 5;
+
+        if (coreRef.current) {
+            coreRef.current.rotation.y = time * 0.5 * speedMultiplier;
+            coreRef.current.rotation.x = time * 0.3 * speedMultiplier;
+            const pulse = 1 + Math.sin(time * 8) * (0.05 + normalizedEntropy * 0.15);
+            coreRef.current.scale.setScalar(pulse);
+        }
+        if (ring1Ref.current) {
+            ring1Ref.current.rotation.x = time * 0.8 * speedMultiplier;
+            ring1Ref.current.rotation.y = time * 0.6 * speedMultiplier;
+        }
+        if (ring2Ref.current) {
+            ring2Ref.current.rotation.y = -time * 0.5 * speedMultiplier;
+            ring2Ref.current.rotation.z = time * 0.4 * speedMultiplier;
+        }
+    });
+
+    // Color interps based on entropy (Cyan -> Orange -> Red)
+    const coreColor = new THREE.Color().lerpColors(
+        new THREE.Color('#00ffff'),
+        new THREE.Color('#ff3300'),
+        normalizedEntropy
+    );
+
+    return (
+        <group>
+            {/* Inner Distorted Core */}
+            <Float speed={2} floatIntensity={0.5} rotationIntensity={0.5}>
+                <mesh ref={coreRef}>
+                    <icosahedronGeometry args={[2, 4]} />
+                    <MeshDistortMaterial
+                        color={coreColor}
+                        emissive={coreColor}
+                        emissiveIntensity={1 + normalizedEntropy * 2}
+                        clearcoat={1}
+                        metalness={0.8}
+                        roughness={0.2}
+                        distort={0.2 + normalizedEntropy * 0.6}
+                        speed={2 + normalizedEntropy * 10}
+                    />
+                </mesh>
+            </Float>
+
+            {/* Stabilization Rings */}
+            <Torus ref={ring1Ref} args={[3.2, 0.05, 16, 100]} rotation={[Math.PI / 3, 0, 0]}>
+                <meshStandardMaterial color={coreColor} emissive={coreColor} emissiveIntensity={2} toneMapped={false} />
+            </Torus>
+            <Torus ref={ring2Ref} args={[4.5, 0.03, 16, 100]} rotation={[0, Math.PI / 4, 0]}>
+                <meshStandardMaterial color="#aa88ff" emissive="#aa88ff" emissiveIntensity={1} transparent opacity={0.6 - normalizedEntropy * 0.4} />
+            </Torus>
+
+            {/* Dynamic Light tied to core */}
+            <pointLight distance={15} intensity={4 + normalizedEntropy * 4} color={coreColor} />
+        </group>
+    );
+};
+
+const Anomaly = ({ position, onClick, id }: any) => {
     const meshRef = useRef<THREE.Mesh>(null);
+    const [hovered, setHovered] = useState(false);
+
     useFrame((state) => {
         if (meshRef.current) {
-            meshRef.current.rotation.x = state.clock.elapsedTime * 0.5;
-            meshRef.current.rotation.y = state.clock.elapsedTime * 0.3;
+            meshRef.current.rotation.x = state.clock.elapsedTime * 3;
+            meshRef.current.rotation.y = state.clock.elapsedTime * 4;
+            const jitter = Math.sin(state.clock.elapsedTime * 20) * 0.05;
+            meshRef.current.position.y = position[1] + jitter;
         }
     });
 
     return (
-        <Float speed={2} floatIntensity={1} rotationIntensity={isActive ? 2 : 0.5}>
-            <Dodecahedron ref={meshRef} args={[1.5, 0]} scale={isActive ? 1.2 : 1}>
-                <MeshDistortMaterial
-                    color={new THREE.Color().setHSL(0.9, 0.8, isActive ? 0.6 : 0.3)}
-                    envMapIntensity={1}
-                    clearcoat={1}
-                    clearcoatRoughness={0}
-                    metalness={0.8}
+        <Float speed={5} rotationIntensity={2} floatIntensity={1}>
+            <mesh
+                ref={meshRef}
+                position={position}
+                onClick={(e) => { e.stopPropagation(); onClick(id); }}
+                onPointerOver={() => { setHovered(true); document.body.style.cursor = 'crosshair'; }}
+                onPointerOut={() => { setHovered(false); document.body.style.cursor = 'auto'; }}
+                scale={hovered ? 1.3 : 1}
+            >
+                <octahedronGeometry args={[0.6, 0]} />
+                <meshStandardMaterial
+                    color="#ff00aa"
+                    emissive={hovered ? "#ffffff" : "#ff00aa"}
+                    emissiveIntensity={hovered ? 4 : 2}
+                    wireframe={!hovered}
                     roughness={0.2}
-                    distort={isActive ? 0.4 : 0.1}
-                    speed={isActive ? 5 : 1}
+                    metalness={0.8}
                 />
-            </Dodecahedron>
+                <pointLight distance={4} intensity={2} color="#ff00aa" />
+            </mesh>
         </Float>
     );
 };
 
+const CameraShake = ({ entropyLevel }: { entropyLevel: number }) => {
+    useFrame((state) => {
+        const shakeIntensity = Math.max(0, (entropyLevel - 50) / 100) * 0.3;
+        if (shakeIntensity > 0) {
+            state.camera.position.x = (Math.random() - 0.5) * shakeIntensity;
+            state.camera.position.y = (Math.random() - 0.5) * shakeIntensity;
+            state.camera.lookAt(0, 0, 0);
+        } else {
+            state.camera.position.x = THREE.MathUtils.lerp(state.camera.position.x, 0, 0.1);
+            state.camera.position.y = THREE.MathUtils.lerp(state.camera.position.y, 0, 0.1);
+        }
+    });
+    return null;
+};
+
+// --- Game Logic ---
+
+interface GameNode { id: string; position: [number, number, number]; spawnedAt: number; }
+
 export const EntropySandbox: React.FC<EntropySandboxProps> = ({ onComplete, difficulty, t }) => {
+    const { queueDialogue } = useDialogue();
     const [score, setScore] = useState(0);
     const [timeLeft, setTimeLeft] = useState(60);
     const [gameState, setGameState] = useState<'PLAYING' | 'SUCCESS' | 'FAILED'>('PLAYING');
-    const [activeNode, setActiveNode] = useState(false);
-    
-    // Multi-Agent Flow Logic State
-    const [advisorMsg, setAdvisorMsg] = useState('Analyzing parameters...');
-    const [adversaryMsg, setAdversaryMsg] = useState('System vulnerable.');
-    const [glitchActive, setGlitchActive] = useState(false);
 
-    // Multi-Agent Simulation Loop
+    // Entropy goes from 0 to 100. If it hits 100, game over.
+    const [entropyLevel, setEntropyLevel] = useState(0);
+    const [anomalies, setAnomalies] = useState<GameNode[]>([]);
+
+    const [advisorMsg, setAdvisorMsg] = useState("Quantum core stable. Await anomalies.");
+    const [adversaryMsg, setAdversaryMsg] = useState("Entropy will inevitably consume this system.");
+
+    const diffMul = difficulty === 'HARD' ? 1.5 : difficulty === 'MEDIUM' ? 1.2 : 1;
+    const maxAnomalies = difficulty === 'HARD' ? 8 : difficulty === 'MEDIUM' ? 6 : 4;
+
+    // Narrative Briefing
+    useEffect(() => {
+        queueDialogue([
+            { id: `entropy-brief1-${Date.now()}`, character: 'ATHENA', text: "The Quantum Core is destabilizing. Anomalies are spawning in the void." },
+            { id: `entropy-brief2-${Date.now()}`, character: 'SYNTAX', text: "Target the anomalies to extract data and reduce entropy. Keep entropy below 100%." },
+        ]);
+    }, [queueDialogue]);
+
+    // Anomaly Spawner
     useEffect(() => {
         if (gameState !== 'PLAYING') return;
 
-        const advisorLines = [
-            'Maintain focus. Logic structures are stabilizing.',
-            'Optimization detected. Keep routing data.',
-            'Adversary is adapting. We need to shift protocols.',
-            'Energy levels holding. Good work.'
-        ];
+        const spawnInterval = Math.max(600, 2000 - (entropyLevel * 10) - (score / 10));
 
-        const adversaryLines = [
-            'Your defenses are pitiful.',
-            'I am bypassing the mainframe context.',
-            'Entropy always wins.',
-            'You cannot sustain this compute load.'
-        ];
+        const interval = setInterval(() => {
+            setAnomalies(prev => {
+                if (prev.length >= maxAnomalies) return prev;
+                // Spawn position on a sphere surface or nearby
+                const radius = 6 + Math.random() * 4;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos((Math.random() * 2) - 1);
 
-        const agentInterval = setInterval(() => {
-            const isAdversary = Math.random() > 0.6;
-            if (isAdversary) {
-                setAdversaryMsg(adversaryLines[Math.floor(Math.random() * adversaryLines.length)]);
-                audio.playSystemMessage({ type: 'warning' });
-                setGlitchActive(true);
-                setTimeout(() => setGlitchActive(false), 500);
+                const x = radius * Math.sin(phi) * Math.cos(theta);
+                const y = radius * Math.sin(phi) * Math.sin(theta);
+                const z = radius * Math.cos(phi);
+
+                return [...prev, {
+                    id: `${Date.now()}-${Math.random()}`,
+                    position: [x, y, z],
+                    spawnedAt: Date.now()
+                }];
+            });
+        }, spawnInterval);
+
+        return () => clearInterval(interval);
+    }, [gameState, entropyLevel, score, maxAnomalies]);
+
+    // Entropy Increase Logic (Unattended anomalies increase entropy)
+    useEffect(() => {
+        if (gameState !== 'PLAYING') return;
+        const interval = setInterval(() => {
+            if (anomalies.length > 0) {
+                // Each active anomaly adds passive entropy
+                setEntropyLevel(prev => {
+                    const next = prev + (anomalies.length * 0.5 * diffMul);
+                    return Math.min(next, 100);
+                });
             } else {
-                setAdvisorMsg(advisorLines[Math.floor(Math.random() * advisorLines.length)]);
-                audio.playSystemMessage({ type: 'success' });
+                // Decay entropy slightly if no anomalies
+                setEntropyLevel(prev => Math.max(prev - 0.2, 0));
             }
-        }, 5000);
+        }, 500);
+        return () => clearInterval(interval);
+    }, [gameState, anomalies.length, diffMul]);
 
-        return () => clearInterval(agentInterval);
-    }, [gameState]);
-
-    // Timer Loop
+    // Agent Chatter
     useEffect(() => {
         if (gameState !== 'PLAYING') return;
+        const aLines = [
+            "Containment fields are holding.",
+            "Energy fluctuations within acceptable parameters.",
+            "Keep extracting the anomaly data.",
+            "Core temperature stable."
+        ];
+        const eLines = [
+            "The chaotic resonance is beautiful.",
+            "You cannot fight the second law of thermodynamics.",
+            "The core is fracturing. Let it happen.",
+            "Too many variables. You are losing control."
+        ];
+
+        const intervalId = setInterval(() => {
+            if (entropyLevel > 60 || Math.random() > 0.6) {
+                setAdversaryMsg(eLines[Math.floor(Math.random() * eLines.length)]);
+                if (entropyLevel > 60) audio.playSystemMessage?.({ type: 'warning' });
+            } else {
+                setAdvisorMsg(aLines[Math.floor(Math.random() * aLines.length)]);
+            }
+        }, 6000);
+        return () => clearInterval(intervalId);
+    }, [gameState, entropyLevel]);
+
+    // Timer & Game Over Checking
+    useEffect(() => {
+        if (gameState !== 'PLAYING') return;
+
+        // Critical Failure Check
+        if (entropyLevel >= 100) {
+            setGameState('FAILED');
+            audio.playError();
+            queueDialogue([
+                { id: `entropy-fail-${Date.now()}`, character: 'BYTE', text: "CRITICAL FAILURE. Core meltdown imminent.", isGlitchy: true }
+            ]);
+            onComplete(0, { completionTime: 60 - timeLeft, difficulty, failureReason: "Meltdown" });
+            return;
+        }
+
         const timer = setInterval(() => {
-            setTimeLeft((prev) => {
+            setTimeLeft(prev => {
                 if (prev <= 1) {
                     clearInterval(timer);
-                    const finalScore = score >= 500 ? score : 0;
-                    setGameState(finalScore >= 500 ? 'SUCCESS' : 'FAILED');
-                    onComplete(finalScore, { completionTime: 60 - prev, difficulty });
+                    // Time survived = Victory
+                    setGameState('SUCCESS');
+                    audio.playSuccess();
+                    queueDialogue([
+                        { id: `entropy-win-${Date.now()}`, character: 'ATHENA', text: `Simulation complete. Core stabilized. Final extracted data: ${score} TB.` }
+                    ]);
+                    onComplete(score, { completionTime: 60, difficulty });
                     return 0;
                 }
                 return prev - 1;
             });
         }, 1000);
         return () => clearInterval(timer);
-    }, [gameState, score, onComplete, difficulty]);
+    }, [gameState, score, entropyLevel, timeLeft, onComplete, difficulty, queueDialogue]);
 
-    const handleInteract = () => {
+    // Interaction
+    const handleAnomalyClick = useCallback((id: string) => {
         if (gameState !== 'PLAYING') return;
-        audio.playTyping();
-        setActiveNode(true);
-        setScore(s => s + 50);
-        setTimeout(() => setActiveNode(false), 300);
-        
-        if (score + 50 >= 1000) {
-            setGameState('SUCCESS');
-            onComplete(1000, { completionTime: 60 - timeLeft, difficulty });
-        }
-    };
+        audio.playClick();
+        setAnomalies(prev => prev.filter(a => a.id !== id));
+
+        // Reduce entropy and boost score
+        setEntropyLevel(prev => Math.max(0, prev - 5));
+        setScore(s => s + Math.floor(25 * diffMul));
+    }, [gameState, diffMul]);
+
+
+    // Dynamic visuals based on entropy
+    const normalizedEntropy = Math.min(Math.max(entropyLevel / 100, 0), 1);
+    const glitchActive = normalizedEntropy > 0.8;
+    const isCritical = normalizedEntropy > 0.7;
 
     return (
-        <div className="relative w-full h-[600px] rounded-xl overflow-hidden border border-white/10 bg-black shadow-2xl">
-            {/* UI Overlay */}
+        <div className="relative w-full h-[600px] rounded-xl overflow-hidden border border-[#00ffff]/20 bg-[#02050a] shadow-2xl">
+            {/* Cinematic HUD */}
             <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-start z-10 pointer-events-none">
                 <div className="flex flex-col gap-4">
-                    <div className="bg-black/40 backdrop-blur-md rounded-lg p-3 border border-indigo-500/30">
-                        <div className="flex items-center gap-2 text-indigo-400 mb-1">
+                    {/* Data Score */}
+                    <div className="bg-black/50 backdrop-blur-xl rounded-2xl p-4 border border-[#00ffff]/30 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#00ffff]/10 to-transparent" />
+                        <div className="flex items-center gap-2 text-[#00ffff] mb-1">
                             <Activity className="w-4 h-4" />
-                            <span className="text-xs uppercase tracking-widest font-bold">Signal</span>
+                            <span className="text-xs uppercase tracking-widest font-bold">Data Extracted</span>
                         </div>
-                        <div className="text-2xl font-mono text-white">{score} / 1000</div>
+                        <div className="text-3xl font-mono font-black text-white tabular-nums drop-shadow-[0_0_10px_#00ffff]">{score} TB</div>
+                    </div>
+
+                    {/* Entropy Meter */}
+                    <div className="bg-black/50 backdrop-blur-xl rounded-2xl p-4 border border-white/10 w-48">
+                        <div className="flex justify-between items-end mb-2">
+                            <div className="flex items-center gap-2 text-white/80">
+                                <AlertTriangle className={`w-4 h-4 ${isCritical ? 'text-[#ff3300] animate-pulse' : 'text-[#ffaa00]'}`} />
+                                <span className="text-xs uppercase tracking-widest font-bold">Entropy</span>
+                            </div>
+                            <span className={`text-sm font-mono font-bold ${isCritical ? 'text-[#ff3300]' : 'text-white'}`}>{entropyLevel.toFixed(1)}%</span>
+                        </div>
+                        <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                            <div
+                                className={`h-full transition-all duration-300 ${isCritical ? 'bg-[#ff3300]' : entropyLevel > 40 ? 'bg-[#ffaa00]' : 'bg-[#00ffff]'}`}
+                                style={{ width: `${entropyLevel}%` }}
+                            />
+                        </div>
                     </div>
                 </div>
 
-                <div className="bg-black/40 backdrop-blur-md rounded-lg p-3 border border-blue-500/30 flex flex-col items-end">
-                     <div className="flex items-center gap-2 text-blue-400 mb-1">
-                        <AlertTriangle className="w-4 h-4" />
-                        <span className="text-xs uppercase tracking-widest font-bold">Time</span>
+                <div className="flex flex-col items-end gap-3">
+                    <div className="bg-black/50 backdrop-blur-xl rounded-2xl p-4 border border-[#aa88ff]/30">
+                        <div className="flex items-center gap-2 text-[#aa88ff] mb-1">
+                            <TerminalSquare className="w-4 h-4" />
+                            <span className="text-xs uppercase tracking-widest font-bold">Time Remaining</span>
+                        </div>
+                        <div className={`text-4xl font-mono font-black tabular-nums ${timeLeft <= 10 ? 'text-[#ff3300] animate-pulse drop-shadow-[0_0_10px_#ff3300]' : 'text-white drop-shadow-[0_0_10px_#aa88ff]'}`}>{timeLeft}s</div>
                     </div>
-                    <div className="text-3xl font-mono text-white tracking-widest">{timeLeft}s</div>
                 </div>
             </div>
 
-            {/* Multi-Agent Comm Panel */}
-            <div className="absolute bottom-6 left-6 right-6 flex gap-4 z-10 pointer-events-none">
-                <div className="flex-1 bg-black/60 backdrop-blur-md rounded-lg p-4 border-l-4 border-indigo-500">
-                    <div className="text-xs text-indigo-400 mb-1 uppercase tracking-widest font-bold flex items-center gap-2"><Shield className="w-3 h-3"/> Advisor Agent</div>
-                    <div className="text-sm text-indigo-100 font-mono tracking-wide">{advisorMsg}</div>
+            {/* Critical Warning Flash */}
+            <AnimatePresence>
+                {isCritical && gameState === 'PLAYING' && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 0.15 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.5, repeat: Infinity, repeatType: "reverse" }}
+                        className="absolute inset-0 bg-[#ff3300] z-0 pointer-events-none"
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* Narrative Comm Panels */}
+            <div className="absolute bottom-6 left-6 right-6 flex flex-col md:flex-row gap-4 z-10 pointer-events-none">
+                <div className="flex-1 bg-gradient-to-r from-[#00ffff]/10 to-transparent backdrop-blur-md rounded-xl p-4 border-l-4 border-[#00ffff]">
+                    <div className="text-[10px] text-[#00ffff] mb-1 uppercase tracking-widest font-bold flex items-center gap-2"><Shield className="w-3 h-3" /> Core Logistics</div>
+                    <div className="text-sm text-white/90 font-mono leading-relaxed">{advisorMsg}</div>
                 </div>
-                <div className="flex-1 bg-black/60 backdrop-blur-md rounded-lg p-4 border-l-4 border-red-500">
-                    <div className="text-xs text-red-500 mb-1 uppercase tracking-widest font-bold flex items-center gap-2"><Zap className="w-3 h-3"/> Adversary AI</div>
-                    <div className="text-sm text-red-200 font-mono tracking-wide">{adversaryMsg}</div>
+                <div className="flex-1 bg-gradient-to-l from-[#ff3300]/10 to-transparent backdrop-blur-md rounded-xl p-4 border-r-4 border-[#ff3300] text-right">
+                    <div className="text-[10px] text-[#ff3300] mb-1 uppercase tracking-widest font-bold flex items-center justify-end gap-2">Void Entity <Zap className="w-3 h-3" /></div>
+                    <div className="text-sm text-white/90 font-mono leading-relaxed">{adversaryMsg}</div>
                 </div>
             </div>
 
-            {/* Game Over States */}
-            {gameState !== 'PLAYING' && (
-                <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-                    <div className="text-center">
-                        <div className={`text-6xl font-black uppercase tracking-widest mb-4 ${gameState === 'SUCCESS' ? 'text-green-500' : 'text-red-500'}`}>
-                            {gameState === 'SUCCESS' ? 'SYSTEM SECURED' : 'BREACH DETECTED'}
-                        </div>
-                        <div className="text-xl text-white/60 font-mono">Final Score: {score}</div>
-                    </div>
-                </div>
-            )}
+            {/* Game Over Screen */}
+            <AnimatePresence>
+                {gameState !== 'PLAYING' && (
+                    <motion.div
+                        initial={{ opacity: 0, backdropFilter: 'blur(0px)' }}
+                        animate={{ opacity: 1, backdropFilter: 'blur(16px)' }}
+                        className="absolute inset-0 z-30 flex items-center justify-center p-4 bg-black/80"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            className="bg-[#02050a] border border-white/10 p-12 rounded-3xl text-center relative overflow-hidden shadow-2xl max-w-lg w-full"
+                        >
+                            <div className={`absolute top-0 left-0 w-full h-2 ${gameState === 'SUCCESS' ? 'bg-[#00ffff]' : 'bg-[#ff3300]'}`} />
 
-            {/* Interaction Layer */}
-            <div className="absolute inset-0 z-0 cursor-crosshair" onClick={handleInteract}>
-                <Canvas camera={{ position: [0, 0, 10], fov: 60 }}>
-                    <ambientLight intensity={0.5} />
-                    <pointLight position={[10, 10, 10]} intensity={1} color={new THREE.Color().setHSL(0.9, 1, 0.5)} />
-                    <pointLight position={[-10, -10, -10]} intensity={0.5} color="#4f46e5" />
-                    
-                    <Sparkles count={200} scale={12} size={2} speed={0.4} opacity={0.5} color={new THREE.Color().setHSL(0.9, 1, 0.8)} />
-                    
-                    <CoreEntity isActive={activeNode} />
-                    
-                    <OrbitControls enableZoom={false} enablePan={false} autoRotate autoRotateSpeed={0.5} />
-                    
-                    <EffectComposer>
-                        <Bloom luminanceThreshold={0.2} luminanceSmoothing={0.9} height={300} intensity={1.5} />
-                        <ChromaticAberration blendFunction={BlendFunction.NORMAL} offset={new THREE.Vector2(0.002, 0.002)} />
+                            <div className={`w-24 h-24 mx-auto mb-6 rounded-full flex items-center justify-center ${gameState === 'SUCCESS' ? 'bg-[#00ffff]/10' : 'bg-[#ff3300]/10'}`}>
+                                {gameState === 'SUCCESS' ? <Shield className="w-12 h-12 text-[#00ffff]" /> : <AlertTriangle className="w-12 h-12 text-[#ff3300]" />}
+                            </div>
+
+                            <div className={`text-4xl font-black uppercase tracking-[0.2em] mb-4 ${gameState === 'SUCCESS' ? 'text-[#00ffff]' : 'text-[#ff3300]'} drop-shadow-[0_0_15px_currentColor]`}>
+                                {gameState === 'SUCCESS' ? 'SYSTEM SECURED' : 'MELTDOWN DETECTED'}
+                            </div>
+
+                            <div className="mt-8 space-y-4">
+                                <div className="flex justify-between items-center border-b border-white/10 pb-4">
+                                    <span className="text-white/60 uppercase tracking-widest text-sm">Data Extracted</span>
+                                    <span className="text-3xl text-white font-mono font-bold">{score} TB</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-white/60 uppercase tracking-widest text-sm">Peak Entropy</span>
+                                    <span className={`text-2xl font-mono font-bold ${gameState === 'SUCCESS' ? 'text-[#ffaa00]' : 'text-[#ff3300]'}`}>{entropyLevel.toFixed(1)}%</span>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* 3D WebGL Canvas */}
+            <div className="absolute inset-0 z-0">
+                <Canvas camera={{ position: [0, 0, 18], fov: 60 }} gl={{ antialias: false }}>
+                    <color attach="background" args={['#010204']} />
+                    <fog attach="fog" args={['#010204', 10, 40]} />
+                    <ambientLight intensity={0.2} color="#00ffff" />
+                    <CameraShake entropyLevel={entropyLevel} />
+
+                    <EntropyCore entropyLevel={entropyLevel} />
+
+                    {anomalies.map(anomaly => (
+                        <Anomaly
+                            key={anomaly.id}
+                            id={anomaly.id}
+                            position={anomaly.position}
+                            onClick={handleAnomalyClick}
+                        />
+                    ))}
+
+                    {/* Background void particles */}
+                    <Sparkles count={500} scale={35} size={1.5} speed={0.2} opacity={0.3} color="#00ffff" />
+                    {/* Chaotic particles tied to entropy */}
+                    {normalizedEntropy > 0.2 && (
+                        <Sparkles count={100 + normalizedEntropy * 300} scale={20} size={3} speed={normalizedEntropy * 2} opacity={normalizedEntropy} color="#ff3300" />
+                    )}
+
+                    <OrbitControls enableZoom={false} enablePan={false} autoRotate autoRotateSpeed={0.5 + normalizedEntropy * 2} />
+
+                    <EffectComposer disableNormalPass>
+                        <Bloom luminanceThreshold={0.2} luminanceSmoothing={0.9} mipmapBlur intensity={1.5 + normalizedEntropy * 2} />
+                        <ChromaticAberration
+                            blendFunction={BlendFunction.NORMAL}
+                            offset={new THREE.Vector2(0.002 + normalizedEntropy * 0.008, 0.002 + normalizedEntropy * 0.008)}
+                            radialModulation={false}
+                            modulationOffset={0}
+                        />
+                        <Noise opacity={0.05 + normalizedEntropy * 0.15} blendFunction={BlendFunction.OVERLAY} />
+                        <Vignette eskil={false} offset={0.1} darkness={1.1} />
                         {glitchActive && (
-                            <Glitch delay={new THREE.Vector2(0, 0)} duration={new THREE.Vector2(0.1, 0.3)} mode={GlitchMode.SPORADIC} active ratio={0.5} />
+                            <Glitch delay={new THREE.Vector2(0, 0)} duration={new THREE.Vector2(0.2, 0.6)} mode={GlitchMode.SPORADIC} active ratio={normalizedEntropy} />
                         )}
                     </EffectComposer>
                 </Canvas>

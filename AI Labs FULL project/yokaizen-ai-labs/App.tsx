@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from './contexts/AuthContext';
 import { useToast } from './contexts/ToastContext';
@@ -9,7 +9,7 @@ import { TRANSLATIONS } from './translations';
 import { audio } from './services/audioService';
 import { useDialogue } from './contexts/DialogueContext';
 import { squadsService } from './services/squadsService';
-import { AppTab, GameDef, GameType, Difficulty, Language, CreatorGame, Squad, UserStats } from './types';
+import { AppTab, GameDef, GameType, Difficulty, Language, CreatorGame, Squad, UserStats, SkillType } from './types';
 import { AuthScreen } from './components/auth/AuthScreen';
 import { GameCover } from './components/ui/GameCover';
 import { Button } from './components/ui/Button';
@@ -36,11 +36,42 @@ import { ShareCard } from './components/social/ShareCard';
 import { StreakRewards } from './components/streaks/StreakRewards';
 import { badgeService } from './services/badgeService';
 import { BadgeNotification } from './components/ui/BadgeNotification';
+import { NotificationCenter, AppNotification } from './components/ui/NotificationCenter';
+import { GameAnalyticsDashboard } from './components/GameAnalyticsDashboard';
 import { SquadOnboarding } from './components/onboarding/SquadOnboarding';
 import {
     Layout, BookOpen, FlaskConical, Trophy, User, Settings,
-    Lock, ArrowLeft, Globe, Volume2, Smartphone, ChevronRight, Zap, Shield, Star, Clock, Play, Brain, Activity, Box, Award, Cpu
+    Lock, ArrowLeft, Globe, Volume2, Smartphone, ChevronRight, Zap, Shield, Star, Clock, Play, Brain, Activity, Box, Award, Cpu,
+    Search, CheckCircle, Filter, Home, BarChart3, Bell, Share2
 } from 'lucide-react';
+
+// ── Language config for full i18n support ──
+const LANG_OPTIONS: { code: string; label: string; flag: string }[] = [
+    { code: 'EN', label: 'English', flag: '🇬🇧' },
+    { code: 'ES', label: 'Español', flag: '🇪🇸' },
+    { code: 'JP', label: '日本語', flag: '🇯🇵' },
+    { code: 'KR', label: '한국어', flag: '🇰🇷' },
+    { code: 'TH', label: 'ไทย', flag: '🇹🇭' },
+    { code: 'CA', label: 'Català', flag: '🏴' },
+    { code: 'DE', label: 'Deutsch', flag: '🇩🇪' },
+    { code: 'FR', label: 'Français', flag: '🇫🇷' },
+    { code: 'PT', label: 'Português', flag: '🇧🇷' },
+    { code: 'NL', label: 'Nederlands', flag: '🇳🇱' },
+    { code: 'PL', label: 'Polski', flag: '🇵🇱' },
+    { code: 'ID', label: 'Bahasa', flag: '🇮🇩' },
+    { code: 'EU', label: 'Euskara', flag: '🏴' },
+];
+
+// ── Category filter options ──
+const CATEGORY_FILTERS: { key: string; label: string; skill?: SkillType }[] = [
+    { key: 'ALL', label: 'All' },
+    { key: 'PROMPTING', label: 'Prompting', skill: SkillType.PROMPTING },
+    { key: 'SAFETY', label: 'Safety', skill: SkillType.SAFETY },
+    { key: 'ETHICS', label: 'Ethics', skill: SkillType.ETHICS },
+    { key: 'ANALYSIS', label: 'Analysis', skill: SkillType.ANALYSIS },
+    { key: 'CREATIVITY', label: 'Creativity', skill: SkillType.CREATIVITY },
+    { key: 'DEBUGGING', label: 'Debugging', skill: SkillType.DEBUGGING },
+];
 
 // Import all games
 import { PromptArchitect } from './components/games/PromptArchitect';
@@ -107,6 +138,11 @@ import { DataHeist } from './components/games/DataHeist';
 import { PromptSculptor } from './components/games/PromptSculptor';
 import { SingularityCore } from './components/games/SingularityCore';
 
+// Growth Mechanism Components
+import { ViralDashboard } from './components/growth/ViralDashboard';
+import { UseCasesShowcase } from './components/growth/UseCasesShowcase';
+import { SquadGauntlet } from './components/growth/SquadGauntlet';
+
 // Assets to preload
 const PRELOAD_ASSETS = [
     'https://grainy-gradients.vercel.app/noise.svg',
@@ -132,6 +168,33 @@ export const App: React.FC = () => {
     const [gameDifficulty, setGameDifficulty] = useState<Difficulty>('Pro');
     const [showStreakModal, setShowStreakModal] = useState(false);
     const [showSkillTree, setShowSkillTree] = useState(false);
+
+    // ── Search & Filter State ──
+    const [searchQuery, setSearchQuery] = useState('');
+    const [categoryFilter, setCategoryFilter] = useState('ALL');
+    const [difficultyFilter, setDifficultyFilter] = useState<'ALL' | Difficulty>('ALL');
+    const [statusFilter, setStatusFilter] = useState<'ALL' | 'COMPLETED' | 'NEW'>('ALL');
+
+    // ── Notifications ──
+    const [showNotifications, setShowNotifications] = useState(false);
+    const [notifications, setNotifications] = useState<AppNotification[]>([
+        {
+            id: 'n1',
+            type: 'SYSTEM',
+            title: 'Welcome to Yokaizen AI Labs',
+            message: 'Your neural link has been established successfully. Begin exploring the scenarios.',
+            timestamp: new Date(Date.now() - 3600000),
+            isRead: false
+        },
+        {
+            id: 'n2',
+            type: 'AGENT',
+            title: 'OpenClaw Ready',
+            message: 'Autonomous execution kernel is online and awaiting objectives.',
+            timestamp: new Date(Date.now() - 1800000),
+            isRead: false
+        }
+    ]);
 
     // Toast State (Replaced by Context)
     const { showToast } = useToast();
@@ -590,6 +653,15 @@ export const App: React.FC = () => {
                 </div>
             </Modal>
 
+            <NotificationCenter
+                isOpen={showNotifications}
+                onClose={() => setShowNotifications(false)}
+                notifications={notifications}
+                onMarkAllRead={() => setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))}
+                onClearAll={() => setNotifications([])}
+                t={t}
+            />
+
             {/* Settings Modal */}
             <Modal isOpen={showSettings} onClose={() => setShowSettings(false)} title={t('settings.title')} icon={<Settings size={24} className="text-electric" />}>
                 <div className="space-y-6">
@@ -598,14 +670,15 @@ export const App: React.FC = () => {
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center text-sm font-bold text-gray-300"><Globe size={18} className="mr-3 text-cyan-400" /> {t('settings.language')}</div>
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                            {['EN', 'ES', 'JP', 'KR', 'TH', 'CA'].map(lang => (
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                            {LANG_OPTIONS.map(({ code, label, flag }) => (
                                 <button
-                                    key={lang}
-                                    onClick={() => updateUser({ ...user, language: lang as Language })}
-                                    className={`text-xs font-bold px-4 py-2 rounded-lg border transition-all duration-300 ${user.language === lang ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/50 shadow-[0_0_15px_rgba(34,211,238,0.2)] scale-105' : 'bg-black/50 border-white/10 text-gray-500 hover:text-white hover:border-white/30 hover:bg-white/5'}`}
+                                    key={code}
+                                    onClick={() => updateUser({ ...user, language: code as Language })}
+                                    className={`text-xs font-bold px-3 py-2.5 rounded-lg border transition-all duration-300 flex items-center gap-2 ${user.language === code ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/50 shadow-[0_0_15px_rgba(34,211,238,0.2)] scale-[1.02]' : 'bg-black/50 border-white/10 text-gray-400 hover:text-white hover:border-white/30 hover:bg-white/5'}`}
                                 >
-                                    {lang}
+                                    <span className="text-base">{flag}</span>
+                                    <span className="truncate">{label}</span>
                                 </button>
                             ))}
                         </div>
@@ -646,39 +719,80 @@ export const App: React.FC = () => {
                 </div>
             </Modal>
 
-            {/* Sidebar */}
-            <nav className="w-64 bg-black/95 bg-[url('/assets/aaa/card-bg-1.png')] bg-cover bg-center border-r border-white/10 flex-col hidden md:flex z-50">
-                <div className="p-6 flex items-center space-x-3 text-white">
-                    <img src="/assets/aaa/logo.png" className="w-8 h-8 rounded-md" />
-                    <h1 className="text-2xl font-black tracking-tighter">YOKAI<span className="text-electric">ZEN</span></h1>
+            {/* ── AAA Sidebar Navigation ── */}
+            <nav className="w-64 bg-black/90 backdrop-blur-3xl border-r border-white/10 flex-col hidden md:flex z-50 relative overflow-hidden">
+                {/* Atmospheric sidebar glows */}
+                <div className="absolute top-0 left-0 w-full h-48 bg-gradient-to-b from-electric/20 to-transparent opacity-50 pointer-events-none"></div>
+                <div className="absolute bottom-0 left-0 w-full h-48 bg-gradient-to-t from-cyan-500/10 to-transparent pointer-events-none"></div>
+
+                <div className="p-8 flex items-center space-x-4 text-white relative z-10">
+                    <div className="relative">
+                        <div className="absolute inset-0 bg-electric blur-md opacity-50 rounded-lg"></div>
+                        <img src="/assets/aaa/logo.png" className="w-8 h-8 rounded-lg relative z-10 shadow-[0_0_15px_rgba(196,95,255,0.6)]" alt="Logo" />
+                    </div>
+                    <h1 className="text-2xl font-black tracking-tighter drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">
+                        YOKAI<span className="text-transparent bg-clip-text bg-gradient-to-r from-electric to-cyan-400">ZEN</span>
+                    </h1>
                 </div>
-                <div className="flex-1 space-y-1 p-4">
-                    {[AppTab.HOME, AppTab.LEARN, AppTab.LAB, AppTab.LEADERBOARD, AppTab.PROFILE].map(tab => (
-                        <button
-                            key={tab}
-                            onClick={() => handleTabSwitch(tab)}
-                            className={`w-full flex items-center px-4 py-3 rounded-lg transition-all ${activeTab === tab ? 'bg-electric text-white shadow-[0_0_15px_rgba(196,95,255,0.3)]' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
-                        >
-                            {tab === AppTab.HOME && <img src="/assets/aaa/nav-home.png" className="w-5 h-5 mr-3" />}
-                            {tab === AppTab.LEARN && <img src="/assets/aaa/nav-games.png" className="w-5 h-5 mr-3" />}
-                            {tab === AppTab.LAB && <img src="/assets/aaa/nav-progress.png" className="w-5 h-5 mr-3" />}
-                            {tab === AppTab.LEADERBOARD && <img src="/assets/aaa/nav-leaderboard.png" className="w-5 h-5 mr-3" />}
-                            {tab === AppTab.PROFILE && <img src="/assets/aaa/nav-profile.png" className="w-5 h-5 mr-3" />}
-                            <span className="font-bold text-sm uppercase tracking-wide">{t(`nav.${tab.toLowerCase()}`)}</span>
-                        </button>
-                    ))}
+
+                <div className="flex-1 space-y-2 p-4 relative z-10">
+                    {[AppTab.HOME, AppTab.LEARN, AppTab.LAB, AppTab.LEADERBOARD, AppTab.GROWTH, AppTab.PROFILE].map(tab => {
+                        const isActive = activeTab === tab;
+                        return (
+                            <button
+                                key={tab}
+                                onClick={() => handleTabSwitch(tab)}
+                                className={`w-full flex items-center px-4 py-3 rounded-xl transition-all duration-300 relative group overflow-hidden ${isActive
+                                    ? 'bg-gradient-to-r from-electric/20 to-transparent text-white border border-electric/30 shadow-[0_0_20px_rgba(196,95,255,0.15)]'
+                                    : 'text-gray-400 border border-transparent hover:bg-white/5 hover:text-white hover:border-white/10'
+                                    }`}
+                            >
+                                {/* Active Indicator Bar */}
+                                {isActive && (
+                                    <motion.div
+                                        layoutId="activeNavIndicator"
+                                        className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-cyan-400 to-electric rounded-r-full shadow-[0_0_10px_rgba(34,211,238,0.8)]"
+                                    />
+                                )}
+
+                                <div className={`flex items-center justify-center w-8 h-8 rounded-lg mr-3 transition-colors ${isActive ? 'bg-electric/20 text-electric' : 'bg-transparent text-gray-500 group-hover:text-gray-300'}`}>
+                                    {tab === AppTab.HOME && <img src="/assets/aaa/nav-home.png" className="w-5 h-5 opacity-90 group-hover:opacity-100 transition-opacity" />}
+                                    {tab === AppTab.LEARN && <img src="/assets/aaa/nav-games.png" className="w-5 h-5 opacity-90 group-hover:opacity-100 transition-opacity" />}
+                                    {tab === AppTab.LAB && <img src="/assets/aaa/nav-progress.png" className="w-5 h-5 opacity-90 group-hover:opacity-100 transition-opacity" />}
+                                    {tab === AppTab.LEADERBOARD && <img src="/assets/aaa/nav-leaderboard.png" className="w-5 h-5 opacity-90 group-hover:opacity-100 transition-opacity" />}
+                                    {tab === AppTab.GROWTH && <span className="text-lg drop-shadow-md group-hover:scale-110 transition-transform">🚀</span>}
+                                    {tab === AppTab.PROFILE && <img src="/assets/aaa/nav-profile.png" className="w-5 h-5 opacity-90 group-hover:opacity-100 transition-opacity" />}
+                                </div>
+                                <span className="font-bold text-xs uppercase tracking-[0.15em] relative z-10">{t(`nav.${tab.toLowerCase()}`)}</span>
+                            </button>
+                        );
+                    })}
                 </div>
-                <div className="p-4 border-t border-white/10">
-                    <div className="flex items-center justify-between">
+
+                <div className="p-4 border-t border-white/5 bg-gradient-to-t from-black to-transparent relative z-10 flex flex-col gap-2">
+                    {/* Desktop Bell Icon */}
+                    <div className="flex justify-end px-2 mb-1 cursor-pointer group" onClick={() => setShowNotifications(true)}>
+                        <div className="relative p-2 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 transition-all shadow-[0_4px_10px_rgba(0,0,0,0.5)]">
+                            <Bell size={18} className="text-gray-400 group-hover:text-white" />
+                            {notifications.some(n => !n.isRead) && (
+                                <div className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-black animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"></div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 transition-all cursor-pointer group" onClick={() => handleTabSwitch(AppTab.PROFILE)}>
                         <div className="flex items-center space-x-3">
-                            <img src={user.avatar} className="w-10 h-10 rounded-full border border-gray-600" />
+                            <div className="relative">
+                                <img src={user.avatar} className="w-10 h-10 rounded-full border-2 border-gray-700 group-hover:border-electric transition-colors" />
+                                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-black"></div>
+                            </div>
                             <div>
-                                <div className="text-sm font-bold truncate w-24">{user.name}</div>
-                                <div className="text-xs text-electric">{t('ui.lvl')} {user.level}</div>
+                                <div className="text-sm font-bold truncate w-24 text-gray-200 group-hover:text-white transition-colors">{user.name}</div>
+                                <div className="text-[10px] text-electric font-bold tracking-widest uppercase">{t('ui.lvl')} {user.level}</div>
                             </div>
                         </div>
-                        <button onClick={() => setShowSettings(true)} className="text-gray-400 hover:text-white">
-                            <Settings size={20} />
+                        <button onClick={(e) => { e.stopPropagation(); setShowSettings(true); }} className="text-gray-500 hover:text-white p-2 rounded-lg hover:bg-white/10 transition-all">
+                            <Settings size={18} />
                         </button>
                     </div>
                 </div>
@@ -691,18 +805,25 @@ export const App: React.FC = () => {
                         <img src="/assets/aaa/logo.png" className="w-6 h-6 rounded-md" />
                         <h1 className="text-xl font-black">YOKAI<span className="text-electric">ZEN</span></h1>
                     </div>
-                    <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-4 pl-2">
+                        {/* Mobile Bell Icon */}
+                        <div className="relative cursor-pointer" onClick={() => setShowNotifications(true)}>
+                            <Bell size={20} className="text-gray-400 hover:text-white transition-colors" />
+                            {notifications.some(n => !n.isRead) && (
+                                <div className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-black animate-pulse"></div>
+                            )}
+                        </div>
                         <button onClick={() => setShowSettings(true)} className="text-gray-400 hover:text-white">
                             <Settings size={20} />
                         </button>
-                        <img src={user.avatar} className="w-8 h-8 rounded-full cursor-pointer" onClick={() => handleTabSwitch(AppTab.PROFILE)} />
+                        <img src={user.avatar} className="w-8 h-8 rounded-full cursor-pointer border border-white/10" onClick={() => handleTabSwitch(AppTab.PROFILE)} />
                     </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto scrollbar-hide bg-[#050505]">
                     <ErrorBoundary>
                         {/* Global WebGL Backdrop for Hub Tabs */}
-                        {[AppTab.HOME, AppTab.LEARN, AppTab.LEADERBOARD, AppTab.PROFILE].includes(activeTab) && (
+                        {[AppTab.HOME, AppTab.LEARN, AppTab.LEADERBOARD, AppTab.GROWTH, AppTab.PROFILE].includes(activeTab) && (
                             <div className="absolute inset-0 z-0 opacity-40 pointer-events-none fixed">
                                 <Canvas camera={{ position: [0, 0, 5], fov: 60 }}>
                                     <ambientLight intensity={0.5} />
@@ -719,131 +840,319 @@ export const App: React.FC = () => {
                             {activeTab === AppTab.HOME && (
                                 <motion.div key="home" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.35, ease: [0.25, 0.8, 0.25, 1] }} className="p-6 pb-24 max-w-7xl mx-auto relative z-10">
 
-                                    <div className="relative z-10 space-y-8">
-                                        {/* HERO STATUS CARD */}
-                                        <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-gray-900 shadow-2xl group">
-                                            <div className="absolute inset-0 bg-[url('/assets/aaa/card-bg-1.png')] bg-cover bg-center opacity-40"></div>
-                                            <div className="absolute inset-0 bg-gradient-to-r from-indigo-900/20 via-black/40 to-violet-900/20 backdrop-blur-sm"></div>
+                                    <div className="relative z-10 space-y-10">
+                                        {/* ── AAA HERO STATUS CARD ── */}
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 30 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ type: 'spring', damping: 20 }}
+                                            className="relative rounded-[32px] overflow-hidden border border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.6)] group bg-black/40 backdrop-blur-2xl"
+                                        >
+                                            {/* Atmospheric Background Layers */}
+                                            <div className="absolute inset-0 bg-[url('/assets/aaa/card-bg-1.png')] bg-cover bg-center opacity-30 mix-blend-screen transition-transform duration-1000 group-hover:scale-105"></div>
+                                            <div className="absolute inset-0 bg-gradient-to-r from-indigo-900/40 via-purple-900/20 to-pink-900/30"></div>
+                                            <div className="absolute -top-32 -right-32 w-96 h-96 bg-electric/20 blur-[100px] rounded-full group-hover:bg-electric/30 transition-colors duration-700"></div>
+                                            <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-cyan-500/20 blur-[100px] rounded-full group-hover:bg-cyan-500/30 transition-colors duration-700"></div>
+                                            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.05] mix-blend-overlay"></div>
 
-                                            <div className="relative p-6 md:p-8 flex flex-col md:flex-row items-center md:justify-between gap-6">
-                                                <div className="flex items-center gap-6">
-                                                    <div className="relative">
-                                                        <div className="w-24 h-24 rounded-full border-4 border-electric p-1 bg-black shadow-[0_0_20px_rgba(196,95,255,0.4)]">
-                                                            <img src={user.avatar} className="w-full h-full rounded-full object-cover" />
+                                            <div className="relative p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-10">
+                                                {/* Left Profile Section */}
+                                                <div className="flex items-center gap-8 w-full md:w-auto">
+                                                    <div className="relative group/avatar cursor-pointer shrink-0" onClick={() => handleTabSwitch(AppTab.PROFILE)}>
+                                                        {/* Avatar Glow Rings */}
+                                                        <div className="absolute inset-[-10px] bg-gradient-to-tr from-cyan-400 via-electric to-pink-500 rounded-full blur-[20px] opacity-40 group-hover/avatar:opacity-70 transition-opacity duration-500 animate-[spin_4s_linear_infinite]"></div>
+                                                        <div className="absolute inset-[-2px] bg-gradient-to-tr from-cyan-400 to-electric rounded-full z-0"></div>
+
+                                                        <div className="relative w-32 h-32 rounded-full p-1 bg-black z-10 overflow-hidden transform group-hover/avatar:scale-95 transition-transform duration-300">
+                                                            <img src={user.avatar} className="w-full h-full rounded-full object-cover" alt="User Avatar" />
                                                         </div>
-                                                        <div className="absolute -bottom-2 -right-2 bg-black border border-white/20 rounded-full p-2 shadow-lg">
-                                                            <Shield className="text-electric w-5 h-5" />
-                                                        </div>
+
+                                                        <motion.div
+                                                            whileHover={{ scale: 1.1, rotate: 10 }}
+                                                            className="absolute -bottom-2 -right-2 bg-gradient-to-br from-gray-900 to-black border border-white/20 rounded-full p-3 shadow-[0_10px_20px_rgba(0,0,0,0.5)] z-20"
+                                                        >
+                                                            <Shield className="text-electric w-6 h-6 animate-pulse" />
+                                                        </motion.div>
                                                     </div>
-                                                    <div>
-                                                        <h2 className="text-4xl font-black text-white uppercase tracking-tight glitch-text" data-text={user.name}>{user.name}</h2>
-                                                        <div className="flex items-center space-x-3 text-sm text-gray-400 font-mono mt-2">
-                                                            <span className="bg-electric/20 text-electric px-3 py-1 rounded border border-electric/30 font-bold">{t('ui.lvl')} {user.level}</span>
-                                                            <span className="flex items-center"><Star size={14} className="mr-1 text-yellow-400" /> {user.title}</span>
+
+                                                    <div className="flex-1 text-center md:text-left">
+                                                        <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1 rounded-full mb-3 backdrop-blur-sm">
+                                                            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+                                                            <span className="text-[10px] font-bold text-gray-300 tracking-widest uppercase">System Online</span>
+                                                        </div>
+                                                        <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-gray-400 uppercase tracking-tight drop-shadow-lg mb-2">
+                                                            {user.name}
+                                                        </h2>
+                                                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm text-gray-300 font-mono">
+                                                            <div className="flex items-center gap-2 bg-electric/10 text-electric px-4 py-1.5 rounded-lg border border-electric/30 font-bold shadow-[0_0_15px_rgba(196,95,255,0.2)]">
+                                                                <Award size={16} /> Lvl {user.level}
+                                                            </div>
+                                                            <div className="flex items-center gap-2 bg-amber-500/10 text-amber-500 px-4 py-1.5 rounded-lg border border-amber-500/30 font-bold shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+                                                                <Star size={16} /> {user.title}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
 
-                                                {/* Stats Grid */}
-                                                <div className="grid grid-cols-3 gap-8 text-center bg-black/40 p-4 rounded-xl border border-white/5 backdrop-blur-sm">
-                                                    <div>
-                                                        <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">{t('profile.xp')}</div>
-                                                        <div className="text-2xl font-black text-white">{user.xp.toLocaleString()}</div>
-                                                    </div>
-                                                    <div>
-                                                        <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">{t('profile.streak')}</div>
-                                                        <div className="text-2xl font-black text-amber-400">{user.streak} <span className="text-[10px] text-gray-500">{t('ui.days')}</span></div>
-                                                    </div>
-                                                    <div>
-                                                        <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">{t('profile.credits')}</div>
-                                                        <div className="text-2xl font-black text-cyan-400">{user.credits}</div>
-                                                    </div>
+                                                {/* Stats Grid Dashboard */}
+                                                <div className="grid grid-cols-3 gap-3 md:gap-4 w-full md:w-auto flex-shrink-0">
+                                                    {[
+                                                        { label: 'Total XP', val: user.xp.toLocaleString(), color: 'text-white', glow: 'rgba(255,255,255,0.2)' },
+                                                        { label: 'Hack Streak', val: `${user.streak} D`, color: 'text-amber-400', glow: 'rgba(245,158,11,0.3)' },
+                                                        { label: 'Credits', val: user.credits.toLocaleString(), color: 'text-cyan-400', glow: 'rgba(34,211,238,0.3)' }
+                                                    ].map((stat, i) => (
+                                                        <motion.div
+                                                            key={i}
+                                                            whileHover={{ y: -5, background: 'rgba(255,255,255,0.1)' }}
+                                                            className="flex flex-col items-center justify-center bg-black/40 p-4 md:p-6 rounded-[20px] border border-white/5 backdrop-blur-md transition-all relative overflow-hidden group/stat"
+                                                        >
+                                                            <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-0 group-hover/stat:opacity-100 transition-opacity"></div>
+                                                            <div className="text-[10px] md:text-xs text-gray-500 font-bold uppercase tracking-[0.2em] mb-2 relative z-10">{stat.label}</div>
+                                                            <div className={`text-2xl md:text-3xl font-black ${stat.color} relative z-10 tracking-tight`} style={{ textShadow: `0 0 20px ${stat.glow}` }}>
+                                                                {stat.val}
+                                                            </div>
+                                                        </motion.div>
+                                                    ))}
                                                 </div>
                                             </div>
+                                        </motion.div>
 
-                                            {/* Next Unlock Widget */}
-                                            {nextLockedTool && (
-                                                <div className="bg-black/60 border-t border-white/5 p-4 flex items-center justify-between backdrop-blur-md cursor-pointer hover:bg-white/5 transition-colors group/unlock" onClick={() => handleTabSwitch(AppTab.LAB)}>
-                                                    <div className="flex items-center space-x-4">
-                                                        <div className="p-2 bg-gray-800 rounded-lg border border-gray-700 group-hover/unlock:border-electric transition-colors">
-                                                            <Lock size={18} className="text-gray-500 group-hover/unlock:text-electric" />
-                                                        </div>
-                                                        <div>
-                                                            <div className="text-xs text-gray-400 font-bold uppercase tracking-wider">{t('home.next_unlock')}</div>
-                                                            <div className="text-sm font-bold text-white group-hover/unlock:text-electric transition-colors">{t(nextLockedTool.name)}</div>
-                                                            <div className="text-[10px] text-gray-500 mt-0.5">{t(nextLockedTool.unlockCondition)}</div>
-                                                        </div>
+                                        {/* Next Unlock Widget (Integrated seamlessly) */}
+
+                                        {nextLockedTool && (
+                                            <div className="bg-black/60 border-t border-white/5 p-4 flex items-center justify-between backdrop-blur-md cursor-pointer hover:bg-white/5 transition-colors group/unlock" onClick={() => handleTabSwitch(AppTab.LAB)}>
+                                                <div className="flex items-center space-x-4">
+                                                    <div className="p-2 bg-gray-800 rounded-lg border border-gray-700 group-hover/unlock:border-electric transition-colors">
+                                                        <Lock size={18} className="text-gray-500 group-hover/unlock:text-electric" />
                                                     </div>
-                                                    <div className="flex items-center text-xs text-electric font-bold uppercase bg-electric/10 px-3 py-1.5 rounded-full border border-electric/20 group-hover/unlock:bg-electric group-hover/unlock:text-white transition-all">
-                                                        {t('home.view_lab')} <ChevronRight size={14} className="ml-1" />
+                                                    <div>
+                                                        <div className="text-xs text-gray-400 font-bold uppercase tracking-wider">{t('home.next_unlock')}</div>
+                                                        <div className="text-sm font-bold text-white group-hover/unlock:text-electric transition-colors">{t(nextLockedTool.name)}</div>
+                                                        <div className="text-[10px] text-gray-500 mt-0.5">{t(nextLockedTool.unlockCondition)}</div>
                                                     </div>
                                                 </div>
-                                            )}
-                                        </div>
-
-                                        <div>
-                                            <div className="flex items-center justify-between mb-4 px-2">
-                                                <h3 className="text-xl font-black text-white uppercase italic tracking-wide">Featured Simulations</h3>
-                                                <div className="flex gap-2">
-                                                    <div className="w-2 h-2 rounded-full bg-electric animate-pulse"></div>
-                                                    <div className="w-2 h-2 rounded-full bg-gray-700"></div>
-                                                    <div className="w-2 h-2 rounded-full bg-gray-700"></div>
+                                                <div className="flex items-center text-xs text-electric font-bold uppercase bg-electric/10 px-3 py-1.5 rounded-full border border-electric/20 group-hover/unlock:bg-electric group-hover/unlock:text-white transition-all">
+                                                    {t('home.view_lab')} <ChevronRight size={14} className="ml-1" />
                                                 </div>
                                             </div>
-                                            <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-6 scrollbar-hide -mx-6 px-6 md:mx-0 md:px-0">
-                                                {GAMES.slice(0, 10).map(game => (
-                                                    <div key={game.id} onClick={() => handleGameLaunch(game)} className="snap-center shrink-0 w-[280px] md:w-[320px] relative aspect-video bg-gray-900 rounded-xl overflow-hidden border border-white/10 cursor-pointer group hover:border-electric transition-all shadow-xl hover:shadow-[0_0_30px_rgba(196,95,255,0.3)] hover:-translate-y-1">
-                                                        <GameCover game={game} className="opacity-70 group-hover:opacity-100 transition-opacity duration-500 scale-105 group-hover:scale-110" iconSize={48} />
-                                                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+                                        )}
 
-                                                        {game.isPremium && !user.isPro && (
-                                                            <div className="absolute top-2 right-2 bg-black/80 text-amber-500 p-1.5 rounded-full border border-amber-500/50 z-10 shadow-lg backdrop-blur-md">
-                                                                <Lock size={14} />
-                                                            </div>
-                                                        )}
+                                        {/* ── SEARCH & FILTER BAR ── */}
+                                        <div className="space-y-4">
+                                            {/* Search Input */}
+                                            <div className="relative">
+                                                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                                                <input
+                                                    type="text"
+                                                    value={searchQuery}
+                                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                                    placeholder="Search 58 simulations..."
+                                                    className="w-full bg-black/60 border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-electric/50 focus:shadow-[0_0_20px_rgba(196,95,255,0.15)] transition-all backdrop-blur-xl font-medium"
+                                                />
+                                                {searchQuery && (
+                                                    <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors text-xs font-bold bg-white/10 px-2 py-1 rounded-md">Clear</button>
+                                                )}
+                                            </div>
 
-                                                        <div className="absolute bottom-4 left-4 right-4 z-10">
-                                                            <div className="text-lg font-black text-white truncate drop-shadow-md group-hover:text-electric transition-colors uppercase tracking-tight">
-                                                                {t(`game.${game.type.toLowerCase()}.title`)}
-                                                            </div>
-                                                            <div className="text-[11px] text-gray-300 truncate opacity-90 mb-3 drop-shadow-md">
-                                                                {t(`game.${game.type.toLowerCase()}.desc`)}
-                                                            </div>
-                                                            <div className="flex items-center space-x-2">
-                                                                <span className={`text-[9px] px-2 py-0.5 rounded-sm font-bold uppercase border ${game.difficulty === 'Rookie' ? 'bg-green-900/40 border-green-500/50 text-green-400' :
-                                                                    game.difficulty === 'Pro' ? 'bg-blue-900/40 border-blue-500/50 text-blue-400' : 'bg-red-900/40 border-red-500/50 text-red-400'
-                                                                    }`}>
-                                                                    {t(`difficulty.${game.difficulty.toLowerCase()}`)}
-                                                                </span>
-                                                                <span className="text-[9px] text-gray-400 font-mono flex items-center bg-black/50 px-2 py-0.5 rounded-sm backdrop-blur-sm">
-                                                                    <Clock size={10} className="mr-1" /> {game.durationMin} {t('ui.min')}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                            {/* Category Pills */}
+                                            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-2 px-2">
+                                                {CATEGORY_FILTERS.map(cat => (
+                                                    <button
+                                                        key={cat.key}
+                                                        onClick={() => setCategoryFilter(cat.key)}
+                                                        className={`shrink-0 text-xs font-bold px-4 py-2 rounded-full border transition-all duration-200 ${categoryFilter === cat.key
+                                                            ? 'bg-electric/20 text-electric border-electric/50 shadow-[0_0_10px_rgba(196,95,255,0.2)]'
+                                                            : 'bg-black/40 border-white/10 text-gray-400 hover:text-white hover:border-white/20 hover:bg-white/5'
+                                                            }`}
+                                                    >
+                                                        {cat.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+
+                                            {/* Difficulty & Status Row */}
+                                            <div className="flex flex-wrap gap-2">
+                                                {(['ALL', 'Rookie', 'Pro', 'Elite'] as const).map(diff => (
+                                                    <button
+                                                        key={diff}
+                                                        onClick={() => setDifficultyFilter(diff)}
+                                                        className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border transition-all duration-200 ${difficultyFilter === diff
+                                                            ? diff === 'Rookie' ? 'bg-green-500/20 text-green-400 border-green-500/40'
+                                                                : diff === 'Pro' ? 'bg-blue-500/20 text-blue-400 border-blue-500/40'
+                                                                    : diff === 'Elite' ? 'bg-red-500/20 text-red-400 border-red-500/40'
+                                                                        : 'bg-white/10 text-white border-white/30'
+                                                            : 'bg-black/30 border-white/5 text-gray-500 hover:text-gray-300 hover:border-white/15'
+                                                            }`}
+                                                    >
+                                                        {diff === 'ALL' ? '⚡ All Levels' : diff}
+                                                    </button>
+                                                ))}
+                                                <div className="w-px bg-white/10 mx-1"></div>
+                                                {(['ALL', 'COMPLETED', 'NEW'] as const).map(status => (
+                                                    <button
+                                                        key={status}
+                                                        onClick={() => setStatusFilter(status)}
+                                                        className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border transition-all duration-200 ${statusFilter === status
+                                                            ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40'
+                                                            : 'bg-black/30 border-white/5 text-gray-500 hover:text-gray-300 hover:border-white/15'
+                                                            }`}
+                                                    >
+                                                        {status === 'ALL' ? 'All' : status === 'COMPLETED' ? '✅ Completed' : '✨ New'}
+                                                    </button>
                                                 ))}
                                             </div>
                                         </div>
 
+                                        {/* ── FEATURED CAROUSEL ── */}
+                                        {!searchQuery && categoryFilter === 'ALL' && difficultyFilter === 'ALL' && statusFilter === 'ALL' && (
+                                            <div>
+                                                <div className="flex items-center justify-between mb-4 px-2">
+                                                    <h3 className="text-xl font-black text-white uppercase italic tracking-wide">Featured Simulations</h3>
+                                                    <div className="flex gap-2">
+                                                        <div className="w-2 h-2 rounded-full bg-electric animate-pulse"></div>
+                                                        <div className="w-2 h-2 rounded-full bg-gray-700"></div>
+                                                        <div className="w-2 h-2 rounded-full bg-gray-700"></div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-6 scrollbar-hide -mx-6 px-6 md:mx-0 md:px-0">
+                                                    {GAMES.slice(0, 10).map(game => {
+                                                        const isCompleted = user.completedNodes?.includes(game.id);
+                                                        return (
+                                                            <div key={game.id} onClick={() => handleGameLaunch(game)} className="snap-center shrink-0 w-[280px] md:w-[320px] relative aspect-video bg-gray-900 rounded-xl overflow-hidden border border-white/10 cursor-pointer group hover:border-electric transition-all shadow-xl hover:shadow-[0_0_30px_rgba(196,95,255,0.3)] hover:-translate-y-1">
+                                                                <GameCover game={game} className="opacity-70 group-hover:opacity-100 transition-opacity duration-500 scale-105 group-hover:scale-110" iconSize={48} />
+                                                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+
+                                                                {/* Completion Badge */}
+                                                                {isCompleted && (
+                                                                    <div className="absolute top-2 left-2 bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded-md border border-emerald-500/40 z-10 backdrop-blur-md flex items-center gap-1">
+                                                                        <CheckCircle size={12} />
+                                                                        <span className="text-[9px] font-bold uppercase">Cleared</span>
+                                                                    </div>
+                                                                )}
+
+                                                                {game.isPremium && !user.isPro && (
+                                                                    <div className="absolute top-2 right-2 bg-black/80 text-amber-500 p-1.5 rounded-full border border-amber-500/50 z-10 shadow-lg backdrop-blur-md">
+                                                                        <Lock size={14} />
+                                                                    </div>
+                                                                )}
+
+                                                                <div className="absolute bottom-4 left-4 right-4 z-10">
+                                                                    <div className="text-lg font-black text-white truncate drop-shadow-md group-hover:text-electric transition-colors uppercase tracking-tight">
+                                                                        {t(`game.${game.type.toLowerCase()}.title`)}
+                                                                    </div>
+                                                                    <div className="text-[11px] text-gray-300 truncate opacity-90 mb-3 drop-shadow-md">
+                                                                        {t(`game.${game.type.toLowerCase()}.desc`)}
+                                                                    </div>
+                                                                    <div className="flex items-center space-x-2">
+                                                                        <span className={`text-[9px] px-2 py-0.5 rounded-sm font-bold uppercase border ${game.difficulty === 'Rookie' ? 'bg-green-900/40 border-green-500/50 text-green-400' :
+                                                                            game.difficulty === 'Pro' ? 'bg-blue-900/40 border-blue-500/50 text-blue-400' : 'bg-red-900/40 border-red-500/50 text-red-400'
+                                                                            }`}>
+                                                                            {t(`difficulty.${game.difficulty.toLowerCase()}`)}
+                                                                        </span>
+                                                                        <span className="text-[9px] text-gray-400 font-mono flex items-center bg-black/50 px-2 py-0.5 rounded-sm backdrop-blur-sm">
+                                                                            <Clock size={10} className="mr-1" /> {game.durationMin} {t('ui.min')}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* ── FILTERED GAME GRID ── */}
                                         <div>
                                             <div className="flex items-center justify-between mb-4 px-2">
-                                                <h3 className="text-xl font-black text-white uppercase italic tracking-wide">All Scenarios</h3>
+                                                <h3 className="text-xl font-black text-white uppercase italic tracking-wide">
+                                                    {searchQuery || categoryFilter !== 'ALL' || difficultyFilter !== 'ALL' || statusFilter !== 'ALL' ? 'Results' : 'All Scenarios'}
+                                                </h3>
+                                                <span className="text-xs text-gray-500 font-mono">
+                                                    {(() => {
+                                                        const filtered = GAMES.filter(game => {
+                                                            if (searchQuery) {
+                                                                const q = searchQuery.toLowerCase();
+                                                                const title = t(`game.${game.type.toLowerCase()}.title`).toLowerCase();
+                                                                const desc = t(`game.${game.type.toLowerCase()}.desc`).toLowerCase();
+                                                                if (!title.includes(q) && !desc.includes(q) && !game.type.toLowerCase().includes(q)) return false;
+                                                            }
+                                                            if (categoryFilter !== 'ALL') {
+                                                                const skill = CATEGORY_FILTERS.find(c => c.key === categoryFilter)?.skill;
+                                                                if (skill && !game.tags.includes(skill)) return false;
+                                                            }
+                                                            if (difficultyFilter !== 'ALL' && game.difficulty !== difficultyFilter) return false;
+                                                            if (statusFilter === 'COMPLETED' && !user.completedNodes?.includes(game.id)) return false;
+                                                            if (statusFilter === 'NEW' && user.completedNodes?.includes(game.id)) return false;
+                                                            return true;
+                                                        });
+                                                        return `${filtered.length} / ${GAMES.length}`;
+                                                    })()}
+                                                </span>
                                             </div>
                                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                                                {GAMES.slice(10).map(game => (
-                                                    <div key={game.id} onClick={() => handleGameLaunch(game)} className="relative aspect-video bg-gray-900 rounded-xl overflow-hidden border border-white/5 cursor-pointer group hover:border-white/30 transition-all">
-                                                        <GameCover game={game} className="opacity-40 group-hover:opacity-80 transition-opacity duration-300" iconSize={32} />
-                                                        <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent"></div>
-                                                        {game.isPremium && !user.isPro && (
-                                                            <div className="absolute top-2 right-2 text-amber-500/50 z-10"><Lock size={12} /></div>
-                                                        )}
-                                                        <div className="absolute bottom-2 left-2 right-2 z-10">
-                                                            <div className="text-xs font-bold text-white truncate group-hover:text-electric transition-colors">{t(`game.${game.type.toLowerCase()}.title`)}</div>
-                                                            <div className="text-[9px] text-gray-500 truncate">{t(`game.${game.type.toLowerCase()}.desc`)}</div>
+                                                {GAMES.filter(game => {
+                                                    if (searchQuery) {
+                                                        const q = searchQuery.toLowerCase();
+                                                        const title = t(`game.${game.type.toLowerCase()}.title`).toLowerCase();
+                                                        const desc = t(`game.${game.type.toLowerCase()}.desc`).toLowerCase();
+                                                        if (!title.includes(q) && !desc.includes(q) && !game.type.toLowerCase().includes(q)) return false;
+                                                    }
+                                                    if (categoryFilter !== 'ALL') {
+                                                        const skill = CATEGORY_FILTERS.find(c => c.key === categoryFilter)?.skill;
+                                                        if (skill && !game.tags.includes(skill)) return false;
+                                                    }
+                                                    if (difficultyFilter !== 'ALL' && game.difficulty !== difficultyFilter) return false;
+                                                    if (statusFilter === 'COMPLETED' && !user.completedNodes?.includes(game.id)) return false;
+                                                    if (statusFilter === 'NEW' && user.completedNodes?.includes(game.id)) return false;
+                                                    return true;
+                                                }).slice(searchQuery || categoryFilter !== 'ALL' || difficultyFilter !== 'ALL' || statusFilter !== 'ALL' ? 0 : 10).map(game => {
+                                                    const isCompleted = user.completedNodes?.includes(game.id);
+                                                    return (
+                                                        <div key={game.id} onClick={() => handleGameLaunch(game)} className={`relative aspect-video bg-gray-900 rounded-xl overflow-hidden border cursor-pointer group hover:border-white/30 transition-all hover:-translate-y-0.5 hover:shadow-xl ${isCompleted ? 'border-emerald-500/20' : 'border-white/5'}`}>
+                                                            <GameCover game={game} className="opacity-40 group-hover:opacity-80 transition-opacity duration-300" iconSize={32} />
+                                                            <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent"></div>
+
+                                                            {/* Completion indicator */}
+                                                            {isCompleted && (
+                                                                <div className="absolute top-1.5 left-1.5 z-10">
+                                                                    <CheckCircle size={14} className="text-emerald-400 drop-shadow-[0_0_4px_rgba(16,185,129,0.6)]" />
+                                                                </div>
+                                                            )}
+
+                                                            {game.isPremium && !user.isPro && (
+                                                                <div className="absolute top-2 right-2 text-amber-500/50 z-10"><Lock size={12} /></div>
+                                                            )}
+                                                            <div className="absolute bottom-2 left-2 right-2 z-10">
+                                                                <div className="text-xs font-bold text-white truncate group-hover:text-electric transition-colors">{t(`game.${game.type.toLowerCase()}.title`)}</div>
+                                                                <div className="text-[9px] text-gray-500 truncate">{t(`game.${game.type.toLowerCase()}.desc`)}</div>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
+                                            {/* Empty state */}
+                                            {GAMES.filter(game => {
+                                                if (searchQuery) {
+                                                    const q = searchQuery.toLowerCase();
+                                                    const title = t(`game.${game.type.toLowerCase()}.title`).toLowerCase();
+                                                    const desc = t(`game.${game.type.toLowerCase()}.desc`).toLowerCase();
+                                                    if (!title.includes(q) && !desc.includes(q) && !game.type.toLowerCase().includes(q)) return false;
+                                                }
+                                                if (categoryFilter !== 'ALL') {
+                                                    const skill = CATEGORY_FILTERS.find(c => c.key === categoryFilter)?.skill;
+                                                    if (skill && !game.tags.includes(skill)) return false;
+                                                }
+                                                if (difficultyFilter !== 'ALL' && game.difficulty !== difficultyFilter) return false;
+                                                if (statusFilter === 'COMPLETED' && !user.completedNodes?.includes(game.id)) return false;
+                                                if (statusFilter === 'NEW' && user.completedNodes?.includes(game.id)) return false;
+                                                return true;
+                                            }).length === 0 && (
+                                                    <div className="text-center py-20 text-gray-500">
+                                                        <Search size={48} className="mx-auto mb-4 opacity-30" />
+                                                        <p className="text-sm font-bold">No simulations match your filters.</p>
+                                                        <button onClick={() => { setSearchQuery(''); setCategoryFilter('ALL'); setDifficultyFilter('ALL'); setStatusFilter('ALL'); }} className="text-electric text-xs mt-3 underline">Clear all filters</button>
+                                                    </div>
+                                                )}
                                         </div>
 
                                         {/* Continue Learning Path Link */}
@@ -934,6 +1243,15 @@ export const App: React.FC = () => {
                                 </motion.div>
                             )}
 
+                            {activeTab === AppTab.GROWTH && (
+                                <motion.div key="growth" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.35 }} className="flex flex-col h-full relative z-10">
+                                    <ViralDashboard
+                                        userReferralCode={user.id?.slice(0, 8).toUpperCase()}
+                                        onNavigateToUseCases={() => { }}
+                                    />
+                                </motion.div>
+                            )}
+
                             {activeTab === AppTab.PROFILE && (
                                 <motion.div key="profile" initial={{ opacity: 0, scale: 0.97, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: -20 }} transition={{ duration: 0.4 }} className="p-4 sm:p-8 space-y-10 pb-32">
                                     {/* Epic Profile Header Card */}
@@ -989,6 +1307,11 @@ export const App: React.FC = () => {
                                     </div>
 
                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                        {/* Epic Game Analytics */}
+                                        <div className="lg:col-span-2">
+                                            <GameAnalyticsDashboard user={user} t={t} />
+                                        </div>
+
                                         {/* Epic Skills Radar */}
                                         <div className="bg-gradient-to-br from-black/80 to-gray-900/90 p-8 rounded-[2rem] border border-white/10 relative group hover:border-white/20 transition-all shadow-2xl backdrop-blur-xl flex flex-col items-center">
                                             <div className="w-full flex justify-between items-center mb-8">
@@ -1078,25 +1401,40 @@ export const App: React.FC = () => {
                     </ErrorBoundary>
                 </div>
 
-                <div className="md:hidden bg-black border-t border-white/10 flex justify-around p-3 z-50 pb-safe">
-                    {[AppTab.HOME, AppTab.LEARN, AppTab.LAB, AppTab.LEADERBOARD, AppTab.PROFILE].map(tab => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`flex flex-col items-center ${activeTab === tab ? 'text-electric' : 'text-gray-500'}`}
-                        >
-                            {tab === AppTab.HOME && <img src="/assets/aaa/nav-home.png" className="w-5 h-5" />}
-                            {tab === AppTab.LEARN && <img src="/assets/aaa/nav-games.png" className="w-5 h-5" />}
-                            {tab === AppTab.LAB && <img src="/assets/aaa/nav-progress.png" className="w-5 h-5" />}
-                            {tab === AppTab.LEADERBOARD && <img src="/assets/aaa/nav-leaderboard.png" className="w-5 h-5" />}
-                            {tab === AppTab.PROFILE && <img src="/assets/aaa/nav-profile.png" className="w-5 h-5" />}
-                            <span className="text-[9px] font-bold mt-1 uppercase">
-                                {tab === AppTab.LEADERBOARD ? t('leaderboard.squad').substring(0, 5) : t(`nav.${tab.toLowerCase()}`).substring(0, 4)}
-                            </span>
-                        </button>
-                    ))}
+                {/* ── AAA Mobile Bottom Nav ── */}
+                <div className="md:hidden bg-black/95 backdrop-blur-2xl border-t border-white/10 flex justify-around px-2 pt-2 pb-safe z-50 relative">
+                    {/* Glow effect for active tab */}
+                    <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-electric/50 to-transparent"></div>
+                    {[AppTab.HOME, AppTab.LEARN, AppTab.LAB, AppTab.LEADERBOARD, AppTab.GROWTH, AppTab.PROFILE].map(tab => {
+                        const isActive = activeTab === tab;
+                        return (
+                            <button
+                                key={tab}
+                                onClick={() => handleTabSwitch(tab)}
+                                className={`flex flex-col items-center py-1.5 px-2 rounded-xl transition-all duration-200 relative ${isActive ? 'text-electric' : 'text-gray-500 active:text-gray-300'}`}
+                            >
+                                {isActive && (
+                                    <motion.div
+                                        layoutId="mobileNavGlow"
+                                        className="absolute -top-0.5 w-8 h-1 bg-electric rounded-full shadow-[0_0_10px_rgba(196,95,255,0.6)]"
+                                    />
+                                )}
+                                <div className={`w-6 h-6 flex items-center justify-center transition-transform ${isActive ? 'scale-110' : ''}`}>
+                                    {tab === AppTab.HOME && <Home size={20} />}
+                                    {tab === AppTab.LEARN && <BookOpen size={20} />}
+                                    {tab === AppTab.LAB && <FlaskConical size={20} />}
+                                    {tab === AppTab.LEADERBOARD && <Trophy size={20} />}
+                                    {tab === AppTab.GROWTH && <BarChart3 size={20} />}
+                                    {tab === AppTab.PROFILE && <User size={20} />}
+                                </div>
+                                <span className={`text-[8px] font-bold mt-0.5 uppercase tracking-wider ${isActive ? 'text-electric' : 'text-gray-600'}`}>
+                                    {tab === AppTab.HOME ? 'Home' : tab === AppTab.LEARN ? 'Learn' : tab === AppTab.LAB ? 'Lab' : tab === AppTab.LEADERBOARD ? 'Rank' : tab === AppTab.GROWTH ? 'Grow' : 'You'}
+                                </span>
+                            </button>
+                        );
+                    })}
                 </div>
-            </main>
-        </div>
+            </main >
+        </div >
     );
 };

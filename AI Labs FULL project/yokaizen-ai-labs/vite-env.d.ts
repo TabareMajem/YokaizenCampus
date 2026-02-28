@@ -1,0 +1,4 @@
+/// <reference types="react" />
+/// <reference types="react-dom" />
+/// <reference types="@react-three/fiber" />
+/// <reference types="vite/client" />

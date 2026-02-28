@@ -1,7 +1,7 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, MeshDistortMaterial, Float, Sparkles } from '@react-three/drei';
-import { EffectComposer, Bloom, ChromaticAberration, Glitch, Vignette } from '@react-three/postprocessing';
+import { OrbitControls, MeshDistortMaterial, Float, Sparkles, MeshTransmissionMaterial, Cone, TorusKnot } from '@react-three/drei';
+import { EffectComposer, Bloom, ChromaticAberration, Glitch, Vignette, Noise } from '@react-three/postprocessing';
 import { GlitchMode, BlendFunction } from 'postprocessing';
 import * as THREE from 'three';
 import { Activity, Shield, Zap, AlertTriangle, Flame, Target, Trophy, SkullIcon } from 'lucide-react';
@@ -15,80 +15,142 @@ export interface DreamSimProps {
     t: (key: string) => string;
 }
 
-// --- 3D Target Node ---
-const TargetNode = ({ position, color, scale, onClick, id }: {
-    position: [number, number, number]; color: string; scale: number; onClick: (id: string) => void; id: string;
-}) => {
-    const meshRef = useRef<THREE.Mesh>(null);
-    const [hovered, setHovered] = useState(false);
+// --- Background Environment ---
+const DreamBackground = () => {
+    const knotRef = useRef<THREE.Mesh>(null);
     useFrame((state) => {
-        if (meshRef.current) {
-            meshRef.current.rotation.x = state.clock.elapsedTime * 2;
-            meshRef.current.rotation.z = state.clock.elapsedTime * 1.5;
-            const pulse = 1 + Math.sin(state.clock.elapsedTime * 6) * 0.12;
-            meshRef.current.scale.setScalar(scale * pulse * (hovered ? 1.3 : 1));
+        if (knotRef.current) {
+            knotRef.current.rotation.x = state.clock.elapsedTime * 0.1;
+            knotRef.current.rotation.y = state.clock.elapsedTime * 0.15;
+            knotRef.current.position.y = Math.sin(state.clock.elapsedTime * 0.5) * 2;
         }
     });
+
     return (
-        <Float speed={3} rotationIntensity={2} floatIntensity={2}>
-            <mesh ref={meshRef} position={position}
+        <group position={[0, 0, -15]}>
+            <TorusKnot ref={knotRef} args={[10, 3, 128, 32]}>
+                <meshStandardMaterial
+                    color="#1a0b2e"
+                    emissive="#aa88ff"
+                    emissiveIntensity={0.2}
+                    wireframe
+                    transparent
+                    opacity={0.15}
+                />
+            </TorusKnot>
+        </group>
+    );
+};
+
+// --- Target Node (Dream Core) ---
+const DreamCore = ({ position, color, scale, onClick, id }: any) => {
+    const meshRef = useRef<THREE.Mesh>(null);
+    const islandRef = useRef<THREE.Mesh>(null);
+    const [hovered, setHovered] = useState(false);
+
+    useFrame((state) => {
+        if (meshRef.current) {
+            meshRef.current.rotation.x = state.clock.elapsedTime * 1.5;
+            meshRef.current.rotation.y = state.clock.elapsedTime * 2;
+            const pulse = 1 + Math.sin(state.clock.elapsedTime * 4 + position[0]) * 0.1;
+            meshRef.current.scale.setScalar(scale * pulse * (hovered ? 1.3 : 1));
+        }
+        if (islandRef.current) {
+            islandRef.current.rotation.y = state.clock.elapsedTime * 0.2;
+        }
+    });
+
+    return (
+        <Float speed={2} rotationIntensity={0.5} floatIntensity={1.5} floatingRange={[-0.5, 0.5]}>
+            <group position={position}>
+                {/* Floating Island Base */}
+                <mesh ref={islandRef} position={[0, -1.5, 0]} rotation={[Math.PI, 0, 0]}>
+                    <coneGeometry args={[1.2, 1.5, 6]} />
+                    <meshStandardMaterial color="#2d1b4e" roughness={0.9} metalness={0.1} flatShading />
+                </mesh>
+
+                {/* Dream Core Orb */}
+                <mesh
+                    ref={meshRef}
+                    position={[0, 0, 0]}
+                    onClick={(e) => { e.stopPropagation(); onClick(id); }}
+                    onPointerOver={() => { setHovered(true); document.body.style.cursor = 'crosshair'; }}
+                    onPointerOut={() => { setHovered(false); document.body.style.cursor = 'auto'; }}
+                >
+                    <octahedronGeometry args={[0.5, 2]} />
+                    <MeshTransmissionMaterial
+                        color={color}
+                        transparent
+                        opacity={0.9}
+                        metalness={0.8}
+                        roughness={0.1}
+                        clearcoat={1}
+                        transmission={1}
+                        thickness={2}
+                    />
+                    {hovered && (
+                        <pointLight distance={6} intensity={2} color={color} />
+                    )}
+                </mesh>
+
+                {/* Core Inner Glow */}
+                <mesh position={[0, 0, 0]} scale={0.3}>
+                    <sphereGeometry args={[1, 16, 16]} />
+                    <meshBasicMaterial color={color} />
+                </mesh>
+            </group>
+        </Float>
+    );
+};
+
+// --- Hazard Node (Nightmare Shard) ---
+const NightmareShard = ({ position, onClick, id }: any) => {
+    const meshRef = useRef<THREE.Mesh>(null);
+
+    useFrame((state) => {
+        if (meshRef.current) {
+            meshRef.current.rotation.x = state.clock.elapsedTime * 4;
+            meshRef.current.rotation.z = state.clock.elapsedTime * 5;
+            const jitter = Math.random() * 0.1;
+            meshRef.current.position.x = position[0] + jitter;
+            meshRef.current.position.y = position[1] + jitter;
+        }
+    });
+
+    return (
+        <Float speed={5} rotationIntensity={3} floatIntensity={0.5}>
+            <mesh
+                ref={meshRef}
+                position={position}
                 onClick={(e) => { e.stopPropagation(); onClick(id); }}
-                onPointerOver={() => { setHovered(true); document.body.style.cursor = 'crosshair'; }}
-                onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default'; }}>
-                <sphereGeometry args={[0.4, 32, 32]} />
-                <MeshDistortMaterial color={color} emissive={color} emissiveIntensity={hovered ? 5 : 3}
-                    clearcoat={1} metalness={0.9} roughness={0} distort={hovered ? 0.6 : 0.25} speed={hovered ? 8 : 4} />
-                <pointLight distance={5} intensity={3} color={color} />
+                onPointerOver={() => { document.body.style.cursor = 'not-allowed'; }}
+                onPointerOut={() => { document.body.style.cursor = 'auto'; }}
+            >
+                <icosahedronGeometry args={[0.6, 0]} />
+                <meshStandardMaterial
+                    color="#ff0044"
+                    emissive="#ff0044"
+                    emissiveIntensity={2}
+                    wireframe
+                    roughness={0.8}
+                    metalness={0.2}
+                />
+                <pointLight distance={5} intensity={1.5} color="#ff0044" />
             </mesh>
         </Float>
     );
 };
 
-// --- 3D Hazard Node ---
-const HazardNode = ({ position, onClick, id }: {
-    position: [number, number, number]; onClick: (id: string) => void; id: string;
-}) => {
-    const meshRef = useRef<THREE.Mesh>(null);
-    useFrame((state) => {
-        if (meshRef.current) {
-            meshRef.current.rotation.x = state.clock.elapsedTime * 5;
-            meshRef.current.rotation.y = state.clock.elapsedTime * 3;
-            const s = 0.7 + Math.sin(state.clock.elapsedTime * 10) * 0.15;
-            meshRef.current.scale.setScalar(s);
-        }
-    });
-    return (
-        <mesh ref={meshRef} position={position}
-            onClick={(e) => { e.stopPropagation(); onClick(id); }}
-            onPointerOver={() => { document.body.style.cursor = 'not-allowed'; }}
-            onPointerOut={() => { document.body.style.cursor = 'default'; }}>
-            <octahedronGeometry args={[0.45]} />
-            <meshStandardMaterial color="#ff3366" emissive="#ff3366" emissiveIntensity={4}
-                wireframe transparent opacity={0.85} roughness={0.3} metalness={0.8} />
-            <pointLight distance={4} intensity={2.5} color="#ff3366" />
-        </mesh>
-    );
-};
-
-// --- Camera Rig ---
-const CameraRig = ({ intensity }: { intensity: number }) => {
-    useFrame((state) => {
-        const t = state.clock.elapsedTime;
-        const shake = intensity > 0.5 ? (Math.random() - 0.5) * intensity * 0.3 : 0;
-        state.camera.position.x = THREE.MathUtils.lerp(state.camera.position.x, Math.sin(t * 0.2) * 2 + shake, 0.05);
-        state.camera.position.y = THREE.MathUtils.lerp(state.camera.position.y, Math.cos(t * 0.15) * 1.5 + shake, 0.05);
-        state.camera.lookAt(0, 0, 0);
-    });
-    return null;
-};
-
-// --- Types ---
+// --- Types & Helpers ---
 interface GameNode { id: string; position: [number, number, number]; type: 'target' | 'hazard'; color: string; spawnedAt: number; lifetime: number; }
 
-const TARGET_COLORS = ['#aa88ff', '#ff88aa', '#88aaff', '#ffffff'];
-const genPos = (): [number, number, number] => [(Math.random() - 0.5) * 12, (Math.random() - 0.5) * 8, (Math.random() - 0.5) * 6];
+const TARGET_COLORS = ['#00ffff', '#ff00ff', '#aa88ff', '#00ffaa'];
+const genPos = (): [number, number, number] => [
+    (Math.random() - 0.5) * 16,
+    (Math.random() - 0.5) * 10,
+    (Math.random() - 0.5) * 8 - 2
+];
 
-// --- Main Component ---
 export const DreamSim: React.FC<DreamSimProps> = ({ onComplete, difficulty, t }) => {
     const { queueDialogue } = useDialogue();
     const [score, setScore] = useState(0);
@@ -98,184 +160,265 @@ export const DreamSim: React.FC<DreamSimProps> = ({ onComplete, difficulty, t })
     const [maxCombo, setMaxCombo] = useState(0);
     const [nodes, setNodes] = useState<GameNode[]>([]);
     const [glitchActive, setGlitchActive] = useState(false);
-    const [screenFlash, setScreenFlash] = useState<string | null>(null);
+
     const [advisorMsg, setAdvisorMsg] = useState(t('game.advisor.flow_stable'));
     const [adversaryMsg, setAdversaryMsg] = useState(t('game.adversary.cracks_attention'));
 
     const diffMul = difficulty === 'HARD' ? 1.5 : difficulty === 'MEDIUM' ? 1.2 : 1;
-    const spawnInterval = Math.max(400, 1200 - (score / 100) * 80);
-    const hazardChance = Math.min(0.4, 0.15 + (score / 2000));
+    const spawnInterval = Math.max(500, 1500 - (score / 100) * 100);
+    const hazardChance = Math.min(0.35, 0.15 + (score / 2000));
 
-    // Narrative: Mission Briefing
+    // Narrative Briefing
     useEffect(() => {
         queueDialogue([
-            { id: `dreamsim-brief-${Date.now()}`, character: 'ATHENA', text: t('game.instructions.click_targets') },
-            { id: `dreamsim-brief2-${Date.now()}`, character: 'BYTE', text: t('game.instructions.avoid_hazards'), isGlitchy: true },
+            { id: `dreamsim-brief-${Date.now()}`, character: 'ATHENA', text: "Welcome to the Dreamscape. Collect the iridescent Dream Cores." },
+            { id: `dreamsim-brief2-${Date.now()}`, character: 'BYTE', text: "Beware the Nightmare Shards. They will shatter your combo.", isGlitchy: true },
         ]);
     }, [queueDialogue, t]);
 
-    // Node spawner
+    // Node Spawner Loop
     useEffect(() => {
         if (gameState !== 'PLAYING') return;
         const interval = setInterval(() => {
             setNodes(prev => {
                 const now = Date.now();
                 const active = prev.filter(n => now - n.spawnedAt < n.lifetime);
-                if (active.length >= 6) return active;
+                if (active.length >= 7) return active;
+
                 const isHazard = Math.random() < hazardChance;
+
                 return [...active, {
-                    id: `${Date.now()}-${Math.random()}`, position: genPos(),
+                    id: `${Date.now()}-${Math.random()}`,
+                    position: genPos(),
                     type: isHazard ? 'hazard' : 'target',
                     color: TARGET_COLORS[Math.floor(Math.random() * TARGET_COLORS.length)],
-                    spawnedAt: now, lifetime: Math.max(1500, 3000 - (score / 200) * 500),
+                    spawnedAt: now,
+                    lifetime: Math.max(1800, 3500 - (score / 200) * 500),
                 }];
             });
         }, spawnInterval);
         return () => clearInterval(interval);
     }, [gameState, spawnInterval, hazardChance, score]);
 
-    // Agent chatter
+    // Agent Chatter Loop
     useEffect(() => {
         if (gameState !== 'PLAYING') return;
-        const aLines = [t('game.advisor.flow_stable'), t('game.advisor.integrity_optimal'), t('game.advisor.metrics_align'), `${t('game.hud.combo_chain')}: ${combo}x`];
-        const eLines = [t('game.adversary.cracks_attention'), t('game.adversary.tempting'), t('game.adversary.hesitate'), `${combo}x ${t('game.hud.combo')}...`];
-        const iv = setInterval(() => {
-            if (Math.random() > 0.6) { setAdversaryMsg(eLines[Math.floor(Math.random() * eLines.length)]); audio.playSystemMessage?.({ type: 'warning' }); }
-            else { setAdvisorMsg(aLines[Math.floor(Math.random() * aLines.length)]); audio.playSystemMessage?.({ type: 'success' }); }
-        }, 5000);
-        return () => clearInterval(iv);
-    }, [gameState, combo, t]);
+        const advisorLines = [
+            "Dream stability holding.",
+            "Core synchronization optimal.",
+            "Keep tracing the latent space pathways.",
+            `Excellent focus. Chain multiplier: ${combo}x`
+        ];
+        const adversaryLines = [
+            "Your mind is wandering.",
+            "Nightmares are manifesting.",
+            "You cannot control the subconscious.",
+            `That combo is fragile...`
+        ];
 
-    // Timer
+        const intervalId = setInterval(() => {
+            if (Math.random() > 0.5) {
+                setAdversaryMsg(adversaryLines[Math.floor(Math.random() * adversaryLines.length)]);
+                audio.playSystemMessage?.({ type: 'warning' });
+            } else {
+                setAdvisorMsg(advisorLines[Math.floor(Math.random() * advisorLines.length)]);
+                audio.playSystemMessage?.({ type: 'success' });
+            }
+        }, 5500);
+        return () => clearInterval(intervalId);
+    }, [gameState, combo]);
+
+    // Timer Loop
     useEffect(() => {
         if (gameState !== 'PLAYING') return;
         const timer = setInterval(() => {
             setTimeLeft(prev => {
                 if (prev <= 1) {
                     clearInterval(timer);
-                    const fs = score >= 400 ? 'SUCCESS' : 'FAILED';
-                    setGameState(fs);
-                    if (fs === 'SUCCESS') {
-                        audio.playSuccess(); queueDialogue([
-                            { id: `dreamsim-win-${Date.now()}`, character: 'SYNTAX', text: `${t('game.hud.final_score')}: ${score}. ${t('game.hud.max_combo')}: ${maxCombo}x.` },
-                            { id: `dreamsim-win2-${Date.now()}`, character: 'ATHENA', text: t('game.state.mission_complete') },
+                    const isWin = score >= 500;
+                    setGameState(isWin ? 'SUCCESS' : 'FAILED');
+
+                    if (isWin) {
+                        audio.playSuccess();
+                        queueDialogue([
+                            { id: `dreamsim-win-${Date.now()}`, character: 'SYNTAX', text: `Lucid state achieved. Final Score: ${score}. Max Combo: ${maxCombo}x.` }
                         ]);
                     } else {
-                        audio.playError(); queueDialogue([
-                            { id: `dreamsim-fail-${Date.now()}`, character: 'BYTE', text: t('game.state.mission_failed'), isGlitchy: true },
+                        audio.playError();
+                        queueDialogue([
+                            { id: `dreamsim-fail-${Date.now()}`, character: 'BYTE', text: "Lost in the dreamscape...", isGlitchy: true },
                         ]);
                     }
-                    onComplete(score, { completionTime: 50 - prev, difficulty, maxCombo });
+                    onComplete(isWin ? score : 0, { completionTime: 50 - prev, difficulty, maxCombo });
                     return 0;
                 }
                 return prev - 1;
             });
         }, 1000);
         return () => clearInterval(timer);
-    }, [gameState, score, onComplete, difficulty, maxCombo, queueDialogue, t]);
+    }, [gameState, score, onComplete, difficulty, maxCombo, queueDialogue]);
 
     const handleTargetClick = useCallback((id: string) => {
         if (gameState !== 'PLAYING') return;
         setNodes(prev => prev.filter(n => n.id !== id));
         audio.playClick();
-        const nc = combo + 1; setCombo(nc); setMaxCombo(c => Math.max(c, nc));
-        setScore(s => s + Math.floor(50 * Math.min(nc, 10) * diffMul));
-        setScreenFlash('#aa88ff'); setTimeout(() => setScreenFlash(null), 80);
+
+        const newCombo = combo + 1;
+        setCombo(newCombo);
+        setMaxCombo(c => Math.max(c, newCombo));
+        setScore(s => s + Math.floor(50 * Math.min(newCombo, 10) * diffMul));
     }, [gameState, combo, diffMul]);
 
     const handleHazardClick = useCallback((id: string) => {
         if (gameState !== 'PLAYING') return;
         setNodes(prev => prev.filter(n => n.id !== id));
-        audio.playError(); setCombo(0); setScore(s => Math.max(0, s - 200));
-        setGlitchActive(true); setScreenFlash('#ff0000');
-        setTimeout(() => { setGlitchActive(false); setScreenFlash(null); }, 400);
+        audio.playError();
+        setCombo(0);
+        setScore(s => Math.max(0, s - 150));
+
+        setGlitchActive(true);
+        setTimeout(() => setGlitchActive(false), 500);
     }, [gameState]);
 
     return (
-        <div className="relative w-full h-[600px] rounded-xl overflow-hidden border border-white/10 bg-black shadow-2xl">
-            <AnimatePresence>{screenFlash && (<motion.div initial={{ opacity: 0.6 }} animate={{ opacity: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="absolute inset-0 z-30 pointer-events-none" style={{ backgroundColor: screenFlash }} />)}</AnimatePresence>
-
-            {/* HUD */}
-            <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-start z-10 pointer-events-none">
-                <div className="flex flex-col gap-3">
-                    <div className="bg-black/60 backdrop-blur-md rounded-lg p-3 border border-white/20">
-                        <div className="flex items-center gap-2 text-emerald-400 mb-1"><Activity className="w-4 h-4" /><span className="text-xs uppercase tracking-widest font-bold">{t('game.hud.score')}</span></div>
-                        <div className="text-3xl font-mono font-black text-white tabular-nums">{score}</div>
+        <div className="relative w-full h-[600px] rounded-xl overflow-hidden border border-[#aa88ff]/20 bg-[#050015] shadow-2xl">
+            {/* Cinematic Glass HUD */}
+            <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-start z-10 pointer-events-none">
+                <div className="flex flex-col gap-4">
+                    <div className="bg-black/40 backdrop-blur-md rounded-2xl p-4 border border-[#aa88ff]/30 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#aa88ff]/10 to-transparent" />
+                        <div className="flex items-center gap-2 text-[#aa88ff] mb-1">
+                            <Activity className="w-4 h-4" />
+                            <span className="text-xs uppercase tracking-widest font-bold">Lucidity Score</span>
+                        </div>
+                        <div className="text-4xl font-mono font-black text-white tabular-nums drop-shadow-[0_0_10px_#aa88ff]">{score}</div>
                     </div>
-                    <AnimatePresence>{combo > 1 && (<motion.div initial={{ scale: 0, x: -50 }} animate={{ scale: 1, x: 0 }} exit={{ scale: 0 }} className="bg-black/60 backdrop-blur-md rounded-lg p-3 border border-orange-500/50">
-                        <div className="flex items-center gap-2"><Flame className="w-5 h-5 text-orange-500 animate-pulse" /><span className="text-orange-400 font-black text-2xl italic">{combo}x</span></div>
-                        <div className="text-[10px] text-orange-300/60 uppercase tracking-widest mt-1">{t('game.hud.combo_chain')}</div>
-                    </motion.div>)}</AnimatePresence>
                 </div>
+
                 <div className="flex flex-col items-end gap-3">
-                    <div className="bg-black/60 backdrop-blur-md rounded-lg p-3 border border-blue-500/40">
-                        <div className="flex items-center gap-2 text-blue-400 mb-1"><AlertTriangle className="w-4 h-4" /><span className="text-xs uppercase tracking-widest font-bold">{t('game.hud.time')}</span></div>
-                        <div className={`text-3xl font-mono font-black tabular-nums ${timeLeft <= 10 ? 'text-red-500 animate-pulse' : 'text-white'}`}>{timeLeft}s</div>
+                    <div className="bg-black/40 backdrop-blur-md rounded-2xl p-4 border border-[#00ffff]/30">
+                        <div className="flex items-center gap-2 text-[#00ffff] mb-1">
+                            <Target className="w-4 h-4" />
+                            <span className="text-xs uppercase tracking-widest font-bold">Dream Cycle</span>
+                        </div>
+                        <div className={`text-4xl font-mono font-black tabular-nums ${timeLeft <= 10 ? 'text-[#ff0044] animate-pulse drop-shadow-[0_0_10px_#ff0044]' : 'text-white drop-shadow-[0_0_10px_#00ffff]'}`}>{timeLeft}s</div>
                     </div>
-                    <div className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest border ${difficulty === 'HARD' ? 'border-red-500 text-red-400 bg-red-500/10' : difficulty === 'MEDIUM' ? 'border-yellow-500 text-yellow-400 bg-yellow-500/10' : 'border-green-500 text-green-400 bg-green-500/10'}`}>{t(`game.difficulty.${difficulty.toLowerCase()}`)}</div>
                 </div>
             </div>
 
-            {/* Instructions */}
-            {timeLeft > 45 && gameState === 'PLAYING' && (
-                <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none text-center">
-                    <div className="bg-black/80 backdrop-blur-xl p-6 rounded-2xl border border-cyan-500/30">
-                        <div className="text-cyan-400 font-black text-xl uppercase tracking-widest mb-2"><Target className="inline w-6 h-6 mr-2" /> {t('game.instructions.click_targets')}</div>
-                        <div className="text-red-400 font-bold text-sm"><SkullIcon className="inline w-4 h-4 mr-1" /> {t('game.instructions.avoid_hazards')}</div>
-                    </div>
-                </motion.div>
-            )}
+            {/* Central Combo Indicator */}
+            <AnimatePresence>
+                {combo > 2 && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.5, y: -20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        className="absolute top-8 left-1/2 -translate-x-1/2 z-10 pointer-events-none bg-black/60 backdrop-blur-xl px-6 py-2 rounded-full border border-[#ff00ff]/50 flex items-center gap-3 shadow-[0_0_20px_#ff00ff40]"
+                    >
+                        <Flame className="w-5 h-5 text-[#ff00ff] animate-pulse" />
+                        <span className="text-[#ff00ff] font-black tracking-widest text-lg">{combo}x FLOW</span>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
-            {/* Agent Panel */}
-            <div className="absolute bottom-4 left-4 right-4 flex flex-col sm:flex-row gap-2 sm:gap-3 z-10 pointer-events-none">
-                <div className="flex-1 bg-black/70 backdrop-blur-xl rounded-lg p-3 border-l-4 border-indigo-500">
-                    <div className="text-[10px] text-indigo-400 mb-1 uppercase tracking-widest font-bold flex items-center gap-1"><Shield className="w-3 h-3" /> {t('game.advisor.label')}</div>
-                    <div className="text-xs text-indigo-100 font-mono leading-relaxed">{advisorMsg}</div>
+            {/* Narrative Comm Panels */}
+            <div className="absolute bottom-6 left-6 right-6 flex flex-col md:flex-row gap-4 z-10 pointer-events-none">
+                <div className="flex-1 bg-gradient-to-r from-[#aa88ff]/10 to-transparent backdrop-blur-md rounded-xl p-4 border-l-4 border-[#aa88ff]">
+                    <div className="text-[10px] text-[#aa88ff] mb-1 uppercase tracking-widest font-bold flex items-center gap-2"><Shield className="w-3 h-3" /> Synthesis Guide</div>
+                    <div className="text-sm text-white/90 font-mono leading-relaxed">{advisorMsg}</div>
                 </div>
-                <div className="flex-1 bg-black/70 backdrop-blur-xl rounded-lg p-3 border-l-4 border-red-500">
-                    <div className="text-[10px] text-red-500 mb-1 uppercase tracking-widest font-bold flex items-center gap-1"><Zap className="w-3 h-3" /> {t('game.adversary.label')}</div>
-                    <div className="text-xs text-red-100 font-mono leading-relaxed">{adversaryMsg}</div>
+                <div className="flex-1 bg-gradient-to-l from-[#ff0044]/10 to-transparent backdrop-blur-md rounded-xl p-4 border-r-4 border-[#ff0044] text-right">
+                    <div className="text-[10px] text-[#ff0044] mb-1 uppercase tracking-widest font-bold flex items-center justify-end gap-2">Nightmare Logic <Zap className="w-3 h-3" /></div>
+                    <div className="text-sm text-white/90 font-mono leading-relaxed">{adversaryMsg}</div>
                 </div>
             </div>
 
-            {/* Game Over */}
-            <AnimatePresence>{gameState !== 'PLAYING' && (
-                <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="absolute inset-0 z-20 flex items-center justify-center p-4 sm:p-0 bg-black/90 backdrop-blur-md">
-                    <div className="text-center p-6 sm:p-10 w-full sm:w-auto rounded-2xl border border-white/10 bg-black/50 shadow-2xl max-w-[90vw] sm:max-w-md">
-                        <div className={`w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center ${gameState === 'SUCCESS' ? 'bg-cyan-500/20 border border-cyan-500/30' : 'bg-red-500/20 border border-red-500/30'}`}>
-                            {gameState === 'SUCCESS' ? <Trophy className="w-10 h-10 text-cyan-400" /> : <SkullIcon className="w-10 h-10 text-red-400" />}
-                        </div>
-                        <div className={`text-3xl sm:text-5xl font-black uppercase tracking-widest mb-4 ${gameState === 'SUCCESS' ? 'text-cyan-400' : 'text-red-500'} drop-shadow-[0_0_15px_currentColor]`}>
-                            {gameState === 'SUCCESS' ? t('game.state.mission_complete') : t('game.state.mission_failed')}
-                        </div>
-                        <div className="text-2xl text-white/80 font-mono mb-2">{t('game.hud.final_score')}: {score}</div>
-                        <div className="text-sm text-orange-400 font-bold mb-6">{t('game.hud.max_combo')}: {maxCombo}x</div>
-                    </div>
-                </motion.div>
-            )}</AnimatePresence>
+            {/* Game Over Screen */}
+            <AnimatePresence>
+                {gameState !== 'PLAYING' && (
+                    <motion.div
+                        initial={{ opacity: 0, backdropFilter: 'blur(0px)' }}
+                        animate={{ opacity: 1, backdropFilter: 'blur(12px)' }}
+                        className="absolute inset-0 z-30 flex items-center justify-center p-4 bg-black/80"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            className="bg-black/60 border border-white/10 p-12 rounded-3xl text-center relative overflow-hidden shadow-2xl max-w-lg w-full"
+                        >
+                            {/* Decorative Line */}
+                            <div className={`absolute top-0 left-0 w-full h-1.5 ${gameState === 'SUCCESS' ? 'bg-[#00ffff]' : 'bg-[#ff0044]'}`} />
 
-            {/* 3D Canvas */}
-            <div className="absolute inset-0 z-0 cursor-crosshair">
-                <Canvas camera={{ position: [0, 0, 12], fov: 60 }} gl={{ antialias: false, powerPreference: "high-performance" }}>
-                    <color attach="background" args={['#040208']} />
-                    <fog attach="fog" args={['#040208', 8, 25]} />
-                    <ambientLight intensity={0.3} />
-                    <pointLight position={[10, 10, 10]} intensity={2} color="#aa88ff" />
-                    <pointLight position={[-10, -10, -10]} intensity={1} color="#ff88aa" />
-                    <CameraRig intensity={combo / 10} />
+                            <div className={`w-24 h-24 mx-auto mb-6 rounded-full flex items-center justify-center ${gameState === 'SUCCESS' ? 'bg-[#00ffff]/10' : 'bg-[#ff0044]/10'}`}>
+                                {gameState === 'SUCCESS' ? <Trophy className="w-12 h-12 text-[#00ffff]" /> : <SkullIcon className="w-12 h-12 text-[#ff0044]" />}
+                            </div>
+
+                            <div className={`text-4xl font-black uppercase tracking-[0.2em] mb-4 ${gameState === 'SUCCESS' ? 'text-[#00ffff]' : 'text-[#ff0044]'} drop-shadow-[0_0_15px_currentColor]`}>
+                                {gameState === 'SUCCESS' ? 'LUCIDITY REACHED' : 'DREAM COLLAPSED'}
+                            </div>
+
+                            <div className="mt-8 space-y-4">
+                                <div className="flex justify-between items-center border-b border-white/10 pb-4">
+                                    <span className="text-white/60 uppercase tracking-widest text-sm">Final Score</span>
+                                    <span className="text-3xl text-white font-mono font-bold">{score}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-white/60 uppercase tracking-widest text-sm">Max Flow Chain</span>
+                                    <span className="text-2xl text-[#ff00ff] font-mono font-bold">{maxCombo}x</span>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* 3D Dreamscape WebGL Canvas */}
+            <div className="absolute inset-0 z-0">
+                <Canvas camera={{ position: [0, 2, 16], fov: 60 }} gl={{ antialias: false }}>
+                    <color attach="background" args={['#050015']} />
+                    <fog attach="fog" args={['#050015', 10, 30]} />
+                    <ambientLight intensity={0.4} color="#5533aa" />
+                    <pointLight position={[5, 10, 5]} intensity={1.5} color="#00ffff" />
+                    <pointLight position={[-5, -10, -5]} intensity={1.0} color="#ff00ff" />
+
+                    <DreamBackground />
+
                     {nodes.map(node => node.type === 'target' ? (
-                        <TargetNode key={node.id} id={node.id} position={node.position} color={node.color} scale={1} onClick={handleTargetClick} />
+                        <DreamCore
+                            key={node.id}
+                            id={node.id}
+                            position={node.position}
+                            color={node.color}
+                            scale={1}
+                            onClick={handleTargetClick}
+                        />
                     ) : (
-                        <HazardNode key={node.id} id={node.id} position={node.position} onClick={handleHazardClick} />
+                        <NightmareShard
+                            key={node.id}
+                            id={node.id}
+                            position={node.position}
+                            onClick={handleHazardClick}
+                        />
                     ))}
-                    <Sparkles count={300} scale={20} size={3} speed={0.5 + combo * 0.2} opacity={0.5} color="#aa88ff" />
-                    <Sparkles count={100} scale={15} size={6} speed={1} opacity={0.3} color="#ff88aa" />
-                    <OrbitControls enableZoom={false} enablePan={false} autoRotate autoRotateSpeed={0.5 + combo * 0.1} />
-                    <EffectComposer >
-                        <Bloom luminanceThreshold={0.15} mipmapBlur intensity={1.5 + combo * 0.15} />
-                        <ChromaticAberration blendFunction={BlendFunction.NORMAL} offset={new THREE.Vector2(0.002 + combo * 0.001, 0.002 + combo * 0.001)} />
-                        <Vignette eskil={false} offset={0.1} darkness={1.1} />
-                        {glitchActive && (<Glitch delay={new THREE.Vector2(0, 0)} duration={new THREE.Vector2(0.1, 0.4)} mode={GlitchMode.SPORADIC} active ratio={0.8} />)}
+
+                    {/* Atmospheric particles */}
+                    <Sparkles count={400} scale={25} size={2.5} speed={0.4} opacity={0.4} color="#88aaff" />
+
+                    <OrbitControls enableZoom={false} enablePan={false} autoRotate autoRotateSpeed={0.3} maxPolarAngle={Math.PI / 2 + 0.1} />
+
+                    <EffectComposer disableNormalPass>
+                        <Bloom luminanceThreshold={0.15} luminanceSmoothing={0.9} mipmapBlur intensity={1.8} />
+                        <ChromaticAberration
+                            blendFunction={BlendFunction.NORMAL}
+                            offset={new THREE.Vector2(0.004, 0.004)}
+                            radialModulation={false}
+                            modulationOffset={0}
+                        />
+                        <Noise opacity={0.04} />
+                        <Vignette eskil={false} offset={0.1} darkness={1.0} />
+                        {glitchActive && (
+                            <Glitch delay={new THREE.Vector2(0, 0)} duration={new THREE.Vector2(0.3, 0.6)} mode={GlitchMode.SPORADIC} active ratio={0.9} />
+                        )}
                     </EffectComposer>
                 </Canvas>
             </div>
