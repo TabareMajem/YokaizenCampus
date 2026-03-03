@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Terminal, Bot, Sparkles, ChevronRight, Share, Zap, X, ShieldAlert, Cpu } from 'lucide-react';
+import { Terminal, Bot, Sparkles, ChevronRight, Share, Zap, X, ShieldAlert, Cpu, Info } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { audio } from '../../services/audioService';
 import { streamAIResponse } from '../../services/geminiService';
@@ -26,6 +26,7 @@ export const OpenClawTerminal: React.FC<OpenClawTerminalProps> = ({ onClose, t }
     const [isRunning, setIsRunning] = useState(false);
     const [streamingContent, setStreamingContent] = useState('');
     const [streamingType, setStreamingType] = useState<LogEntry['type']>('SYSTEM');
+    const [showInfo, setShowInfo] = useState(false);
     const bottomRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -93,11 +94,16 @@ export const OpenClawTerminal: React.FC<OpenClawTerminalProps> = ({ onClose, t }
                         <div className="text-[10px] text-gray-500 mt-0.5">Recursive Execution Interface</div>
                     </div>
                 </div>
-                {onClose && (
-                    <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors p-1 hover:bg-white/10 rounded">
-                        <X className="w-5 h-5" />
+                <div className="flex items-center gap-2">
+                    <button onClick={() => setShowInfo(true)} className="text-indigo-400 hover:text-white transition-colors p-1 hover:bg-white/10 rounded" title="Execution Strategy">
+                        <Info className="w-5 h-5" />
                     </button>
-                )}
+                    {onClose && (
+                        <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors p-1 hover:bg-white/10 rounded">
+                            <X className="w-5 h-5" />
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Terminal Window */}
@@ -192,6 +198,37 @@ export const OpenClawTerminal: React.FC<OpenClawTerminalProps> = ({ onClose, t }
                     Caution: OpenClaw will execute recursively until objective constraints are met.
                 </div>
             </div>
-        </div >
+
+            {/* Strategy Modal */}
+            {showInfo && (
+                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+                    <div className="bg-gray-900 border border-indigo-500/50 rounded-xl max-w-lg w-full p-6 shadow-2xl">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-bold text-white flex items-center gap-2"><Cpu className="text-indigo-400" /> OpenClaw Execution Strategy</h3>
+                            <button onClick={() => setShowInfo(false)} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+                        </div>
+                        <div className="space-y-4 text-sm text-gray-300">
+                            <div className="p-3 bg-indigo-500/10 border border-indigo-500/30 rounded-lg">
+                                <h4 className="text-indigo-400 font-bold mb-1">1. Backend Autonomy (Mobile-first)</h4>
+                                <p>Once deployed, objectives execute autonomously on Yokaizen's secure cloud instances. It does NOT rely on your local connection, perfect for mobile execution.</p>
+                            </div>
+                            <div className="p-3 bg-indigo-500/10 border border-indigo-500/30 rounded-lg">
+                                <h4 className="text-indigo-400 font-bold mb-1">2. DeepSeek & Gemini Protocols</h4>
+                                <p>OpenClaw utilizes deep-reasoning APIs backed by DeepSeek & Gemini, drastically reducing token costs while maintaining frontier-level logic.</p>
+                            </div>
+                            <div className="p-3 bg-indigo-500/10 border border-indigo-500/30 rounded-lg">
+                                <h4 className="text-indigo-400 font-bold mb-1">3. Mobile Push Notifications</h4>
+                                <p>If OpenClaw requires authorization (e.g., buying a domain, paying an invoice), it pauses execution and sends a Push Notification to your phone for approval.</p>
+                            </div>
+                            <div className="p-3 bg-indigo-500/10 border border-indigo-500/30 rounded-lg">
+                                <h4 className="text-indigo-400 font-bold mb-1">4. Human-In-The-Loop</h4>
+                                <p>The terminal acts purely as a 'remote control'. You issue the command, and the agent orchestrates the sub-threads until the goal is synthesized.</p>
+                            </div>
+                        </div>
+                        <button onClick={() => setShowInfo(false)} className="w-full mt-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg transition-colors shadow-[0_0_20px_rgba(79,70,229,0.3)]">ACKNOWLEDGE</button>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 };

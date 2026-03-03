@@ -53,5 +53,5 @@ export const COMMON = {
     'difficulty.elite': 'ELITE',
     'leaderboard.global': 'GLOBAL',
     'leaderboard.squad': 'SQUAD',
+    'settings.title': 'EZARPENAK', 'settings.language': 'Hizkuntza', 'settings.audio': 'Audioa', 'settings.haptics': 'Bibratzea', 'settings.test': 'PROBATU', 'settings.toggle': 'ALDATU', 'settings.admin_console': 'ADMIN KONTSOLA', 'settings.close': 'ITXI', 'nav.growth': 'Hazkuntza',
 };
-

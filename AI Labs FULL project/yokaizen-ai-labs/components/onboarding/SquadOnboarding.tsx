@@ -1,9 +1,11 @@
 
 import React, { useState } from 'react';
-import { Users, Shield, Zap, ChevronRight } from 'lucide-react';
+import { Users, Shield, Zap, ChevronRight, Ghost, Sword, Zap as ZapIcon, Flame, Droplet, Wind, Mountain, Sun, Moon } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { Squad } from '../../types';
+
+const SQUAD_ICONS = [<Ghost size={24} />, <Shield size={24} />, <Sword size={24} />, <ZapIcon size={24} />, <Flame size={24} />, <Droplet size={24} />, <Wind size={24} />, <Mountain size={24} />, <Sun size={24} />, <Moon size={24} />];
 
 interface SquadOnboardingProps {
     isOpen: boolean;
@@ -34,15 +36,15 @@ export const SquadOnboarding: React.FC<SquadOnboardingProps> = ({ isOpen, onClos
                             <span className="text-electric font-bold">Squads dominate.</span>
                         </p>
                         <div className="mt-8 grid grid-cols-2 gap-4 text-left">
-                            <div className="bg-black/40 p-3 rounded-lg border border-white/10">
-                                <Zap size={20} className="text-yellow-400 mb-2" />
-                                <div className="text-xs font-bold text-gray-400 uppercase">Perk</div>
-                                <div className="text-sm font-bold text-white">+10% XP Boost</div>
+                            <div className="bg-black/60 p-4 rounded-xl border border-white/10 shadow-[inset_0_0_20px_rgba(255,255,255,0.05)] hover:border-yellow-400/50 transition-colors group">
+                                <Zap size={24} className="text-yellow-400 mb-3 group-hover:scale-110 transition-transform drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]" />
+                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Neural Link Perk</div>
+                                <div className="text-sm font-black text-white mt-1">+10% XP Boost</div>
                             </div>
-                            <div className="bg-black/40 p-3 rounded-lg border border-white/10">
-                                <Users size={20} className="text-cyan-400 mb-2" />
-                                <div className="text-xs font-bold text-gray-400 uppercase">Access</div>
-                                <div className="text-sm font-bold text-white">War Room Raids</div>
+                            <div className="bg-black/60 p-4 rounded-xl border border-white/10 shadow-[inset_0_0_20px_rgba(255,255,255,0.05)] hover:border-cyan-400/50 transition-colors group">
+                                <Users size={24} className="text-cyan-400 mb-3 group-hover:scale-110 transition-transform drop-shadow-[0_0_10px_rgba(34,211,238,0.5)]" />
+                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Network Access</div>
+                                <div className="text-sm font-black text-white mt-1">War Room Raids</div>
                             </div>
                         </div>
                     </div>
@@ -73,15 +75,17 @@ export const SquadOnboarding: React.FC<SquadOnboardingProps> = ({ isOpen, onClos
                             </div>
                             <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
                                 {topSquads.map(squad => (
-                                    <div key={squad.id} className="bg-gray-900 border border-white/10 p-4 rounded-xl flex items-center justify-between group hover:border-electric transition-colors cursor-pointer" onClick={() => onJoin(squad.id)}>
+                                    <div key={squad.id} className="bg-black/60 border border-white/10 p-4 rounded-xl flex items-center justify-between group hover:border-electric hover:shadow-[0_0_20px_rgba(196,95,255,0.2)] transition-all cursor-pointer backdrop-blur-md" onClick={() => onJoin(squad.id)}>
                                         <div className="flex items-center space-x-4">
-                                            <div className="text-2xl">{squad.avatar}</div>
+                                            <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center text-white shadow-[inset_0_0_15px_rgba(255,255,255,0.1)] border border-white/10 group-hover:scale-110 transition-transform">
+                                                {isNaN(Number(squad.avatar)) ? <Shield size={20} /> : SQUAD_ICONS[Number(squad.avatar)] || <Shield size={20} />}
+                                            </div>
                                             <div>
-                                                <div className="font-bold text-white group-hover:text-electric transition-colors">{squad.name}</div>
-                                                <div className="text-xs text-gray-500">{squad.members?.length || 0}/10 Operatives</div>
+                                                <div className="font-black text-white group-hover:text-electric transition-colors uppercase tracking-widest">{squad.name}</div>
+                                                <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">{squad.members?.length || 0}/10 Operatives</div>
                                             </div>
                                         </div>
-                                        <Button size="sm" variant="secondary">Join</Button>
+                                        <Button size="sm" variant="secondary" className="opacity-0 group-hover:opacity-100 transition-opacity">Deploy</Button>
                                     </div>
                                 ))}
                             </div>

@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Squad, SquadMember, UserStats } from '../types';
 import { Button } from './ui/Button';
 import { useToast } from '../contexts/ToastContext';
-import { Users, Plus, Search, Crown, Shield, Globe, Link as LinkIcon, Check, Lock, Swords, Trophy, AlertTriangle, CheckCircle2, Zap, Share2, LogOut, ShieldAlert, Skull, Target } from 'lucide-react';
+import { Users, Plus, Search, Crown, Shield, Globe, Link as LinkIcon, Check, Lock, Swords, Trophy, AlertTriangle, CheckCircle2, Share2, LogOut, ShieldAlert, Skull, Target, Ghost, Sword, Flame, Droplet, Wind, Mountain, Sun, Moon, Zap } from 'lucide-react';
 import { GlassCard } from './ui/GlassCard';
 import { audio } from '../services/audioService';
 import { squadsService } from '../services/squadsService';
@@ -24,12 +24,10 @@ interface SquadManagerProps {
     isPro: boolean;
     onTriggerPaywall: () => void;
     t: (key: string) => string;
-    user: UserStats;
     onUpdateUser: (user: UserStats) => void;
     onUpdateSquads?: (squads: Squad[]) => void;
 }
-
-const SQUAD_ICONS = ['🦁', '🐉', '🤖', '👽', '👾', '🚀', '⚔️', '🧬', '👁️', '🔥'];
+const SQUAD_ICONS = [Ghost, Shield, Sword, Zap, Flame, Droplet, Wind, Mountain, Sun, Moon];
 
 // --- 3D Components ---
 const TacticalGlobe = ({ isAttacking, hpRatio }: { isAttacking: boolean; hpRatio: number }) => {
@@ -273,13 +271,13 @@ export const SquadManager: React.FC<SquadManagerProps> = ({ squads, userSquadId,
                 <div>
                     <label className="text-xs font-bold text-gray-500 uppercase mb-3 block">{t('squad.icon_label')}</label>
                     <div className="flex space-x-2 overflow-x-auto pb-4 scrollbar-hide">
-                        {SQUAD_ICONS.map(icon => (
+                        {SQUAD_ICONS.map((Icon, i) => (
                             <button
-                                key={icon}
-                                onClick={() => { setNewSquadIcon(icon); audio.playClick(); }}
-                                className={`w-14 h-14 flex-shrink-0 rounded-xl flex items-center justify-center text-3xl border transition-all ${newSquadIcon === icon ? 'bg-electric/20 border-electric shadow-[0_0_15px_rgba(196,95,255,0.4)] scale-110' : 'bg-gray-900 border-gray-700 opacity-50'}`}
+                                key={i}
+                                onClick={() => { setNewSquadIcon(i.toString()); audio.playClick(); }}
+                                className={`w-14 h-14 flex-shrink-0 rounded-xl flex items-center justify-center text-white border transition-all ${newSquadIcon === i.toString() ? 'bg-electric/20 border-electric shadow-[0_0_15px_rgba(196,95,255,0.4)] scale-110' : 'bg-gray-900 border-gray-700 opacity-50'}`}
                             >
-                                {icon}
+                                <Icon size={24} />
                             </button>
                         ))}
                     </div>
@@ -328,8 +326,8 @@ export const SquadManager: React.FC<SquadManagerProps> = ({ squads, userSquadId,
                     {squads.filter(s => s.id !== userSquadId).map(squad => (
                         <GlassCard key={squad.id} className="flex justify-between items-center group hover:bg-white/5 border-white/5">
                             <div className="flex items-center space-x-4">
-                                <div className="w-12 h-12 bg-gray-800 rounded-xl flex items-center justify-center text-2xl shadow-inner border border-white/5">
-                                    {squad.avatar || '🛡️'}
+                                <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center text-white shadow-[inset_0_0_15px_rgba(255,255,255,0.1)] border border-white/10">
+                                    {isNaN(Number(squad.avatar)) ? <Shield size={20} /> : React.createElement(SQUAD_ICONS[Number(squad.avatar)] || Shield, { size: 20 })}
                                 </div>
                                 <div>
                                     <h4 className="font-black text-white text-sm uppercase tracking-wide">{squad.name}</h4>
@@ -357,7 +355,10 @@ export const SquadManager: React.FC<SquadManagerProps> = ({ squads, userSquadId,
     if (view === 'WAR_ROOM') {
         return (
             <div className={`p-6 h-full flex flex-col bg-black/80 backdrop-blur-md animate-in zoom-in relative overflow-hidden transition-transform duration-100 ${screenShake ? 'translate-x-1 translate-y-1' : ''}`}>
-                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 pointer-events-none mix-blend-overlay"></div>
+                {/* Cyberpunk Grid Background */}
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,0,0,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,0,0,0.03)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none z-0 mix-blend-screen"></div>
+                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 pointer-events-none mix-blend-overlay z-0"></div>
+
                 {/* Red Flash on Attack */}
                 <div className={`absolute inset-0 bg-red-500/20 pointer-events-none transition-opacity duration-100 ${screenShake ? 'opacity-100' : 'opacity-0'} z-50`}></div>
 
@@ -474,8 +475,10 @@ export const SquadManager: React.FC<SquadManagerProps> = ({ squads, userSquadId,
                 <div className="absolute inset-0 bg-[url('/assets/aaa/grid-pattern.png')] opacity-10 mix-blend-overlay pointer-events-none"></div>
                 <div className="absolute top-0 right-0 w-64 h-64 bg-electric/10 blur-[100px] rounded-full group-hover:bg-electric/20 transition-all duration-700 pointer-events-none"></div>
                 <div className="relative z-10">
-                    <div className="w-24 h-24 mx-auto bg-black/60 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-6 border border-white/20 shadow-[0_0_30px_rgba(196,95,255,0.3)] hover:scale-110 transition-transform duration-500">
-                        <span className="text-4xl">{userSquad?.avatar || '🛡️'}</span>
+                    <div className="w-24 h-24 mx-auto bg-black/80 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-6 border border-white/20 shadow-[0_0_30px_rgba(196,95,255,0.3)] hover:scale-110 transition-transform duration-500 text-white">
+                        {userSquad?.avatar !== undefined && !isNaN(Number(userSquad.avatar))
+                            ? React.createElement(SQUAD_ICONS[Number(userSquad.avatar)] || Shield, { size: 48 })
+                            : <Shield size={48} />}
                     </div>
                     <h2 className="text-2xl font-black text-white uppercase tracking-tight">{userSquad?.name}</h2>
                     <div className="flex justify-center space-x-2 mt-3 mb-6">

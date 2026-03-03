@@ -45,37 +45,61 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onGuideC
          <SubscriptionModal isOpen={isSubModalOpen} onClose={() => setIsSubModalOpen(false)} language={language} onSuccess={() => onLoginClick()} />
 
          {/* NAV */}
-         <nav className="fixed top-0 w-full z-50 px-6 md:px-12 py-6 flex flex-wrap justify-between items-center backdrop-blur-md border-b border-white/5 bg-[#030712]/80 transition-all">
-            <div className="flex items-center gap-6">
+         <nav className="fixed top-0 w-full z-50 px-4 md:px-12 py-3 md:py-4 flex flex-col lg:flex-row items-center backdrop-blur-xl border-b border-white/10 bg-[#030712]/90 transition-all gap-3 lg:gap-0">
+
+            {/* Top row for Mobile (Logo + Mobile Actions), acts as left side on Desktop */}
+            <div className="flex items-center justify-between w-full lg:w-auto lg:flex-shrink-0">
                <div className="font-bold tracking-wider text-xl flex items-center gap-2 cursor-pointer group" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
                   {/* Complex Logo */}
-                  <div className="relative w-8 h-8 flex items-center justify-center">
+                  <div className="relative w-6 h-6 md:w-8 md:h-8 flex items-center justify-center">
                      <div className="absolute inset-0 border-2 border-neon-blue/30 rounded-full group-hover:border-neon-blue transition-colors"></div>
-                     <div className="absolute inset-2 border-2 border-neon-purple/30 rounded-full group-hover:border-neon-purple transition-colors rotate-45"></div>
-                     <div className="w-2 h-2 bg-white rounded-full shadow-[0_0_10px_white]"></div>
+                     <div className="absolute inset-1.5 md:inset-2 border-2 border-neon-purple/30 rounded-full group-hover:border-neon-purple transition-colors rotate-45"></div>
+                     <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-white rounded-full shadow-[0_0_10px_white]"></div>
                   </div>
                   <span className="font-mono text-sm md:text-base">YOKAIZEN <span className="text-slate-500">CAMPUS</span></span>
                </div>
 
+               {/* Mobile Actions: AI Labs + Launch Button */}
+               <div className="flex lg:hidden items-center gap-2">
+                  <a
+                     href="https://ai.yokaizencampus.com"
+                     target="_blank"
+                     rel="noreferrer"
+                     className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border border-pink-500/50 bg-pink-500/20 text-[10px] font-black text-pink-300 tracking-wider shadow-[0_0_10px_rgba(236,72,153,0.3)] animate-pulse"
+                  >
+                     <FlaskConical className="w-3 h-3" />
+                     AI LABS
+                  </a>
+                  <button
+                     onClick={onLoginClick}
+                     className="px-4 py-1.5 bg-white text-black text-xs font-black rounded-full shadow-[0_0_15px_rgba(255,255,255,0.3)]"
+                  >
+                     {T.LAUNCH}
+                  </button>
+               </div>
+            </div>
+
+            {/* Desktop Center: Nav Links + AI Labs Link — all in flex flow, no absolute positioning */}
+            <div className="hidden lg:flex flex-1 items-center justify-center gap-6">
+               <button onClick={() => scrollToSection('vision')} className="text-sm font-medium text-slate-400 hover:text-white transition-colors whitespace-nowrap">{T.VISION}</button>
+               <button onClick={() => scrollToSection('features')} className="text-sm font-medium text-slate-400 hover:text-white transition-colors whitespace-nowrap">{T.FEATURES}</button>
+
                <a
-                  href="https://AI.yokaizencampus.com"
+                  href="https://ai.yokaizencampus.com"
                   target="_blank"
                   rel="noreferrer"
-                  className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border border-pink-500/30 bg-pink-500/10 hover:bg-pink-500/20 text-[10px] font-bold text-pink-400 tracking-wider hover:text-pink-300 transition-all"
+                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-pink-500/40 bg-pink-500/10 hover:bg-pink-500/20 text-[11px] font-black text-pink-400 tracking-widest hover:text-pink-300 transition-all hover:scale-105 shadow-[0_0_15px_rgba(236,72,153,0.1)] hover:shadow-[0_0_20px_rgba(236,72,153,0.4)] whitespace-nowrap"
                >
-                  <FlaskConical className="w-3 h-3" />
-                  YOKAIZEN AI LABS
+                  <FlaskConical className="w-4 h-4 animate-pulse" />
+                  ENTER AI LABS
                </a>
+
+               <button onClick={onGuideClick} className="text-sm font-medium hover:text-neon-blue transition-colors text-white font-bold tracking-widest uppercase whitespace-nowrap">User Guide</button>
+               <button onClick={() => scrollToSection('pricing')} className="text-sm font-medium text-slate-400 hover:text-white transition-colors whitespace-nowrap">{T.PRICING}</button>
             </div>
 
-            <div className="hidden lg:flex items-center gap-8 text-sm font-medium text-slate-400">
-               <button onClick={() => scrollToSection('vision')} className="hover:text-white transition-colors">{T.VISION}</button>
-               <button onClick={() => scrollToSection('features')} className="hover:text-white transition-colors">{T.FEATURES}</button>
-               <button onClick={onGuideClick} className="hover:text-neon-blue transition-colors text-white font-bold tracking-widest uppercase">User Guide</button>
-               <button onClick={() => scrollToSection('pricing')} className="hover:text-white transition-colors">{T.PRICING}</button>
-            </div>
-
-            <div className="flex items-center gap-4">
+            {/* Right side for Desktop (Language + Launch) */}
+            <div className="hidden lg:flex items-center gap-4 flex-shrink-0">
                {/* Lang Selector */}
                <div className="relative">
                   <button

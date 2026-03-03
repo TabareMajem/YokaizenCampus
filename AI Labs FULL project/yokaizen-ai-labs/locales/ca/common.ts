@@ -53,5 +53,5 @@ export const COMMON = {
     'difficulty.elite': 'ELITE',
     'leaderboard.global': 'GLOBAL',
     'leaderboard.squad': 'SQUAD',
+    'settings.title': 'CONFIGURACIÓ', 'settings.language': 'Idioma', 'settings.audio': 'Àudio', 'settings.haptics': 'Vibració', 'settings.test': 'PROVAR', 'settings.toggle': 'ALTERNAR', 'settings.admin_console': 'CONSOLA ADMIN', 'settings.close': 'TANCAR', 'nav.growth': 'Creixement',
 };
-

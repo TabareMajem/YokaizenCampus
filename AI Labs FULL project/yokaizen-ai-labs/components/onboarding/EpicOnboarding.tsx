@@ -94,7 +94,7 @@ export const EpicOnboarding: React.FC<EpicOnboardingProps> = ({ onComplete }) =>
 
         const t3 = setTimeout(() => {
             setStep(3); // Welcome
-            setWelcomeText(t('auth.slogan_3') || "WELCOME TO YOKAIZEN AI LABS");
+            setWelcomeText("WELCOME TO YOKAIZEN AI LABS");
             audio.playSuccess();
         }, 11000);
 
@@ -155,8 +155,8 @@ export const EpicOnboarding: React.FC<EpicOnboardingProps> = ({ onComplete }) =>
                             {welcomeText}
                         </h2>
                         {step === 1 && (
-                            <p className="mt-4 text-cyan-400 text-sm tracking-[0.3em] uppercase animate-in fade-in delay-1000">
-                                Language Protocol Detected: [{detectedLang}]
+                            <p className="mt-4 text-cyan-400 text-sm tracking-[0.3em] uppercase animate-in fade-in delay-1000 font-mono">
+                                {"//"} NEURAL LINK ESTABLISHED: [{detectedLang}]
                             </p>
                         )}
                     </div>
@@ -170,7 +170,19 @@ export const EpicOnboarding: React.FC<EpicOnboardingProps> = ({ onComplete }) =>
                         onClick={handleEnter}
                         className="px-12 py-5 bg-white text-black font-black text-xl tracking-[0.3em] uppercase rounded-sm hover:scale-110 hover:bg-electric hover:text-white transition-all shadow-[0_0_40px_rgba(255,255,255,0.5)] active:scale-95 border-2 border-white/20"
                     >
-                        ENTER NEXUS
+                        ENTER THE GRID
+                    </button>
+                </div>
+            )}
+
+            {/* Skip Button */}
+            {step < 3 && (
+                <div className="absolute top-8 right-8 z-[210] animate-in fade-in duration-1000 delay-1000">
+                    <button
+                        onClick={handleEnter}
+                        className="text-gray-500 hover:text-white font-mono text-xs uppercase tracking-[0.3em] transition-colors flex items-center bg-black/50 px-4 py-2 rounded-full border border-white/10 backdrop-blur-md"
+                    >
+                        Skip Sequence <span className="ml-2 font-black leading-none text-electric">&raquo;</span>
                     </button>
                 </div>
             )}

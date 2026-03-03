@@ -148,24 +148,43 @@ export const ViralPromptInjection: React.FC<GameProps> = ({ onComplete }) => {
             <AnimatePresence>
                 {gameState === 'intro' && (
                     <motion.div
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -30 }}
-                        className="max-w-[90vw] md:max-w-lg w-full p-4 md:p-8 text-center z-10"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md overflow-y-auto"
                     >
-                        <div className="w-16 h-16 md:w-24 md:h-24 mx-auto bg-red-500/20 rounded-full flex items-center justify-center mb-6 md:mb-8 border border-red-500/30 shadow-[0_0_40px_rgba(239,68,68,0.2)]">
-                            <Skull className="text-red-500 w-8 h-8 md:w-12 md:h-12" />
-                        </div>
-                        <h1 className="text-3xl md:text-5xl font-black text-white mb-3 md:mb-4 tracking-tight">AI SURVIVABILITY<br /><span className="text-red-500">TEST</span></h1>
-                        <p className="text-gray-400 mb-6 md:mb-8 text-xs md:text-sm leading-relaxed">
-                            5 timed questions. 10 seconds each. Test if your brain can survive prompt injection, social engineering, and AI hallucination attacks.
-                        </p>
-                        <button
-                            onClick={startGame}
-                            className="w-full py-5 bg-red-600 hover:bg-red-500 text-white font-black uppercase tracking-widest rounded-xl transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-3 text-lg shadow-[0_0_30px_rgba(239,68,68,0.3)]"
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="max-w-md w-full h-fit my-auto p-6 md:p-8 text-center bg-black/80 border border-red-500/30 rounded-2xl shadow-[0_0_40px_rgba(239,68,68,0.15)] pointer-events-auto"
                         >
-                            <AlertTriangle size={24} /> BEGIN THREAT ASSESSMENT
-                        </button>
+                            <div className="w-16 h-16 md:w-24 md:h-24 mx-auto bg-red-500/20 rounded-full flex items-center justify-center mb-6 border border-red-500/30 shadow-[0_0_30px_rgba(239,68,68,0.2)]">
+                                <Skull className="text-red-500 w-8 h-8 md:w-12 md:h-12" />
+                            </div>
+                            <h1 className="text-3xl md:text-5xl font-black text-white mb-4 tracking-tight">AI SURVIVABILITY<br /><span className="text-red-500">TEST</span></h1>
+
+                            <div className="space-y-4 text-sm text-gray-300 leading-relaxed mb-8 text-left">
+                                <p>
+                                    The AGI transition is accelerating. By 2027, over 68% of current cognitive tasks will be fully automated. The previous generation's skills are already obsolete.
+                                </p>
+                                <p>
+                                    <strong className="text-white">Yokaizen AI Labs</strong> is a gamified training facility designed to forge your cognitive resilience. Here, you don't just use AI—you command autonomous swarms, master prompt engineering, and defend against deepfakes.
+                                </p>
+                                <div className="bg-red-900/20 border border-red-500/30 p-4 rounded-lg flex gap-3 items-start mt-4">
+                                    <AlertTriangle className="w-6 h-6 text-red-500 shrink-0 mt-0.5" />
+                                    <p className="text-xs text-red-100">
+                                        Before you enter the Campus Core, we must test your cognitive processing. 5 timed questions. 10 seconds each. Survive prompt injection, social engineering, and AI attacks.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={startGame}
+                                className="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-black uppercase tracking-widest rounded-xl transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2 drop-shadow-[0_0_20px_rgba(239,68,68,0.5)]"
+                            >
+                                <AlertTriangle size={20} /> BEGIN THREAT ASSESSMENT
+                            </button>
+                        </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -256,11 +275,15 @@ export const ViralPromptInjection: React.FC<GameProps> = ({ onComplete }) => {
             <AnimatePresence>
                 {gameState === 'result' && (
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="max-w-[95vw] md:max-w-md w-full p-4 md:p-8 text-center z-10"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl overflow-y-auto"
                     >
-                        <div className="bg-black/80 border border-white/10 rounded-2xl md:rounded-3xl p-6 md:p-8 backdrop-blur-2xl shadow-2xl">
+                        <motion.div
+                            initial={{ scale: 0.9 }}
+                            animate={{ scale: 1 }}
+                            className="max-w-[95vw] md:max-w-md w-full h-fit my-auto p-6 md:p-8 text-center bg-black/80 border border-white/10 rounded-2xl md:rounded-3xl backdrop-blur-2xl shadow-2xl pointer-events-auto"
+                        >
                             <div className="w-16 h-16 md:w-24 md:h-24 mx-auto bg-white/5 rounded-full flex items-center justify-center mb-4 md:mb-6 border border-white/20">
                                 <Shield className="text-white w-8 h-8 md:w-12 md:h-12" />
                             </div>
@@ -269,6 +292,14 @@ export const ViralPromptInjection: React.FC<GameProps> = ({ onComplete }) => {
                             <div className={`text-3xl md:text-5xl font-black mb-2 ${getGrade().color}`}>{getGrade().title}</div>
                             <div className="text-2xl md:text-3xl font-black text-white mb-2">{score}/{QUESTIONS.length}</div>
                             <p className="text-gray-400 text-xs md:text-sm mb-4 md:mb-6">{getGrade().desc}</p>
+
+                            <div className="bg-cyan-950/30 border border-cyan-500/20 rounded-xl p-4 mb-6 text-left relative overflow-hidden z-10">
+                                <div className="absolute top-0 left-0 w-1 h-full bg-cyan-500"></div>
+                                <h3 className="text-cyan-400 font-bold mb-1 text-sm flex items-center gap-2"><AlertTriangle size={14} /> REALITY CHECK</h3>
+                                <p className="text-xs md:text-sm text-gray-300 leading-relaxed">
+                                    The AGI transition has begun. By 2027, over 68% of current cognitive tasks will be fully automated. The previous generation's skills are already obsolete. <span className="text-white font-bold">Yokaizen AI Labs is not just a game.</span> It is the premier training ground for the next generation to master human-AI collaboration, prompt engineering, and cognitive survivability. Adapt now, or be replaced.
+                                </p>
+                            </div>
 
                             {/* VIRAL SHARE BUTTONS */}
                             <div className="flex flex-col sm:flex-row gap-2 mb-4 md:mb-6">
@@ -292,7 +323,7 @@ export const ViralPromptInjection: React.FC<GameProps> = ({ onComplete }) => {
                             >
                                 <Zap size={20} className="fill-black" /> Join AI Labs
                             </button>
-                        </div>
+                        </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>

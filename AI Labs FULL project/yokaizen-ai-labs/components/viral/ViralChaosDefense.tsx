@@ -82,7 +82,9 @@ function Enemies({ onHitCore, onHitEnemy, isPlaying }: { onHitCore: () => void, 
                 if (!e.alive) return e;
                 // Move towards center
                 const dir = new THREE.Vector3(0, 0, 0).sub(e.pos).normalize();
-                const speed = 3;
+
+                // Base speed is 4, increases over time basically (handled by spawn interval)
+                const speed = 4 + (Math.random() * 3);
                 const newPos = e.pos.clone().add(dir.multiplyScalar(speed * delta));
 
                 if (newPos.length() < 1.6) {
@@ -133,7 +135,7 @@ function CameraRig({ isShaking }: { isShaking: boolean }) {
 
 export const ViralChaosDefense: React.FC<GameProps> = ({ onComplete }) => {
     const { queueDialogue } = useDialogue();
-    const [gameState, setGameState] = useState<'playing' | 'crashed' | 'won'>('playing');
+    const [gameState, setGameState] = useState<'intro' | 'playing' | 'crashed' | 'won'>('intro');
     const [timeLeft, setTimeLeft] = useState(SURVIVAL_TIME);
     const [score, setScore] = useState(0);
     const [combo, setCombo] = useState(1);
@@ -141,21 +143,23 @@ export const ViralChaosDefense: React.FC<GameProps> = ({ onComplete }) => {
     const [isGlitching, setIsGlitching] = useState(false);
 
     useEffect(() => {
-        audio.playEngine(SURVIVAL_TIME * 1000);
-        queueDialogue([
-            {
-                id: 'cd-intro-1',
-                character: 'BYTE',
-                text: "Alert! Alert! Unidentified payload targeting the central AI core! Flesh-brain, we need you on manual defense!",
-                isGlitchy: true
-            },
-            {
-                id: 'cd-intro-2',
-                character: 'ATHENA',
-                text: `Click the incoming fragment-bots before they impact the core. You have ${SURVIVAL_TIME} seconds. Do not fail.`
-            }
-        ]);
-    }, [queueDialogue]);
+        if (gameState === 'playing') {
+            audio.playEngine(SURVIVAL_TIME * 1000);
+            queueDialogue([
+                {
+                    id: 'cd-intro-1',
+                    character: 'BYTE',
+                    text: "Alert! Alert! Unidentified payload targeting the central AI core! Flesh-brain, we need you on manual defense!",
+                    isGlitchy: true
+                },
+                {
+                    id: 'cd-intro-2',
+                    character: 'ATHENA',
+                    text: `Click the incoming fragment-bots before they impact the core. You have ${SURVIVAL_TIME} seconds. Do not fail.`
+                }
+            ]);
+        }
+    }, [gameState, queueDialogue]);
 
     useEffect(() => {
         if (gameState !== 'playing') return;
@@ -203,6 +207,10 @@ export const ViralChaosDefense: React.FC<GameProps> = ({ onComplete }) => {
             audio.playClick();
             setCombo(c => Math.min(c + 1, 10)); // Max combo x10
             setScore(s => s + (100 * combo));
+
+            // Mini shake for game feel
+            setIsShaking(true);
+            setTimeout(() => setIsShaking(false), 50);
         }
     };
 
@@ -297,15 +305,65 @@ export const ViralChaosDefense: React.FC<GameProps> = ({ onComplete }) => {
                 </div>
             )}
 
-            {/* Win Modal */}
+            {/* Modals */}
             <AnimatePresence>
+                {/* Intro Modal */}
+                {gameState === 'intro' && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md overflow-y-auto"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9 }}
+                            animate={{ scale: 1 }}
+                            className="max-w-md w-full h-fit my-auto border border-cyan-500/30 bg-black/80 p-6 md:p-8 rounded-2xl text-left relative shadow-[0_0_50px_rgba(6,182,212,0.15)] pointer-events-auto"
+                        >
+                            <div className="w-16 h-16 bg-cyan-500/10 border border-cyan-500/30 rounded-xl flex items-center justify-center mb-6">
+                                <Shield className="text-cyan-400 w-8 h-8" />
+                            </div>
+                            <h2 className="text-2xl md:text-3xl font-black text-white mb-4 tracking-tight">WELCOME TO <span className="text-cyan-400">AI LABS</span></h2>
+
+                            <div className="space-y-4 text-sm text-gray-300 leading-relaxed mb-8">
+                                <p>
+                                    The AGI transition is accelerating. By 2027, over 68% of current cognitive tasks will be fully automated. The previous generation's skills are already obsolete.
+                                </p>
+                                <p>
+                                    <strong className="text-white">Yokaizen AI Labs</strong> is a gamified training facility designed to forge your cognitive resilience. Here, you don't just use AI—you command autonomous swarms, master prompt engineering, and defend against deepfakes.
+                                </p>
+                                <p>
+                                    Our mission is to evolve you from a mere "Doer" to an <strong className="text-cyan-400">Orchestrator</strong> of intelligences.
+                                </p>
+                                <div className="bg-cyan-900/20 border border-cyan-500/30 p-4 rounded-lg flex gap-3 items-start mt-4">
+                                    <Target className="w-6 h-6 text-cyan-400 shrink-0 mt-0.5" />
+                                    <p className="text-xs text-cyan-100">
+                                        Before you enter the Campus Core, we must test your cognitive processing speed. Defend the AI Core against incoming fragmentation bots.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => setGameState('playing')}
+                                className="w-full py-4 bg-cyan-500 hover:bg-cyan-400 text-black font-black uppercase tracking-widest rounded transition-all hover:shadow-[0_0_30px_rgba(34,211,238,0.5)] flex items-center justify-center gap-2 group"
+                            >
+                                <Shield size={20} className="group-hover:animate-pulse" /> Initialize Defense
+                            </button>
+                        </motion.div>
+                    </motion.div>
+                )}
+
+                {/* Win Modal */}
                 {gameState === 'won' && (
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl overflow-y-auto"
                     >
-                        <div className="max-w-[90vw] md:max-w-md w-full p-6 md:p-8 border border-cyan-500/50 bg-black/80 rounded-2xl text-center shadow-[0_0_50px_rgba(0,255,255,0.1)] relative overflow-hidden">
+                        <motion.div
+                            initial={{ scale: 0.9 }}
+                            animate={{ scale: 1 }}
+                            className="max-w-[90vw] md:max-w-md w-full h-fit my-auto p-6 md:p-8 border border-cyan-500/50 bg-black/80 rounded-2xl text-center shadow-[0_0_50px_rgba(0,255,255,0.1)] relative pointer-events-auto"
+                        >
                             <div className="w-16 h-16 md:w-20 md:h-20 mx-auto bg-cyan-500/20 rounded-full flex items-center justify-center mb-4 md:mb-6 border border-cyan-400/30">
                                 <BrainCircuit className="text-cyan-400 w-8 h-8 md:w-10 md:h-10" />
                             </div>
@@ -315,6 +373,14 @@ export const ViralChaosDefense: React.FC<GameProps> = ({ onComplete }) => {
                             <p className="text-sm md:text-base text-gray-300 mb-4 pt-4 border-t border-white/10">
                                 Threat neutralized. Your Defense Rating: <span className="text-cyan-400 font-black">{score >= 100 ? 'LEGENDARY' : score >= 50 ? 'ELITE' : 'OPERATOR'}</span>
                             </p>
+
+                            <div className="bg-cyan-950/30 border border-cyan-500/20 rounded-xl p-4 mb-6 text-left relative overflow-hidden z-10">
+                                <div className="absolute top-0 left-0 w-1 h-full bg-cyan-500"></div>
+                                <h3 className="text-cyan-400 font-bold mb-1 text-sm flex items-center gap-2"><TriangleAlert size={14} /> REALITY CHECK</h3>
+                                <p className="text-xs md:text-sm text-gray-300 leading-relaxed">
+                                    The AGI transition has begun. By 2027, over 68% of current cognitive tasks will be fully automated. The previous generation's skills are already obsolete. <span className="text-white font-bold">Yokaizen AI Labs is not just a game.</span> It is the premier training ground for the next generation to master human-AI collaboration, prompt engineering, and cognitive survivability. Adapt now, or be replaced.
+                                </p>
+                            </div>
 
                             {/* VIRAL SHARE BUTTONS */}
                             <div className="flex flex-col sm:flex-row gap-2 mb-6">
@@ -338,7 +404,7 @@ export const ViralChaosDefense: React.FC<GameProps> = ({ onComplete }) => {
                             >
                                 <Zap size={20} className="fill-black" /> Enter AI Labs
                             </button>
-                        </div>
+                        </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from './contexts/AuthContext';
 import { useToast } from './contexts/ToastContext';
@@ -28,9 +28,14 @@ import { Scanlines } from './components/ui/Visuals';
 import { Modal } from './components/ui/Modal';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { Preloader } from './components/ui/Preloader';
-import { AIGeneratedGame } from './components/games/AIGeneratedGame';
+const AIGeneratedGame = React.lazy(() => import('./components/games/AIGeneratedGame').then(m => ({ default: m.AIGeneratedGame })));
 import { OnboardingWizard } from './components/onboarding/OnboardingWizard';
 import { ValueProposition } from './components/onboarding/ValueProposition';
+import { HomePage } from './pages/HomePage';
+import { LeaderboardPage } from './pages/LeaderboardPage';
+import { ProfilePage } from './pages/ProfilePage';
+import { BottomNav } from './components/ui/BottomNav';
+
 import { EpicOnboarding } from './components/onboarding/EpicOnboarding';
 import { ShareCard } from './components/social/ShareCard';
 import { StreakRewards } from './components/streaks/StreakRewards';
@@ -42,7 +47,8 @@ import { SquadOnboarding } from './components/onboarding/SquadOnboarding';
 import {
     Layout, BookOpen, FlaskConical, Trophy, User, Settings,
     Lock, ArrowLeft, Globe, Volume2, Smartphone, ChevronRight, Zap, Shield, Star, Clock, Play, Brain, Activity, Box, Award, Cpu,
-    Search, CheckCircle, Filter, Home, BarChart3, Bell, Share2
+    Home, Gamepad2, Rocket,
+    Search, CheckCircle, Filter, BarChart3, Bell, Share2
 } from 'lucide-react';
 
 // ── Language config for full i18n support ──
@@ -74,69 +80,79 @@ const CATEGORY_FILTERS: { key: string; label: string; skill?: SkillType }[] = [
 ];
 
 // Import all games
-import { PromptArchitect } from './components/games/PromptArchitect';
-import { RedTeam } from './components/games/RedTeam';
-import { NeonDrift } from './components/games/NeonDrift';
-import { PlanariumHeist } from './components/games/PlanariumHeist';
-import { BanditBistro } from './components/games/BanditBistro';
-import { StyleAnchor } from './components/games/StyleAnchor';
-import { GlitchwaveAnalyst } from './components/games/GlitchwaveAnalyst';
-import { OODSentinel } from './components/games/OODSentinel';
-import { LatencyLab } from './components/games/LatencyLab';
-import { BiasBingo } from './components/games/BiasBingo';
-import { GradientSki } from './components/games/GradientSki';
-import { LatentVoyager } from './components/games/LatentVoyager';
-import { TokenTsunami } from './components/games/TokenTsunami';
-import { ProteinPoker } from './components/games/ProteinPoker';
-import { ClimateTimeMachine } from './components/games/ClimateTimeMachine';
-import { WallStreetWar } from './components/games/WallStreetWar';
-import { SmartCityMayor } from './components/games/SmartCityMayor';
-import { SpaceMission } from './components/games/SpaceMission';
+const PromptArchitect = React.lazy(() => import('./components/games/PromptArchitect').then(m => ({ default: m.PromptArchitect })));
+const RedTeam = React.lazy(() => import('./components/games/RedTeam').then(m => ({ default: m.RedTeam })));
+const NeonDrift = React.lazy(() => import('./components/games/NeonDrift').then(m => ({ default: m.NeonDrift })));
+const PlanariumHeist = React.lazy(() => import('./components/games/PlanariumHeist').then(m => ({ default: m.PlanariumHeist })));
+const BanditBistro = React.lazy(() => import('./components/games/BanditBistro').then(m => ({ default: m.BanditBistro })));
+const StyleAnchor = React.lazy(() => import('./components/games/StyleAnchor').then(m => ({ default: m.StyleAnchor })));
+const GlitchwaveAnalyst = React.lazy(() => import('./components/games/GlitchwaveAnalyst').then(m => ({ default: m.GlitchwaveAnalyst })));
+const OODSentinel = React.lazy(() => import('./components/games/OODSentinel').then(m => ({ default: m.OODSentinel })));
+const LatencyLab = React.lazy(() => import('./components/games/LatencyLab').then(m => ({ default: m.LatencyLab })));
+const BiasBingo = React.lazy(() => import('./components/games/BiasBingo').then(m => ({ default: m.BiasBingo })));
+const GradientSki = React.lazy(() => import('./components/games/GradientSki').then(m => ({ default: m.GradientSki })));
+const LatentVoyager = React.lazy(() => import('./components/games/LatentVoyager').then(m => ({ default: m.LatentVoyager })));
+const TokenTsunami = React.lazy(() => import('./components/games/TokenTsunami').then(m => ({ default: m.TokenTsunami })));
+const ProteinPoker = React.lazy(() => import('./components/games/ProteinPoker').then(m => ({ default: m.ProteinPoker })));
+const ClimateTimeMachine = React.lazy(() => import('./components/games/ClimateTimeMachine').then(m => ({ default: m.ClimateTimeMachine })));
+const WallStreetWar = React.lazy(() => import('./components/games/WallStreetWar').then(m => ({ default: m.WallStreetWar })));
+const SmartCityMayor = React.lazy(() => import('./components/games/SmartCityMayor').then(m => ({ default: m.SmartCityMayor })));
+const SpaceMission = React.lazy(() => import('./components/games/SpaceMission').then(m => ({ default: m.SpaceMission })));
 
 // Viral Mini Games (Funnel bypasses)
-import { ViralNeuralHack } from './components/viral/ViralNeuralHack';
-import { ViralLatencyTunnel } from './components/viral/ViralLatencyTunnel';
-import { ViralChaosDefense } from './components/viral/ViralChaosDefense';
-import { ViralPromptInjection } from './components/viral/ViralPromptInjection';
+const ViralNeuralHack = React.lazy(() => import('./components/viral/ViralNeuralHack').then(m => ({ default: m.ViralNeuralHack })));
+const ViralLatencyTunnel = React.lazy(() => import('./components/viral/ViralLatencyTunnel').then(m => ({ default: m.ViralLatencyTunnel })));
+const ViralChaosDefense = React.lazy(() => import('./components/viral/ViralChaosDefense').then(m => ({ default: m.ViralChaosDefense })));
+const ViralPromptInjection = React.lazy(() => import('./components/viral/ViralPromptInjection').then(m => ({ default: m.ViralPromptInjection })));
 import { Canvas } from '@react-three/fiber';
 import { Sparkles as DreiSparkles } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
-import { DefenseStrategist } from './components/games/DefenseStrategist';
-import { PersonaSwitchboard } from './components/games/PersonaSwitchboard';
-import { DeepfakeDetective } from './components/games/DeepfakeDetective';
-import { CausalConservatory } from './components/games/CausalConservatory';
-import { DataWhisperer } from './components/games/DataWhisperer';
-import { RewardFixer } from './components/games/RewardFixer';
-import { NeuralNoir } from './components/games/NeuralNoir';
-import { PhantomLatency } from './components/games/PhantomLatency';
-import { ChronoQuest } from './components/games/ChronoQuest';
-import { VampireInvitation } from './components/games/VampireInvitation';
-import { MantellaWorld } from './components/games/MantellaWorld';
-import { CyberRain } from './components/games/CyberRain';
-import { DreamSim } from './components/games/DreamSim';
-import { BioGuard } from './components/games/BioGuard';
-import { NexusNegotiation } from './components/games/NexusNegotiation';
-import { Xenoflora } from './components/games/Xenoflora';
-import { NeonSyndicate } from './components/games/NeonSyndicate';
-import { EntropySandbox } from './components/games/EntropySandbox';
-import { CognitiveCity } from './components/games/CognitiveCity';
-import { PromptDrift } from './components/games/PromptDrift';
-import { Doppelganger } from './components/games/Doppelganger';
-import { VoightKampffProtocol } from './components/games/VoightKampffProtocol';
-import { ArrakisSands } from './components/games/ArrakisSands';
-import { LazarusVector } from './components/games/LazarusVector';
-import { VeritasFalls } from './components/games/VeritasFalls';
-import { AethelredGambit } from './components/games/AethelredGambit';
-import { QuantumQubit } from './components/games/QuantumQubit';
-import { NeuralPrism } from './components/games/NeuralPrism';
-import { SynapseSurge } from './components/games/SynapseSurge';
-import { DeepfakeDeflector } from './components/games/DeepfakeDeflector';
-import { OracleIndex } from './components/games/OracleIndex';
-import { ChaosEngineering } from './components/games/ChaosEngineering';
-import { TuringTessellation } from './components/games/TuringTessellation';
-import { DataHeist } from './components/games/DataHeist';
-import { PromptSculptor } from './components/games/PromptSculptor';
-import { SingularityCore } from './components/games/SingularityCore';
+const DefenseStrategist = React.lazy(() => import('./components/games/DefenseStrategist').then(m => ({ default: m.DefenseStrategist })));
+const PersonaSwitchboard = React.lazy(() => import('./components/games/PersonaSwitchboard').then(m => ({ default: m.PersonaSwitchboard })));
+const DeepfakeDetective = React.lazy(() => import('./components/games/DeepfakeDetective').then(m => ({ default: m.DeepfakeDetective })));
+const CausalConservatory = React.lazy(() => import('./components/games/CausalConservatory').then(m => ({ default: m.CausalConservatory })));
+const DataWhisperer = React.lazy(() => import('./components/games/DataWhisperer').then(m => ({ default: m.DataWhisperer })));
+const RewardFixer = React.lazy(() => import('./components/games/RewardFixer').then(m => ({ default: m.RewardFixer })));
+const NeuralNoir = React.lazy(() => import('./components/games/NeuralNoir').then(m => ({ default: m.NeuralNoir })));
+const PhantomLatency = React.lazy(() => import('./components/games/PhantomLatency').then(m => ({ default: m.PhantomLatency })));
+const ChronoQuest = React.lazy(() => import('./components/games/ChronoQuest').then(m => ({ default: m.ChronoQuest })));
+const VampireInvitation = React.lazy(() => import('./components/games/VampireInvitation').then(m => ({ default: m.VampireInvitation })));
+const MantellaWorld = React.lazy(() => import('./components/games/MantellaWorld').then(m => ({ default: m.MantellaWorld })));
+const CyberRain = React.lazy(() => import('./components/games/CyberRain').then(m => ({ default: m.CyberRain })));
+const DreamSim = React.lazy(() => import('./components/games/DreamSim').then(m => ({ default: m.DreamSim })));
+const BioGuard = React.lazy(() => import('./components/games/BioGuard').then(m => ({ default: m.BioGuard })));
+const NexusNegotiation = React.lazy(() => import('./components/games/NexusNegotiation').then(m => ({ default: m.NexusNegotiation })));
+const Xenoflora = React.lazy(() => import('./components/games/Xenoflora').then(m => ({ default: m.Xenoflora })));
+const NeonSyndicate = React.lazy(() => import('./components/games/NeonSyndicate').then(m => ({ default: m.NeonSyndicate })));
+const EntropySandbox = React.lazy(() => import('./components/games/EntropySandbox').then(m => ({ default: m.EntropySandbox })));
+const CognitiveCity = React.lazy(() => import('./components/games/CognitiveCity').then(m => ({ default: m.CognitiveCity })));
+const PromptDrift = React.lazy(() => import('./components/games/PromptDrift').then(m => ({ default: m.PromptDrift })));
+const Doppelganger = React.lazy(() => import('./components/games/Doppelganger').then(m => ({ default: m.Doppelganger })));
+const VoightKampffProtocol = React.lazy(() => import('./components/games/VoightKampffProtocol').then(m => ({ default: m.VoightKampffProtocol })));
+const ArrakisSands = React.lazy(() => import('./components/games/ArrakisSands').then(m => ({ default: m.ArrakisSands })));
+const LazarusVector = React.lazy(() => import('./components/games/LazarusVector').then(m => ({ default: m.LazarusVector })));
+const VeritasFalls = React.lazy(() => import('./components/games/VeritasFalls').then(m => ({ default: m.VeritasFalls })));
+const AethelredGambit = React.lazy(() => import('./components/games/AethelredGambit').then(m => ({ default: m.AethelredGambit })));
+const QuantumQubit = React.lazy(() => import('./components/games/QuantumQubit').then(m => ({ default: m.QuantumQubit })));
+const NeuralPrism = React.lazy(() => import('./components/games/NeuralPrism').then(m => ({ default: m.NeuralPrism })));
+const SynapseSurge = React.lazy(() => import('./components/games/SynapseSurge').then(m => ({ default: m.SynapseSurge })));
+const DeepfakeDeflector = React.lazy(() => import('./components/games/DeepfakeDeflector').then(m => ({ default: m.DeepfakeDeflector })));
+const OracleIndex = React.lazy(() => import('./components/games/OracleIndex').then(m => ({ default: m.OracleIndex })));
+const ChaosEngineering = React.lazy(() => import('./components/games/ChaosEngineering').then(m => ({ default: m.ChaosEngineering })));
+const TuringTessellation = React.lazy(() => import('./components/games/TuringTessellation').then(m => ({ default: m.TuringTessellation })));
+const DataHeist = React.lazy(() => import('./components/games/DataHeist').then(m => ({ default: m.DataHeist })));
+const PromptSculptor = React.lazy(() => import('./components/games/PromptSculptor').then(m => ({ default: m.PromptSculptor })));
+const SingularityCore = React.lazy(() => import('./components/games/SingularityCore').then(m => ({ default: m.SingularityCore })));
+const PromptKnight = React.lazy(() => import('./components/games/PromptKnight').then(m => ({ default: m.PromptKnight })));
+const DataKart = React.lazy(() => import('./components/games/DataKart').then(m => ({ default: m.DataKart })));
+const AgentCrossing = React.lazy(() => import('./components/games/AgentCrossing').then(m => ({ default: m.AgentCrossing })));
+const SuperMLBros = React.lazy(() => import('./components/games/SuperMLBros').then(m => ({ default: m.SuperMLBros })));
+const PromptEmon = React.lazy(() => import('./components/games/PromptEmon').then(m => ({ default: m.PromptEmon })));
+const TokenTactics = React.lazy(() => import('./components/games/TokenTactics').then(m => ({ default: m.TokenTactics })));
+const LatentSpace = React.lazy(() => import('./components/games/LatentSpace').then(m => ({ default: m.LatentSpace })));
+const SiliconValley = React.lazy(() => import('./components/games/SiliconValley').then(m => ({ default: m.SiliconValley })));
+const PromptKitchen = React.lazy(() => import('./components/games/PromptKitchen').then(m => ({ default: m.PromptKitchen })));
+const CyberSmash = React.lazy(() => import('./components/games/CyberSmash').then(m => ({ default: m.CyberSmash })));
 
 // Growth Mechanism Components
 import { ViralDashboard } from './components/growth/ViralDashboard';
@@ -461,66 +477,78 @@ export const App: React.FC = () => {
 
         return (
             <ErrorBoundary>
-                {(() => {
-                    switch (activeGame.type) {
-                        case GameType.NEON_DRIFT: return <NeonDrift {...progressionProps} />;
-                        case GameType.SPACE_MISSION: return <SpaceMission {...progressionProps} />;
+                <React.Suspense fallback={<div className="h-screen w-screen bg-black flex flex-col items-center justify-center text-electric font-mono"><div className="w-16 h-16 border-4 border-electric border-t-transparent rounded-full animate-spin mb-4"></div><div>Synthesizing Neural Link...</div></div>}>
+                    {(() => {
+                        switch (activeGame.type) {
+                            case GameType.NEON_DRIFT: return <NeonDrift {...progressionProps} />;
+                            case GameType.SPACE_MISSION: return <SpaceMission {...progressionProps} />;
 
-                        case GameType.PROMPT_ARCHITECT: return <PromptArchitect {...baseProps} />;
-                        case GameType.RED_TEAM: return <RedTeam {...baseProps} />;
-                        case GameType.PLANARIUM_HEIST: return <PlanariumHeist {...baseProps} />;
-                        case GameType.BANDIT_BISTRO: return <BanditBistro {...baseProps} />;
-                        case GameType.STYLE_ANCHOR: return <StyleAnchor {...baseProps} />;
-                        case GameType.GLITCHWAVE: return <GlitchwaveAnalyst {...baseProps} />;
-                        case GameType.OOD_SENTINEL: return <OODSentinel {...baseProps} />;
-                        case GameType.LATENCY_LAB: return <LatencyLab {...baseProps} />;
-                        case GameType.BIAS_BINGO: return <BiasBingo {...baseProps} />;
-                        case GameType.GRADIENT_SKI: return <GradientSki {...baseProps} />;
-                        case GameType.LATENT_VOYAGER: return <LatentVoyager {...baseProps} />;
-                        case GameType.TOKEN_TSUNAMI: return <TokenTsunami {...baseProps} />;
-                        case GameType.PROTEIN_POKER: return <ProteinPoker {...baseProps} />;
-                        case GameType.CLIMATE_TIME_MACHINE: return <ClimateTimeMachine {...baseProps} />;
-                        case GameType.WALL_STREET_WAR: return <WallStreetWar {...baseProps} />;
-                        case GameType.SMART_CITY_MAYOR: return <SmartCityMayor {...baseProps} />;
-                        case GameType.DEFENSE_STRATEGIST: return <DefenseStrategist {...baseProps} />;
-                        case GameType.PERSONA_SWITCHBOARD: return <PersonaSwitchboard {...baseProps} />;
-                        case GameType.DEEPFAKE_DETECTIVE: return <DeepfakeDetective {...baseProps} />;
-                        case GameType.CAUSAL_CONSERVATORY: return <CausalConservatory {...baseProps} />;
-                        case GameType.DATA_WHISPERER: return <DataWhisperer {...baseProps} />;
-                        case GameType.REWARD_FIXER: return <RewardFixer {...baseProps} />;
-                        case GameType.NEURAL_NOIR: return <NeuralNoir {...baseProps} />;
-                        case GameType.PHANTOM_LATENCY: return <PhantomLatency {...baseProps} />;
-                        case GameType.CHRONO_QUEST: return <ChronoQuest {...baseProps} />;
-                        case GameType.VAMPIRE_INVITATION: return <VampireInvitation {...baseProps} />;
-                        case GameType.MANTELLA: return <MantellaWorld {...baseProps} />;
-                        case GameType.CYBER_RAIN: return <CyberRain {...baseProps} />;
-                        case GameType.DREAM_SIM: return <DreamSim {...baseProps} />;
-                        case GameType.BIO_GUARD: return <BioGuard {...baseProps} />;
-                        case GameType.NEXUS_NEGOTIATION: return <NexusNegotiation {...baseProps} />;
-                        case GameType.XENOFLORA: return <Xenoflora {...baseProps} />;
-                        case GameType.NEON_SYNDICATE: return <NeonSyndicate {...baseProps} />;
-                        case GameType.ENTROPY_SANDBOX: return <EntropySandbox {...baseProps} />;
-                        case GameType.COGNITIVE_CITY: return <CognitiveCity {...baseProps} />;
-                        case GameType.PROMPT_DRIFT: return <PromptDrift {...baseProps} />;
-                        case GameType.DOPPELGANGER: return <Doppelganger {...baseProps} />;
-                        case GameType.VOIGHT_KAMPFF: return <VoightKampffProtocol {...baseProps} />;
-                        case GameType.ARRAKIS_SANDS: return <ArrakisSands {...baseProps} />;
-                        case GameType.LAZARUS_VECTOR: return <LazarusVector {...baseProps} />;
-                        case GameType.VERITAS_FALLS: return <VeritasFalls {...baseProps} />;
-                        case GameType.AETHELRED_GAMBIT: return <AethelredGambit {...baseProps} />;
-                        case GameType.QUANTUM_QUBIT: return <QuantumQubit {...baseProps} />;
-                        case GameType.NEURAL_PRISM: return <NeuralPrism {...baseProps} />;
-                        case GameType.SYNAPSE_SURGE: return <SynapseSurge {...baseProps} />;
-                        case GameType.DEEPFAKE_DEFLECTOR: return <DeepfakeDeflector {...baseProps} />;
-                        case GameType.ORACLE_INDEX: return <OracleIndex {...baseProps} />;
-                        case GameType.CHAOS_ENGINEERING: return <ChaosEngineering {...baseProps} />;
-                        case GameType.TURING_TESSELLATION: return <TuringTessellation {...baseProps} />;
-                        case GameType.DATA_HEIST: return <DataHeist {...baseProps} />;
-                        case GameType.PROMPT_SCULPTOR: return <PromptSculptor {...baseProps} />;
-                        case GameType.SINGULARITY_CORE: return <SingularityCore {...baseProps} />;
-                        default: return <div className="text-white p-8">Game not implemented yet.</div>;
-                    }
-                })()}
+                            case GameType.PROMPT_ARCHITECT: return <PromptArchitect {...baseProps} />;
+                            case GameType.RED_TEAM: return <RedTeam {...baseProps} />;
+                            case GameType.PLANARIUM_HEIST: return <PlanariumHeist {...baseProps} />;
+                            case GameType.BANDIT_BISTRO: return <BanditBistro {...baseProps} />;
+                            case GameType.STYLE_ANCHOR: return <StyleAnchor {...baseProps} />;
+                            case GameType.GLITCHWAVE: return <GlitchwaveAnalyst {...baseProps} />;
+                            case GameType.OOD_SENTINEL: return <OODSentinel {...baseProps} />;
+                            case GameType.LATENCY_LAB: return <LatencyLab {...baseProps} />;
+                            case GameType.BIAS_BINGO: return <BiasBingo {...baseProps} />;
+                            case GameType.GRADIENT_SKI: return <GradientSki {...baseProps} />;
+                            case GameType.LATENT_VOYAGER: return <LatentVoyager {...baseProps} />;
+                            case GameType.TOKEN_TSUNAMI: return <TokenTsunami {...baseProps} />;
+                            case GameType.PROTEIN_POKER: return <ProteinPoker {...baseProps} />;
+                            case GameType.CLIMATE_TIME_MACHINE: return <ClimateTimeMachine {...baseProps} />;
+                            case GameType.WALL_STREET_WAR: return <WallStreetWar {...baseProps} />;
+                            case GameType.SMART_CITY_MAYOR: return <SmartCityMayor {...baseProps} />;
+                            case GameType.DEFENSE_STRATEGIST: return <DefenseStrategist {...baseProps} />;
+                            case GameType.PERSONA_SWITCHBOARD: return <PersonaSwitchboard {...baseProps} />;
+                            case GameType.DEEPFAKE_DETECTIVE: return <DeepfakeDetective {...baseProps} />;
+                            case GameType.CAUSAL_CONSERVATORY: return <CausalConservatory {...baseProps} />;
+                            case GameType.DATA_WHISPERER: return <DataWhisperer {...baseProps} />;
+                            case GameType.REWARD_FIXER: return <RewardFixer {...baseProps} />;
+                            case GameType.NEURAL_NOIR: return <NeuralNoir {...baseProps} />;
+                            case GameType.PHANTOM_LATENCY: return <PhantomLatency {...baseProps} />;
+                            case GameType.CHRONO_QUEST: return <ChronoQuest {...baseProps} />;
+                            case GameType.VAMPIRE_INVITATION: return <VampireInvitation {...baseProps} />;
+                            case GameType.MANTELLA: return <MantellaWorld {...baseProps} />;
+                            case GameType.CYBER_RAIN: return <CyberRain {...baseProps} />;
+                            case GameType.DREAM_SIM: return <DreamSim {...baseProps} />;
+                            case GameType.BIO_GUARD: return <BioGuard {...baseProps} />;
+                            case GameType.NEXUS_NEGOTIATION: return <NexusNegotiation {...baseProps} />;
+                            case GameType.XENOFLORA: return <Xenoflora {...baseProps} />;
+                            case GameType.NEON_SYNDICATE: return <NeonSyndicate {...baseProps} />;
+                            case GameType.ENTROPY_SANDBOX: return <EntropySandbox {...baseProps} />;
+                            case GameType.COGNITIVE_CITY: return <CognitiveCity {...baseProps} />;
+                            case GameType.PROMPT_DRIFT: return <PromptDrift {...baseProps} />;
+                            case GameType.DOPPELGANGER: return <Doppelganger {...baseProps} />;
+                            case GameType.VOIGHT_KAMPFF: return <VoightKampffProtocol {...baseProps} />;
+                            case GameType.ARRAKIS_SANDS: return <ArrakisSands {...baseProps} />;
+                            case GameType.LAZARUS_VECTOR: return <LazarusVector {...baseProps} />;
+                            case GameType.VERITAS_FALLS: return <VeritasFalls {...baseProps} />;
+                            case GameType.AETHELRED_GAMBIT: return <AethelredGambit {...baseProps} />;
+                            case GameType.QUANTUM_QUBIT: return <QuantumQubit {...baseProps} />;
+                            case GameType.NEURAL_PRISM: return <NeuralPrism {...baseProps} />;
+                            case GameType.SYNAPSE_SURGE: return <SynapseSurge {...baseProps} />;
+                            case GameType.DEEPFAKE_DEFLECTOR: return <DeepfakeDeflector {...baseProps} />;
+                            case GameType.ORACLE_INDEX: return <OracleIndex {...baseProps} />;
+                            case GameType.CHAOS_ENGINEERING: return <ChaosEngineering {...baseProps} />;
+                            case GameType.TURING_TESSELLATION: return <TuringTessellation {...baseProps} />;
+                            case GameType.DATA_HEIST: return <DataHeist {...baseProps} />;
+                            case GameType.PROMPT_SCULPTOR: return <PromptSculptor {...baseProps} />;
+                            case GameType.SINGULARITY_CORE: return <SingularityCore {...baseProps} />;
+                            case GameType.PROMPT_KNIGHT: return <PromptKnight {...progressionProps} />;
+                            case GameType.DATA_KART: return <DataKart {...progressionProps} />;
+                            case GameType.AGENT_CROSSING: return <AgentCrossing {...progressionProps} />;
+                            case GameType.SUPER_ML_BROS: return <SuperMLBros {...progressionProps} />;
+                            case GameType.PROMPT_EMON: return <PromptEmon {...progressionProps} />;
+                            case GameType.TOKEN_TACTICS: return <TokenTactics {...progressionProps} />;
+                            case GameType.LATENT_SPACE: return <LatentSpace {...progressionProps} />;
+                            case GameType.SILICON_VALLEY: return <SiliconValley {...progressionProps} />;
+                            case GameType.PROMPT_KITCHEN: return <PromptKitchen {...progressionProps} />;
+                            case GameType.CYBER_SMASH: return <CyberSmash {...progressionProps} />;
+                            default: return <div className="text-white p-8">Game not implemented yet.</div>;
+                        }
+                    })()}
+                </React.Suspense>
             </ErrorBoundary>
         );
     };
@@ -537,16 +565,16 @@ export const App: React.FC = () => {
     };
 
     if (path === '/play/neural-hack') {
-        return <ViralNeuralHack onComplete={redirectToOnboarding} />;
+        return <React.Suspense fallback={<div className="h-screen w-screen bg-black" />}><ViralNeuralHack onComplete={redirectToOnboarding} /></React.Suspense>;
     }
     if (path === '/play/latency-tunnel') {
-        return <ViralLatencyTunnel onComplete={redirectToOnboarding} />;
+        return <React.Suspense fallback={<div className="h-screen w-screen bg-black" />}><ViralLatencyTunnel onComplete={redirectToOnboarding} /></React.Suspense>;
     }
     if (path === '/play/chaos-defense') {
-        return <ViralChaosDefense onComplete={redirectToOnboarding} />;
+        return <React.Suspense fallback={<div className="h-screen w-screen bg-black" />}><ViralChaosDefense onComplete={redirectToOnboarding} /></React.Suspense>;
     }
     if (path === '/play/prompt-injection') {
-        return <ViralPromptInjection onComplete={redirectToOnboarding} />;
+        return <React.Suspense fallback={<div className="h-screen w-screen bg-black" />}><ViralPromptInjection onComplete={redirectToOnboarding} /></React.Suspense>;
     }
 
     if (showEpicOnboarding) {
@@ -704,7 +732,7 @@ export const App: React.FC = () => {
                     {/* Performance Settings */}
                     <div className="bg-black/40 border border-white/5 rounded-xl p-4 hover:border-white/10 transition-colors space-y-4">
                         <div className="flex items-center justify-between group">
-                            <div className="flex items-center text-sm font-bold text-gray-300 group-hover:text-white transition-colors"><Cpu size={18} className="mr-3 text-electric" /> Focus Mode (Disable 3D)</div>
+                            <div className="flex items-center text-sm font-bold text-gray-300 group-hover:text-white transition-colors"><Cpu size={18} className="mr-3 text-electric" /> Focus Mode</div>
                             <button onClick={() => setFocusMode(!focusMode)} className={`text-xs font-bold px-4 py-2 rounded-lg border transition-all duration-300 ${focusMode ? 'bg-electric/20 text-electric border-electric/50 shadow-[0_0_15px_rgba(196,95,255,0.2)] scale-105' : 'bg-black/50 border-white/10 text-gray-500 hover:text-white hover:border-white/30 hover:bg-white/5'}`}>
                                 {focusMode ? 'ON' : 'OFF'}
                             </button>
@@ -756,12 +784,12 @@ export const App: React.FC = () => {
                                 )}
 
                                 <div className={`flex items-center justify-center w-8 h-8 rounded-lg mr-3 transition-colors ${isActive ? 'bg-electric/20 text-electric' : 'bg-transparent text-gray-500 group-hover:text-gray-300'}`}>
-                                    {tab === AppTab.HOME && <img src="/assets/aaa/nav-home.png" className="w-5 h-5 opacity-90 group-hover:opacity-100 transition-opacity" />}
-                                    {tab === AppTab.LEARN && <img src="/assets/aaa/nav-games.png" className="w-5 h-5 opacity-90 group-hover:opacity-100 transition-opacity" />}
-                                    {tab === AppTab.LAB && <img src="/assets/aaa/nav-progress.png" className="w-5 h-5 opacity-90 group-hover:opacity-100 transition-opacity" />}
-                                    {tab === AppTab.LEADERBOARD && <img src="/assets/aaa/nav-leaderboard.png" className="w-5 h-5 opacity-90 group-hover:opacity-100 transition-opacity" />}
-                                    {tab === AppTab.GROWTH && <span className="text-lg drop-shadow-md group-hover:scale-110 transition-transform">🚀</span>}
-                                    {tab === AppTab.PROFILE && <img src="/assets/aaa/nav-profile.png" className="w-5 h-5 opacity-90 group-hover:opacity-100 transition-opacity" />}
+                                    {tab === AppTab.HOME && <Home size={18} />}
+                                    {tab === AppTab.LEARN && <Gamepad2 size={18} />}
+                                    {tab === AppTab.LAB && <FlaskConical size={18} />}
+                                    {tab === AppTab.LEADERBOARD && <Trophy size={18} />}
+                                    {tab === AppTab.GROWTH && <Rocket size={18} />}
+                                    {tab === AppTab.PROFILE && <User size={18} />}
                                 </div>
                                 <span className="font-bold text-xs uppercase tracking-[0.15em] relative z-10">{t(`nav.${tab.toLowerCase()}`)}</span>
                             </button>
@@ -800,7 +828,7 @@ export const App: React.FC = () => {
 
             {/* Main Content */}
             <main className="flex-1 flex flex-col relative overflow-hidden">
-                <div className="md:hidden p-4 bg-black border-b border-white/10 flex justify-between items-center z-40">
+                <div className="md:hidden p-4 bg-black border-b border-white/10 flex justify-between items-center z-40 relative">
                     <div className="flex items-center space-x-2 text-white">
                         <img src="/assets/aaa/logo.png" className="w-6 h-6 rounded-md" />
                         <h1 className="text-xl font-black">YOKAI<span className="text-electric">ZEN</span></h1>
@@ -816,14 +844,13 @@ export const App: React.FC = () => {
                         <button onClick={() => setShowSettings(true)} className="text-gray-400 hover:text-white">
                             <Settings size={20} />
                         </button>
-                        <img src={user.avatar} className="w-8 h-8 rounded-full cursor-pointer border border-white/10" onClick={() => handleTabSwitch(AppTab.PROFILE)} />
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto scrollbar-hide bg-[#050505]">
+                <div className="flex-1 overflow-y-auto scrollbar-hide bg-[#050505] pb-24 md:pb-0 relative z-10">
                     <ErrorBoundary>
                         {/* Global WebGL Backdrop for Hub Tabs */}
-                        {[AppTab.HOME, AppTab.LEARN, AppTab.LEADERBOARD, AppTab.GROWTH, AppTab.PROFILE].includes(activeTab) && (
+                        {activeTab === AppTab.HOME && (
                             <div className="absolute inset-0 z-0 opacity-40 pointer-events-none fixed">
                                 <Canvas camera={{ position: [0, 0, 5], fov: 60 }}>
                                     <ambientLight intensity={0.5} />
@@ -838,340 +865,7 @@ export const App: React.FC = () => {
 
                         <AnimatePresence mode="wait">
                             {activeTab === AppTab.HOME && (
-                                <motion.div key="home" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.35, ease: [0.25, 0.8, 0.25, 1] }} className="p-6 pb-24 max-w-7xl mx-auto relative z-10">
-
-                                    <div className="relative z-10 space-y-10">
-                                        {/* ── AAA HERO STATUS CARD ── */}
-                                        <motion.div
-                                            initial={{ opacity: 0, y: 30 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ type: 'spring', damping: 20 }}
-                                            className="relative rounded-[32px] overflow-hidden border border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.6)] group bg-black/40 backdrop-blur-2xl"
-                                        >
-                                            {/* Atmospheric Background Layers */}
-                                            <div className="absolute inset-0 bg-[url('/assets/aaa/card-bg-1.png')] bg-cover bg-center opacity-30 mix-blend-screen transition-transform duration-1000 group-hover:scale-105"></div>
-                                            <div className="absolute inset-0 bg-gradient-to-r from-indigo-900/40 via-purple-900/20 to-pink-900/30"></div>
-                                            <div className="absolute -top-32 -right-32 w-96 h-96 bg-electric/20 blur-[100px] rounded-full group-hover:bg-electric/30 transition-colors duration-700"></div>
-                                            <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-cyan-500/20 blur-[100px] rounded-full group-hover:bg-cyan-500/30 transition-colors duration-700"></div>
-                                            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.05] mix-blend-overlay"></div>
-
-                                            <div className="relative p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-10">
-                                                {/* Left Profile Section */}
-                                                <div className="flex items-center gap-8 w-full md:w-auto">
-                                                    <div className="relative group/avatar cursor-pointer shrink-0" onClick={() => handleTabSwitch(AppTab.PROFILE)}>
-                                                        {/* Avatar Glow Rings */}
-                                                        <div className="absolute inset-[-10px] bg-gradient-to-tr from-cyan-400 via-electric to-pink-500 rounded-full blur-[20px] opacity-40 group-hover/avatar:opacity-70 transition-opacity duration-500 animate-[spin_4s_linear_infinite]"></div>
-                                                        <div className="absolute inset-[-2px] bg-gradient-to-tr from-cyan-400 to-electric rounded-full z-0"></div>
-
-                                                        <div className="relative w-32 h-32 rounded-full p-1 bg-black z-10 overflow-hidden transform group-hover/avatar:scale-95 transition-transform duration-300">
-                                                            <img src={user.avatar} className="w-full h-full rounded-full object-cover" alt="User Avatar" />
-                                                        </div>
-
-                                                        <motion.div
-                                                            whileHover={{ scale: 1.1, rotate: 10 }}
-                                                            className="absolute -bottom-2 -right-2 bg-gradient-to-br from-gray-900 to-black border border-white/20 rounded-full p-3 shadow-[0_10px_20px_rgba(0,0,0,0.5)] z-20"
-                                                        >
-                                                            <Shield className="text-electric w-6 h-6 animate-pulse" />
-                                                        </motion.div>
-                                                    </div>
-
-                                                    <div className="flex-1 text-center md:text-left">
-                                                        <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1 rounded-full mb-3 backdrop-blur-sm">
-                                                            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-                                                            <span className="text-[10px] font-bold text-gray-300 tracking-widest uppercase">System Online</span>
-                                                        </div>
-                                                        <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-gray-400 uppercase tracking-tight drop-shadow-lg mb-2">
-                                                            {user.name}
-                                                        </h2>
-                                                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm text-gray-300 font-mono">
-                                                            <div className="flex items-center gap-2 bg-electric/10 text-electric px-4 py-1.5 rounded-lg border border-electric/30 font-bold shadow-[0_0_15px_rgba(196,95,255,0.2)]">
-                                                                <Award size={16} /> Lvl {user.level}
-                                                            </div>
-                                                            <div className="flex items-center gap-2 bg-amber-500/10 text-amber-500 px-4 py-1.5 rounded-lg border border-amber-500/30 font-bold shadow-[0_0_15px_rgba(245,158,11,0.2)]">
-                                                                <Star size={16} /> {user.title}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Stats Grid Dashboard */}
-                                                <div className="grid grid-cols-3 gap-3 md:gap-4 w-full md:w-auto flex-shrink-0">
-                                                    {[
-                                                        { label: 'Total XP', val: user.xp.toLocaleString(), color: 'text-white', glow: 'rgba(255,255,255,0.2)' },
-                                                        { label: 'Hack Streak', val: `${user.streak} D`, color: 'text-amber-400', glow: 'rgba(245,158,11,0.3)' },
-                                                        { label: 'Credits', val: user.credits.toLocaleString(), color: 'text-cyan-400', glow: 'rgba(34,211,238,0.3)' }
-                                                    ].map((stat, i) => (
-                                                        <motion.div
-                                                            key={i}
-                                                            whileHover={{ y: -5, background: 'rgba(255,255,255,0.1)' }}
-                                                            className="flex flex-col items-center justify-center bg-black/40 p-4 md:p-6 rounded-[20px] border border-white/5 backdrop-blur-md transition-all relative overflow-hidden group/stat"
-                                                        >
-                                                            <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-0 group-hover/stat:opacity-100 transition-opacity"></div>
-                                                            <div className="text-[10px] md:text-xs text-gray-500 font-bold uppercase tracking-[0.2em] mb-2 relative z-10">{stat.label}</div>
-                                                            <div className={`text-2xl md:text-3xl font-black ${stat.color} relative z-10 tracking-tight`} style={{ textShadow: `0 0 20px ${stat.glow}` }}>
-                                                                {stat.val}
-                                                            </div>
-                                                        </motion.div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </motion.div>
-
-                                        {/* Next Unlock Widget (Integrated seamlessly) */}
-
-                                        {nextLockedTool && (
-                                            <div className="bg-black/60 border-t border-white/5 p-4 flex items-center justify-between backdrop-blur-md cursor-pointer hover:bg-white/5 transition-colors group/unlock" onClick={() => handleTabSwitch(AppTab.LAB)}>
-                                                <div className="flex items-center space-x-4">
-                                                    <div className="p-2 bg-gray-800 rounded-lg border border-gray-700 group-hover/unlock:border-electric transition-colors">
-                                                        <Lock size={18} className="text-gray-500 group-hover/unlock:text-electric" />
-                                                    </div>
-                                                    <div>
-                                                        <div className="text-xs text-gray-400 font-bold uppercase tracking-wider">{t('home.next_unlock')}</div>
-                                                        <div className="text-sm font-bold text-white group-hover/unlock:text-electric transition-colors">{t(nextLockedTool.name)}</div>
-                                                        <div className="text-[10px] text-gray-500 mt-0.5">{t(nextLockedTool.unlockCondition)}</div>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center text-xs text-electric font-bold uppercase bg-electric/10 px-3 py-1.5 rounded-full border border-electric/20 group-hover/unlock:bg-electric group-hover/unlock:text-white transition-all">
-                                                    {t('home.view_lab')} <ChevronRight size={14} className="ml-1" />
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* ── SEARCH & FILTER BAR ── */}
-                                        <div className="space-y-4">
-                                            {/* Search Input */}
-                                            <div className="relative">
-                                                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
-                                                <input
-                                                    type="text"
-                                                    value={searchQuery}
-                                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                                    placeholder="Search 58 simulations..."
-                                                    className="w-full bg-black/60 border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-electric/50 focus:shadow-[0_0_20px_rgba(196,95,255,0.15)] transition-all backdrop-blur-xl font-medium"
-                                                />
-                                                {searchQuery && (
-                                                    <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors text-xs font-bold bg-white/10 px-2 py-1 rounded-md">Clear</button>
-                                                )}
-                                            </div>
-
-                                            {/* Category Pills */}
-                                            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-2 px-2">
-                                                {CATEGORY_FILTERS.map(cat => (
-                                                    <button
-                                                        key={cat.key}
-                                                        onClick={() => setCategoryFilter(cat.key)}
-                                                        className={`shrink-0 text-xs font-bold px-4 py-2 rounded-full border transition-all duration-200 ${categoryFilter === cat.key
-                                                            ? 'bg-electric/20 text-electric border-electric/50 shadow-[0_0_10px_rgba(196,95,255,0.2)]'
-                                                            : 'bg-black/40 border-white/10 text-gray-400 hover:text-white hover:border-white/20 hover:bg-white/5'
-                                                            }`}
-                                                    >
-                                                        {cat.label}
-                                                    </button>
-                                                ))}
-                                            </div>
-
-                                            {/* Difficulty & Status Row */}
-                                            <div className="flex flex-wrap gap-2">
-                                                {(['ALL', 'Rookie', 'Pro', 'Elite'] as const).map(diff => (
-                                                    <button
-                                                        key={diff}
-                                                        onClick={() => setDifficultyFilter(diff)}
-                                                        className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border transition-all duration-200 ${difficultyFilter === diff
-                                                            ? diff === 'Rookie' ? 'bg-green-500/20 text-green-400 border-green-500/40'
-                                                                : diff === 'Pro' ? 'bg-blue-500/20 text-blue-400 border-blue-500/40'
-                                                                    : diff === 'Elite' ? 'bg-red-500/20 text-red-400 border-red-500/40'
-                                                                        : 'bg-white/10 text-white border-white/30'
-                                                            : 'bg-black/30 border-white/5 text-gray-500 hover:text-gray-300 hover:border-white/15'
-                                                            }`}
-                                                    >
-                                                        {diff === 'ALL' ? '⚡ All Levels' : diff}
-                                                    </button>
-                                                ))}
-                                                <div className="w-px bg-white/10 mx-1"></div>
-                                                {(['ALL', 'COMPLETED', 'NEW'] as const).map(status => (
-                                                    <button
-                                                        key={status}
-                                                        onClick={() => setStatusFilter(status)}
-                                                        className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border transition-all duration-200 ${statusFilter === status
-                                                            ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40'
-                                                            : 'bg-black/30 border-white/5 text-gray-500 hover:text-gray-300 hover:border-white/15'
-                                                            }`}
-                                                    >
-                                                        {status === 'ALL' ? 'All' : status === 'COMPLETED' ? '✅ Completed' : '✨ New'}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* ── FEATURED CAROUSEL ── */}
-                                        {!searchQuery && categoryFilter === 'ALL' && difficultyFilter === 'ALL' && statusFilter === 'ALL' && (
-                                            <div>
-                                                <div className="flex items-center justify-between mb-4 px-2">
-                                                    <h3 className="text-xl font-black text-white uppercase italic tracking-wide">Featured Simulations</h3>
-                                                    <div className="flex gap-2">
-                                                        <div className="w-2 h-2 rounded-full bg-electric animate-pulse"></div>
-                                                        <div className="w-2 h-2 rounded-full bg-gray-700"></div>
-                                                        <div className="w-2 h-2 rounded-full bg-gray-700"></div>
-                                                    </div>
-                                                </div>
-                                                <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-6 scrollbar-hide -mx-6 px-6 md:mx-0 md:px-0">
-                                                    {GAMES.slice(0, 10).map(game => {
-                                                        const isCompleted = user.completedNodes?.includes(game.id);
-                                                        return (
-                                                            <div key={game.id} onClick={() => handleGameLaunch(game)} className="snap-center shrink-0 w-[280px] md:w-[320px] relative aspect-video bg-gray-900 rounded-xl overflow-hidden border border-white/10 cursor-pointer group hover:border-electric transition-all shadow-xl hover:shadow-[0_0_30px_rgba(196,95,255,0.3)] hover:-translate-y-1">
-                                                                <GameCover game={game} className="opacity-70 group-hover:opacity-100 transition-opacity duration-500 scale-105 group-hover:scale-110" iconSize={48} />
-                                                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
-
-                                                                {/* Completion Badge */}
-                                                                {isCompleted && (
-                                                                    <div className="absolute top-2 left-2 bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded-md border border-emerald-500/40 z-10 backdrop-blur-md flex items-center gap-1">
-                                                                        <CheckCircle size={12} />
-                                                                        <span className="text-[9px] font-bold uppercase">Cleared</span>
-                                                                    </div>
-                                                                )}
-
-                                                                {game.isPremium && !user.isPro && (
-                                                                    <div className="absolute top-2 right-2 bg-black/80 text-amber-500 p-1.5 rounded-full border border-amber-500/50 z-10 shadow-lg backdrop-blur-md">
-                                                                        <Lock size={14} />
-                                                                    </div>
-                                                                )}
-
-                                                                <div className="absolute bottom-4 left-4 right-4 z-10">
-                                                                    <div className="text-lg font-black text-white truncate drop-shadow-md group-hover:text-electric transition-colors uppercase tracking-tight">
-                                                                        {t(`game.${game.type.toLowerCase()}.title`)}
-                                                                    </div>
-                                                                    <div className="text-[11px] text-gray-300 truncate opacity-90 mb-3 drop-shadow-md">
-                                                                        {t(`game.${game.type.toLowerCase()}.desc`)}
-                                                                    </div>
-                                                                    <div className="flex items-center space-x-2">
-                                                                        <span className={`text-[9px] px-2 py-0.5 rounded-sm font-bold uppercase border ${game.difficulty === 'Rookie' ? 'bg-green-900/40 border-green-500/50 text-green-400' :
-                                                                            game.difficulty === 'Pro' ? 'bg-blue-900/40 border-blue-500/50 text-blue-400' : 'bg-red-900/40 border-red-500/50 text-red-400'
-                                                                            }`}>
-                                                                            {t(`difficulty.${game.difficulty.toLowerCase()}`)}
-                                                                        </span>
-                                                                        <span className="text-[9px] text-gray-400 font-mono flex items-center bg-black/50 px-2 py-0.5 rounded-sm backdrop-blur-sm">
-                                                                            <Clock size={10} className="mr-1" /> {game.durationMin} {t('ui.min')}
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* ── FILTERED GAME GRID ── */}
-                                        <div>
-                                            <div className="flex items-center justify-between mb-4 px-2">
-                                                <h3 className="text-xl font-black text-white uppercase italic tracking-wide">
-                                                    {searchQuery || categoryFilter !== 'ALL' || difficultyFilter !== 'ALL' || statusFilter !== 'ALL' ? 'Results' : 'All Scenarios'}
-                                                </h3>
-                                                <span className="text-xs text-gray-500 font-mono">
-                                                    {(() => {
-                                                        const filtered = GAMES.filter(game => {
-                                                            if (searchQuery) {
-                                                                const q = searchQuery.toLowerCase();
-                                                                const title = t(`game.${game.type.toLowerCase()}.title`).toLowerCase();
-                                                                const desc = t(`game.${game.type.toLowerCase()}.desc`).toLowerCase();
-                                                                if (!title.includes(q) && !desc.includes(q) && !game.type.toLowerCase().includes(q)) return false;
-                                                            }
-                                                            if (categoryFilter !== 'ALL') {
-                                                                const skill = CATEGORY_FILTERS.find(c => c.key === categoryFilter)?.skill;
-                                                                if (skill && !game.tags.includes(skill)) return false;
-                                                            }
-                                                            if (difficultyFilter !== 'ALL' && game.difficulty !== difficultyFilter) return false;
-                                                            if (statusFilter === 'COMPLETED' && !user.completedNodes?.includes(game.id)) return false;
-                                                            if (statusFilter === 'NEW' && user.completedNodes?.includes(game.id)) return false;
-                                                            return true;
-                                                        });
-                                                        return `${filtered.length} / ${GAMES.length}`;
-                                                    })()}
-                                                </span>
-                                            </div>
-                                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                                                {GAMES.filter(game => {
-                                                    if (searchQuery) {
-                                                        const q = searchQuery.toLowerCase();
-                                                        const title = t(`game.${game.type.toLowerCase()}.title`).toLowerCase();
-                                                        const desc = t(`game.${game.type.toLowerCase()}.desc`).toLowerCase();
-                                                        if (!title.includes(q) && !desc.includes(q) && !game.type.toLowerCase().includes(q)) return false;
-                                                    }
-                                                    if (categoryFilter !== 'ALL') {
-                                                        const skill = CATEGORY_FILTERS.find(c => c.key === categoryFilter)?.skill;
-                                                        if (skill && !game.tags.includes(skill)) return false;
-                                                    }
-                                                    if (difficultyFilter !== 'ALL' && game.difficulty !== difficultyFilter) return false;
-                                                    if (statusFilter === 'COMPLETED' && !user.completedNodes?.includes(game.id)) return false;
-                                                    if (statusFilter === 'NEW' && user.completedNodes?.includes(game.id)) return false;
-                                                    return true;
-                                                }).slice(searchQuery || categoryFilter !== 'ALL' || difficultyFilter !== 'ALL' || statusFilter !== 'ALL' ? 0 : 10).map(game => {
-                                                    const isCompleted = user.completedNodes?.includes(game.id);
-                                                    return (
-                                                        <div key={game.id} onClick={() => handleGameLaunch(game)} className={`relative aspect-video bg-gray-900 rounded-xl overflow-hidden border cursor-pointer group hover:border-white/30 transition-all hover:-translate-y-0.5 hover:shadow-xl ${isCompleted ? 'border-emerald-500/20' : 'border-white/5'}`}>
-                                                            <GameCover game={game} className="opacity-40 group-hover:opacity-80 transition-opacity duration-300" iconSize={32} />
-                                                            <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent"></div>
-
-                                                            {/* Completion indicator */}
-                                                            {isCompleted && (
-                                                                <div className="absolute top-1.5 left-1.5 z-10">
-                                                                    <CheckCircle size={14} className="text-emerald-400 drop-shadow-[0_0_4px_rgba(16,185,129,0.6)]" />
-                                                                </div>
-                                                            )}
-
-                                                            {game.isPremium && !user.isPro && (
-                                                                <div className="absolute top-2 right-2 text-amber-500/50 z-10"><Lock size={12} /></div>
-                                                            )}
-                                                            <div className="absolute bottom-2 left-2 right-2 z-10">
-                                                                <div className="text-xs font-bold text-white truncate group-hover:text-electric transition-colors">{t(`game.${game.type.toLowerCase()}.title`)}</div>
-                                                                <div className="text-[9px] text-gray-500 truncate">{t(`game.${game.type.toLowerCase()}.desc`)}</div>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                            {/* Empty state */}
-                                            {GAMES.filter(game => {
-                                                if (searchQuery) {
-                                                    const q = searchQuery.toLowerCase();
-                                                    const title = t(`game.${game.type.toLowerCase()}.title`).toLowerCase();
-                                                    const desc = t(`game.${game.type.toLowerCase()}.desc`).toLowerCase();
-                                                    if (!title.includes(q) && !desc.includes(q) && !game.type.toLowerCase().includes(q)) return false;
-                                                }
-                                                if (categoryFilter !== 'ALL') {
-                                                    const skill = CATEGORY_FILTERS.find(c => c.key === categoryFilter)?.skill;
-                                                    if (skill && !game.tags.includes(skill)) return false;
-                                                }
-                                                if (difficultyFilter !== 'ALL' && game.difficulty !== difficultyFilter) return false;
-                                                if (statusFilter === 'COMPLETED' && !user.completedNodes?.includes(game.id)) return false;
-                                                if (statusFilter === 'NEW' && user.completedNodes?.includes(game.id)) return false;
-                                                return true;
-                                            }).length === 0 && (
-                                                    <div className="text-center py-20 text-gray-500">
-                                                        <Search size={48} className="mx-auto mb-4 opacity-30" />
-                                                        <p className="text-sm font-bold">No simulations match your filters.</p>
-                                                        <button onClick={() => { setSearchQuery(''); setCategoryFilter('ALL'); setDifficultyFilter('ALL'); setStatusFilter('ALL'); }} className="text-electric text-xs mt-3 underline">Clear all filters</button>
-                                                    </div>
-                                                )}
-                                        </div>
-
-                                        {/* Continue Learning Path Link */}
-                                        <div className="mt-8 p-6 bg-gradient-to-r from-blue-900/40 to-purple-900/40 rounded-2xl border border-white/10 flex flex-col md:flex-row items-center justify-between gap-4 group cursor-pointer hover:border-electric transition-all" onClick={() => handleTabSwitch(AppTab.LEARN)}>
-                                            <div className="flex items-center space-x-4">
-                                                <div className="p-3 bg-electric/20 rounded-full border border-electric/50 text-electric group-hover:scale-110 transition-transform">
-                                                    <BookOpen size={24} />
-                                                </div>
-                                                <div>
-                                                    <h3 className="text-xl font-black text-white uppercase italic">{t('home.continue_path')}</h3>
-                                                    <p className="text-sm text-gray-400">{t('home.path_desc')}</p>
-                                                </div>
-                                            </div>
-                                            <Button variant="primary" className="shadow-[0_0_20px_rgba(196,95,255,0.3)]">
-                                                {t('ui.enter_path')} <ChevronRight className="ml-2" size={16} />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </motion.div>
+                                <HomePage user={user} t={t} handleTabSwitch={handleTabSwitch} handleGameLaunch={handleGameLaunch} />
                             )}
 
                             {activeTab === AppTab.LEARN && (
@@ -1202,45 +896,8 @@ export const App: React.FC = () => {
                                     />
                                 </motion.div>
                             )}
-
                             {activeTab === AppTab.LEADERBOARD && (
-                                <motion.div key="leaderboard" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.35 }} className="flex flex-col h-full">
-                                    {/* Mobile Toggle */}
-                                    <div className="md:hidden flex border-b border-white/10">
-                                        <button
-                                            className={`flex-1 py-3 text-xs font-bold uppercase ${mobileLeaderboardView === 'RANKING' ? 'text-electric border-b-2 border-electric' : 'text-gray-500'}`}
-                                            onClick={() => setMobileLeaderboardView('RANKING')}
-                                        >
-                                            {t('leaderboard.global')}
-                                        </button>
-                                        <button
-                                            className={`flex-1 py-3 text-xs font-bold uppercase ${mobileLeaderboardView === 'SQUAD' ? 'text-electric border-b-2 border-electric' : 'text-gray-500'}`}
-                                            onClick={() => setMobileLeaderboardView('SQUAD')}
-                                        >
-                                            {t('leaderboard.squad')}
-                                        </button>
-                                    </div>
-
-                                    <div className="flex flex-1 overflow-hidden">
-                                        <div className={`flex-1 border-r border-white/10 ${mobileLeaderboardView === 'SQUAD' ? 'block' : 'hidden md:block'}`}>
-                                            <SquadManager
-                                                squads={squads}
-                                                userSquadId={user.squadId}
-                                                onJoinSquad={handleJoinSquad}
-                                                onCreateSquad={handleCreateSquad}
-                                                isPro={user.isPro}
-                                                onTriggerPaywall={() => setShowPaywall(true)}
-                                                t={t}
-                                                user={user}
-                                                onUpdateUser={updateUser}
-                                                onUpdateSquads={setSquads}
-                                            />
-                                        </div>
-                                        <div className={`flex-1 h-full ${mobileLeaderboardView === 'RANKING' ? 'block' : 'hidden md:block'}`}>
-                                            <Leaderboard />
-                                        </div>
-                                    </div>
-                                </motion.div>
+                                <LeaderboardPage mobileLeaderboardView={mobileLeaderboardView} setMobileLeaderboardView={setMobileLeaderboardView} squads={squads} user={user} handleJoinSquad={handleJoinSquad} handleCreateSquad={handleCreateSquad} setShowPaywall={setShowPaywall} t={t} updateUser={updateUser} setSquads={setSquads} />
                             )}
 
                             {activeTab === AppTab.GROWTH && (
@@ -1251,145 +908,8 @@ export const App: React.FC = () => {
                                     />
                                 </motion.div>
                             )}
-
                             {activeTab === AppTab.PROFILE && (
-                                <motion.div key="profile" initial={{ opacity: 0, scale: 0.97, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: -20 }} transition={{ duration: 0.4 }} className="p-4 sm:p-8 space-y-10 pb-32">
-                                    {/* Epic Profile Header Card */}
-                                    <div ref={idCardRef} className="bg-gradient-to-br from-gray-900/90 via-black/80 to-electric/20 p-8 sm:p-10 rounded-[2rem] border border-white/10 backdrop-blur-2xl relative overflow-hidden group shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-                                        {/* Animated light sweeps */}
-                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                                        <div className="absolute -top-32 -right-32 w-96 h-96 bg-electric/20 rounded-full blur-[100px] pointer-events-none group-hover:bg-cyan-500/20 transition-all duration-700"></div>
-
-                                        <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-6 sm:space-y-0 sm:space-x-8 relative z-10">
-                                            <div className="relative group/avatar">
-                                                <div className="w-32 h-32 rounded-[2rem] border-2 border-white/20 p-1 shadow-[0_0_30px_rgba(196,95,255,0.3)] bg-black overflow-hidden group-hover/avatar:border-electric transition-colors duration-500">
-                                                    <img src={user.avatar} className="w-full h-full object-cover rounded-[1.8rem] group-hover/avatar:scale-110 transition-transform duration-700" />
-                                                </div>
-                                                <div className="absolute inset-0 bg-electric/50 rounded-[2rem] blur-2xl opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-500 -z-10"></div>
-                                            </div>
-                                            <div className="text-center sm:text-left flex-1">
-                                                <h2 className="text-4xl md:text-5xl font-black text-white tracking-tighter drop-shadow-lg mb-2">{user.name}</h2>
-                                                <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-electric/10 border border-electric/30 text-electric font-bold text-sm uppercase tracking-widest mb-6 shadow-[0_0_15px_rgba(196,95,255,0.2)]">
-                                                    <div className="w-2 h-2 rounded-full bg-electric animate-pulse mr-2 shadow-[0_0_10px_#c45fff]"></div>
-                                                    {user.title}
-                                                </div>
-
-                                                <div className="flex flex-wrap justify-center sm:justify-start gap-4">
-                                                    <div className="bg-black/60 border border-white/10 px-5 py-3 rounded-2xl flex items-center backdrop-blur-xl shadow-inner group/stat hover:border-amber-500/50 transition-colors">
-                                                        <Trophy size={18} className="text-amber-400 mr-3 group-hover/stat:scale-125 transition-transform" />
-                                                        <div className="flex flex-col">
-                                                            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-none mb-1">{t('profile.level')}</span>
-                                                            <span className="text-xl font-black text-white leading-none">{user.level}</span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="bg-black/60 border border-white/10 px-5 py-3 rounded-2xl flex items-center backdrop-blur-xl shadow-inner group/stat hover:border-cyan-500/50 transition-colors">
-                                                        <Zap size={18} className="text-cyan-400 mr-3 group-hover/stat:scale-125 transition-transform" />
-                                                        <div className="flex flex-col">
-                                                            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-none mb-1">{t('profile.credits')}</span>
-                                                            <span className="text-xl font-black text-white leading-none flex items-baseline">
-                                                                {user.credits} <span className="text-xs text-cyan-700 ml-1">CR</span>
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <button
-                                                    onClick={handleExportIDCard}
-                                                    disabled={isGeneratingCard}
-                                                    className="mt-6 flex items-center justify-center bg-transparent border border-electric/50 text-electric hover:bg-electric/20 rounded-xl px-5 py-2.5 text-xs font-bold transition-all uppercase tracking-widest shadow-[0_0_15px_rgba(196,95,255,0.2)] hover:shadow-[0_0_25px_rgba(196,95,255,0.5)]"
-                                                    title="Export Neural ID to PNG"
-                                                >
-                                                    <Share2 size={16} className="mr-3" />
-                                                    {isGeneratingCard ? 'Exporting...' : 'Export Neural ID Card'}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                        {/* Epic Game Analytics */}
-                                        <div className="lg:col-span-2">
-                                            <GameAnalyticsDashboard user={user} t={t} />
-                                        </div>
-
-                                        {/* Epic Skills Radar */}
-                                        <div className="bg-gradient-to-br from-black/80 to-gray-900/90 p-8 rounded-[2rem] border border-white/10 relative group hover:border-white/20 transition-all shadow-2xl backdrop-blur-xl flex flex-col items-center">
-                                            <div className="w-full flex justify-between items-center mb-8">
-                                                <h3 className="text-sm font-black text-white uppercase tracking-[0.2em] flex items-center">
-                                                    <Activity size={18} className="mr-3 text-electric" /> SKILL MATRIX
-                                                </h3>
-                                                <button
-                                                    className="bg-electric/10 text-electric text-xs font-bold px-4 py-2 rounded-xl border border-electric/30 hover:bg-electric border-hover bg-hover text-hover transition-all shadow-[0_0_15px_rgba(196,95,255,0.2)] hover:shadow-[0_0_25px_rgba(196,95,255,0.6)] hover:text-white"
-                                                    onClick={() => setShowSkillTree(true)}
-                                                >
-                                                    {t('ui.view_skill_tree')}
-                                                </button>
-                                            </div>
-                                            <div className="relative z-10 w-full flex-1 flex items-center justify-center min-h-[300px]">
-                                                <SkillRadar skills={user.skills} t={t} />
-                                            </div>
-                                        </div>
-
-                                        {/* Epic Created Games */}
-                                        <div className="bg-gradient-to-br from-black/80 to-gray-900/90 p-8 rounded-[2rem] border border-white/10 group hover:border-white/20 transition-all shadow-2xl backdrop-blur-xl flex flex-col">
-                                            <h3 className="text-sm font-black text-white uppercase tracking-[0.2em] mb-8 flex items-center">
-                                                <Box size={18} className="mr-3 text-cyan-400" /> {t('profile.created_games')}
-                                            </h3>
-                                            <div className="space-y-4 flex-1 mt-2 overflow-y-auto pr-2 custom-scrollbar max-h-[300px]">
-                                                {(user.createdGames || []).map((g: any, i: number) => (
-                                                    <div key={i} className="flex justify-between items-center p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-cyan-500/50 hover:bg-gradient-to-r hover:from-cyan-900/20 hover:to-transparent transition-all group/item shadow-sm hover:shadow-lg">
-                                                        <span className="text-base font-bold text-gray-300 group-hover/item:text-white transition-colors">{g.title}</span>
-                                                        <Button size="sm" variant="primary" onClick={() => setActiveGeneratedGame(g)} className="opacity-0 group-hover/item:opacity-100 transition-all translate-x-4 group-hover/item:translate-x-0"><Play size={14} className="mr-2" /> {t('ui.play')}</Button>
-                                                    </div>
-                                                ))}
-                                                {(!user.createdGames || user.createdGames.length === 0) && (
-                                                    <div className="h-full w-full flex flex-col items-center justify-center text-gray-600 space-y-4 opacity-70">
-                                                        <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center">
-                                                            <Box size={24} className="text-gray-500" />
-                                                        </div>
-                                                        <span className="text-xs uppercase font-bold tracking-[0.2em]">{t('profile.no_games')}</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Epic Badges Gallery */}
-                                    <div className="bg-gradient-to-br from-black/80 to-gray-900/90 p-8 rounded-[2rem] border border-white/10 relative group hover:border-white/20 transition-all shadow-2xl backdrop-blur-xl overflow-hidden">
-                                        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-amber-500/5 rounded-full blur-[120px] pointer-events-none"></div>
-
-                                        <h3 className="text-sm font-black text-white uppercase tracking-[0.2em] mb-8 flex items-center relative z-10">
-                                            <Award size={18} className="mr-3 text-amber-500" /> HALL OF MASTERY
-                                        </h3>
-
-                                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-8 gap-4 sm:gap-6 relative z-10">
-                                            {user.inventory.filter(i => i.type === 'BADGE').map(b => (
-                                                <div key={b.id} className="aspect-square bg-gradient-to-b from-gray-800 to-black rounded-2xl flex flex-col items-center justify-center border border-white/10 relative group/badge hover:-translate-y-2 shadow-lg hover:shadow-[0_20px_40px_rgba(245,158,11,0.2)] transition-all duration-500 cursor-crosshair overflow-hidden hover:border-amber-500/60">
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-amber-500/20 to-transparent opacity-0 group-hover/badge:opacity-100 transition-opacity duration-300"></div>
-
-                                                    <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center mb-1 group-hover/badge:scale-110 transition-transform duration-500">
-                                                        {b.icon.endsWith('.svg') || b.icon.endsWith('.png') ? (
-                                                            <img src={`/assets/badges/${b.icon}`} alt={b.name} className="w-full h-full object-contain filter drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]" onError={(e) => (e.currentTarget.src = `https://api.dicebear.com/7.x/initials/svg?seed=${b.name}`)} />
-                                                        ) : (
-                                                            <span className="text-4xl drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">{b.icon}</span>
-                                                        )}
-                                                    </div>
-                                                    <div className="absolute bottom-0 left-0 right-0 bg-black/90 backdrop-blur-md border-t border-amber-500/30 flex items-center justify-center text-[10px] font-black tracking-wider text-center py-2 px-1 translate-y-full group-hover/badge:translate-y-0 transition-transform duration-300 rounded-b-2xl z-20 text-amber-400 uppercase shadow-[0_-10px_20px_rgba(0,0,0,0.8)]">
-                                                        {b.name}
-                                                    </div>
-                                                </div>
-                                            ))}
-
-                                            {/* Epic Locked placeholders */}
-                                            {Array.from({ length: Math.max(0, 16 - user.inventory.filter(i => i.type === 'BADGE').length) }).map((_, i) => (
-                                                <div key={`locked-${i}`} className="aspect-square bg-black/40 rounded-2xl border border-white/5 border-dashed flex flex-col items-center justify-center opacity-40 hover:opacity-80 hover:bg-black/60 hover:border-white/20 transition-all duration-300 group/locked">
-                                                    <Lock size={20} className="text-gray-600 mb-2 group-hover/locked:text-gray-400 transition-colors" />
-                                                    <div className="w-8 h-1 bg-gray-800 rounded-full"></div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </motion.div>
+                                <ProfilePage user={user} t={t} idCardRef={idCardRef} isGeneratingCard={isGeneratingCard} handleExportIDCard={handleExportIDCard} setShowSkillTree={setShowSkillTree} setActiveGeneratedGame={setActiveGeneratedGame} />
                             )}
 
                             {activeTab === AppTab.ADMIN && user.role === 'admin' && (
@@ -1401,40 +921,9 @@ export const App: React.FC = () => {
                     </ErrorBoundary>
                 </div>
 
-                {/* ── AAA Mobile Bottom Nav ── */}
-                <div className="md:hidden bg-black/95 backdrop-blur-2xl border-t border-white/10 flex justify-around px-2 pt-2 pb-safe z-50 relative">
-                    {/* Glow effect for active tab */}
-                    <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-electric/50 to-transparent"></div>
-                    {[AppTab.HOME, AppTab.LEARN, AppTab.LAB, AppTab.LEADERBOARD, AppTab.GROWTH, AppTab.PROFILE].map(tab => {
-                        const isActive = activeTab === tab;
-                        return (
-                            <button
-                                key={tab}
-                                onClick={() => handleTabSwitch(tab)}
-                                className={`flex flex-col items-center py-1.5 px-2 rounded-xl transition-all duration-200 relative ${isActive ? 'text-electric' : 'text-gray-500 active:text-gray-300'}`}
-                            >
-                                {isActive && (
-                                    <motion.div
-                                        layoutId="mobileNavGlow"
-                                        className="absolute -top-0.5 w-8 h-1 bg-electric rounded-full shadow-[0_0_10px_rgba(196,95,255,0.6)]"
-                                    />
-                                )}
-                                <div className={`w-6 h-6 flex items-center justify-center transition-transform ${isActive ? 'scale-110' : ''}`}>
-                                    {tab === AppTab.HOME && <Home size={20} />}
-                                    {tab === AppTab.LEARN && <BookOpen size={20} />}
-                                    {tab === AppTab.LAB && <FlaskConical size={20} />}
-                                    {tab === AppTab.LEADERBOARD && <Trophy size={20} />}
-                                    {tab === AppTab.GROWTH && <BarChart3 size={20} />}
-                                    {tab === AppTab.PROFILE && <User size={20} />}
-                                </div>
-                                <span className={`text-[8px] font-bold mt-0.5 uppercase tracking-wider ${isActive ? 'text-electric' : 'text-gray-600'}`}>
-                                    {tab === AppTab.HOME ? 'Home' : tab === AppTab.LEARN ? 'Learn' : tab === AppTab.LAB ? 'Lab' : tab === AppTab.LEADERBOARD ? 'Rank' : tab === AppTab.GROWTH ? 'Grow' : 'You'}
-                                </span>
-                            </button>
-                        );
-                    })}
-                </div>
-            </main >
-        </div >
+                {/* ── MOBILE NAV BAR ── */}
+                <BottomNav activeTab={activeTab} handleTabSwitch={handleTabSwitch} t={t} />
+            </main>
+        </div>
     );
 };

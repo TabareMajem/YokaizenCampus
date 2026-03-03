@@ -53,5 +53,5 @@ export const COMMON = {
     'difficulty.elite': 'ELITE',
     'leaderboard.global': 'GLOBAL',
     'leaderboard.squad': 'SQUAD',
+    'settings.title': 'การตั้งค่า', 'settings.language': 'ภาษา', 'settings.audio': 'เสียง', 'settings.haptics': 'การสั่น', 'settings.test': 'ทดสอบ', 'settings.toggle': 'สลับ', 'settings.admin_console': 'คอนโซล', 'settings.close': 'ปิด', 'nav.growth': 'การเติบโต',
 };
-

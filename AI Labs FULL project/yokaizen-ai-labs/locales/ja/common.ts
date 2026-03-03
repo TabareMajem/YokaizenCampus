@@ -53,5 +53,5 @@ export const COMMON = {
     'difficulty.elite': 'ELITE',
     'leaderboard.global': 'GLOBAL',
     'leaderboard.squad': 'SQUAD',
+    'settings.title': 'システム設定', 'settings.language': '言語', 'settings.audio': '音声', 'settings.haptics': '触覚', 'settings.test': 'テスト', 'settings.toggle': '切替', 'settings.admin_console': '管理コンソール', 'settings.close': '閉じる', 'nav.growth': '成長',
 };
-

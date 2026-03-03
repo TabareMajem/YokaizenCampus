@@ -6,6 +6,7 @@ import { logger } from '@config/logger';
 import { User, UserTier } from '@entities/User';
 import { GameHistory, GameType, GameDifficulty } from '@entities/GameHistory';
 import { Squad } from '@entities/Squad';
+import { GeneratedGame, GameStatus as GenGameStatus } from '@entities/GeneratedGame';
 import { ApiError } from '@utils/errors';
 import { calculateXPReward, calculateCreditReward, calculateLevel } from '@utils/helpers';
 import { GameSession } from '@types';
@@ -110,11 +111,13 @@ export class GameService {
   private userRepository: Repository<User>;
   private gameHistoryRepository: Repository<GameHistory>;
   private squadRepository: Repository<Squad>;
+  private generatedGameRepository: Repository<GeneratedGame>;
 
   constructor() {
     this.userRepository = AppDataSource.getRepository(User);
     this.gameHistoryRepository = AppDataSource.getRepository(GameHistory);
     this.squadRepository = AppDataSource.getRepository(Squad);
+    this.generatedGameRepository = AppDataSource.getRepository(GeneratedGame);
   }
 
   /**
@@ -647,50 +650,125 @@ export class GameService {
     return game;
   }
 
-  // Daily Challenge Stubs
+  // Daily Challenge
   async getDailyChallenge(userId: string) {
-    return { id: 'daily-1', type: GameType.QUICK_FIRE, difficulty: GameDifficulty.MEDIUM };
+    // Generate a deterministic seed based on date
+    const today = new Date().toISOString().split('T')[0];
+    return { id: `daily-${today}`, type: GameType.DAILY_CHALLENGE, difficulty: GameDifficulty.MEDIUM };
   }
 
   async completeDailyChallenge(userId: string, sessionToken: string, score: number, metadata?: any) {
     return this.submitScore(userId, sessionToken, score, metadata);
   }
 
-  // Generated Games Stubs
+  // Generated Games Implementations
   async getGeneratedGames(options: any) {
-    return { items: [], total: 0 };
+    const { page = 1, limit = 20, isPublic = true, status = GenGameStatus.PUBLISHED, creatorId } = options;
+
+    const where: any = {};
+    if (isPublic !== undefined) where.isPublic = isPublic;
+    if (status) where.status = status;
+    if (creatorId) where.creatorId = creatorId;
+
+    const [items, total] = await this.generatedGameRepository.findAndCount({
+      where,
+      order: { createdAt: 'DESC' },
+      take: limit,
+      skip: (page - 1) * limit
+    });
+
+    return { items, total };
   }
 
   async getGeneratedGameById(id: string, userId?: string) {
-    throw ApiError.notFound('Generated game not found');
+    const game = await this.generatedGameRepository.findOne({ where: { id } });
+    if (!game) throw ApiError.notFound('Generated game not found');
+
+    // Privacy check
+    if (!game.isPublic && game.creatorId !== userId) {
+      throw ApiError.forbidden('Game is private');
+    }
+
+    return game;
   }
 
   async createGeneratedGame(userId: string, data: any) {
-    throw ApiError.notImplemented('AI Game Generation temporarily unavailable');
+    const game = this.generatedGameRepository.create({
+      creatorId: userId,
+      status: GenGameStatus.DRAFT,
+      ...data
+    });
+    return this.generatedGameRepository.save(game);
   }
 
   async updateGeneratedGame(id: string, userId: string, updates: any) {
-    throw ApiError.notFound('Game not found');
+    const game = await this.generatedGameRepository.findOne({ where: { id } });
+    if (!game) throw ApiError.notFound('Game not found');
+    if (game.creatorId !== userId) throw ApiError.forbidden('Only the creator can edit this game');
+
+    Object.assign(game, updates);
+    return this.generatedGameRepository.save(game);
   }
 
   async deleteGeneratedGame(id: string, userId: string) {
-    throw ApiError.notFound('Game not found');
+    const game = await this.generatedGameRepository.findOne({ where: { id } });
+    if (!game) throw ApiError.notFound('Game not found');
+    if (game.creatorId !== userId) throw ApiError.forbidden('Only the creator can delete this game');
+
+    await this.generatedGameRepository.remove(game);
+    return { success: true };
   }
 
   async startGeneratedGame(id: string, userId: string) {
-    throw ApiError.notFound('Game not found');
+    const game = await this.getGeneratedGameById(id, userId);
+
+    // Increment play count
+    game.playsCount += 1;
+    await this.generatedGameRepository.save(game);
+
+    // Create custom session
+    const sessionToken = uuidv4();
+    const session: GameSession = {
+      sessionToken,
+      userId,
+      gameType: GameType.CUSTOM_QUEST,
+      difficulty: GameDifficulty.MEDIUM,
+      startTime: Date.now(),
+      metadata: { generatedGameId: id },
+      isActive: true,
+    };
+
+    await setGameSession(userId, sessionToken, session);
+    return { session, game };
   }
 
   async updateGeneratedGameProgress(id: string, userId: string, sessionToken: string, data: any) {
-    throw ApiError.notFound('Session not found');
+    const session = await getGameSession<GameSession>(userId, sessionToken);
+    if (!session || !session.isActive) throw ApiError.badRequest('Invalid or expired session');
+    return { success: true, progress: data };
   }
 
   async completeGeneratedGame(id: string, userId: string, sessionToken: string, data: any) {
-    throw ApiError.notFound('Session not found');
+    const game = await this.generatedGameRepository.findOne({ where: { id } });
+    if (game) {
+      game.completionsCount += 1;
+      await this.generatedGameRepository.save(game);
+    }
+
+    // Extract score
+    const score = data.score || 1000;
+    return this.submitScore(userId, sessionToken, score, { ...data, generatedGameId: id });
   }
 
   async rateGeneratedGame(id: string, userId: string, rating: number, review?: string) {
-    throw ApiError.notFound('Game not found');
+    const game = await this.generatedGameRepository.findOne({ where: { id } });
+    if (!game) throw ApiError.notFound('Game not found');
+
+    game.ratingCount += 1;
+    game.rating = ((game.rating * (game.ratingCount - 1)) + rating) / game.ratingCount;
+
+    await this.generatedGameRepository.save(game);
+    return { success: true, newRating: game.rating };
   }
 }
 

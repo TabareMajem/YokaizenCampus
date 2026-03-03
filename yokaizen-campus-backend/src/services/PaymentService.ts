@@ -554,17 +554,155 @@ export class PaymentService {
     }
   }
 
-  // --- STUBS FOR PAYMENT CONTROLLER SYNC ---
-  async createPortalSession(...args: any[]) { return { url: 'https://billing.stripe.com/p/session/test', id: 'session_123' }; }
-  async getSubscription(...args: any[]) { return this.getSubscriptionStatus(args[0]); }
-  async purchaseCredits(...args: any[]) { return this.createCheckoutSession({ userId: args[0], productKey: 'CREDITS_100', successUrl: '', cancelUrl: '' }); }
-  async getCreditBalance(...args: any[]) { return { credits: 0 }; }
-  async getInvoices(...args: any[]) { return []; }
-  async sponsorStudent(...args: any[]) { return { success: true }; }
-  async getAvailablePlans(...args: any[]) { return PRODUCTS; }
-  async addPaymentMethod(...args: any[]) { return { success: true }; }
-  async getPaymentMethods(...args: any[]) { return []; }
-  async removePaymentMethod(...args: any[]) { return { success: true }; }
+  // --- REAL IMPLEMENTATIONS FOR PAYMENT CONTROLLER ---
+
+  async createPortalSession(userId: string, returnUrl: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { stripeCustomerId: true }
+    });
+
+    if (!user?.stripeCustomerId) {
+      throw new AppError('User has no active billing profile', 400);
+    }
+
+    const session = await stripe.billingPortal.sessions.create({
+      customer: user.stripeCustomerId,
+      return_url: returnUrl,
+    });
+
+    return { url: session.url, id: session.id };
+  }
+
+  async getSubscription(userId: string) {
+    return this.getSubscriptionStatus(userId);
+  }
+
+  async purchaseCredits(userId: string, amount: number, successUrl: string, cancelUrl: string) {
+    // Find closest product key for credits or default to 100
+    let productKey: keyof typeof PRODUCTS = 'CREDITS_100';
+    if (amount >= 1000) productKey = 'CREDITS_1000';
+    else if (amount >= 500) productKey = 'CREDITS_500';
+
+    return this.createCheckoutSession({
+      userId,
+      productKey,
+      successUrl,
+      cancelUrl
+    });
+  }
+
+  async getCreditBalance(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { credits: true }
+    });
+
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+
+    return { credits: user.credits };
+  }
+
+  async getInvoices(userId: string, limit: number = 10) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { stripeCustomerId: true }
+    });
+
+    if (!user?.stripeCustomerId) {
+      return [];
+    }
+
+    const invoices = await stripe.invoices.list({
+      customer: user.stripeCustomerId,
+      limit
+    });
+
+    return invoices.data.map(invoice => ({
+      id: invoice.id,
+      amount: invoice.amount_paid / 100,
+      currency: invoice.currency,
+      status: invoice.status,
+      pdfUrl: invoice.hosted_invoice_url,
+      created: new Date(invoice.created * 1000)
+    }));
+  }
+
+  async sponsorStudent(parentId: string, studentId: string, credits: number, successUrl: string, cancelUrl: string) {
+    return this.createSponsorCheckout({
+      parentId,
+      studentId,
+      credits,
+      successUrl,
+      cancelUrl
+    });
+  }
+
+  async getAvailablePlans() {
+    return PRODUCTS;
+  }
+
+  async addPaymentMethod(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { stripeCustomerId: true }
+    });
+
+    if (!user?.stripeCustomerId) {
+      throw new AppError('No billing profile found', 400);
+    }
+
+    // Creates a SetupIntent so the frontend can securely collect card details
+    const setupIntent = await stripe.setupIntents.create({
+      customer: user.stripeCustomerId,
+      usage: 'off_session',
+    });
+
+    return { clientSecret: setupIntent.client_secret };
+  }
+
+  async getPaymentMethods(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { stripeCustomerId: true }
+    });
+
+    if (!user?.stripeCustomerId) {
+      return [];
+    }
+
+    const paymentMethods = await stripe.paymentMethods.list({
+      customer: user.stripeCustomerId,
+      type: 'card',
+    });
+
+    return paymentMethods.data.map(pm => ({
+      id: pm.id,
+      brand: pm.card?.brand,
+      last4: pm.card?.last4,
+      expMonth: pm.card?.exp_month,
+      expYear: pm.card?.exp_year,
+      isDefault: false // We would need to cross-check with customer default_source/invoice_settings if we tracked defaults
+    }));
+  }
+
+  async removePaymentMethod(userId: string, paymentMethodId: string) {
+    // Double check ownership
+    const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { stripeCustomerId: true }
+    });
+
+    if (paymentMethod.customer !== user?.stripeCustomerId) {
+      throw new AppError('Unauthorized', 403);
+    }
+
+    await stripe.paymentMethods.detach(paymentMethodId);
+    return { success: true };
+  }
 }
 
 export const paymentService = new PaymentService();

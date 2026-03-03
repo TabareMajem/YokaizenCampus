@@ -1,11 +1,12 @@
 import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Icosahedron, MeshDistortMaterial, Float, Text, Trail, Sparkles } from '@react-three/drei';
-import { EffectComposer, Bloom, ChromaticAberration, Glitch } from '@react-three/postprocessing';
-import { GlitchMode, BlendFunction } from 'postprocessing';
+import { OrbitControls, Box, Cylinder, Float, Text, Trail, Sparkles, Html, Line } from '@react-three/drei';
+import { EffectComposer, Bloom, Glitch, Scanline } from '@react-three/postprocessing';
+import { BlendFunction } from 'postprocessing';
 import * as THREE from 'three';
-import { Activity, Shield, Cpu, AlertTriangle, Zap, Terminal } from 'lucide-react';
+import { Activity, TrendingUp, TrendingDown, DollarSign, Zap, AlertOctagon, BarChart2 } from 'lucide-react';
 import { audio } from '../../services/audioService';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export interface WallStreetWarProps {
     onComplete: (score: number, metrics?: any) => void;
@@ -13,78 +14,156 @@ export interface WallStreetWarProps {
     t: (key: string) => string;
 }
 
-// Advanced WebGL Node Component
-const CoreEntity = ({ isActive }: { isActive: boolean }) => {
-    const meshRef = useRef<THREE.Mesh>(null);
+// Data Types
+interface Ticker {
+    symbol: string;
+    price: number;
+    history: number[];
+    volatility: number;
+    trend: number;
+    color: string;
+}
+
+interface Trade {
+    id: string;
+    symbol: string;
+    type: 'BUY' | 'SELL';
+    price: number;
+    amount: number;
+    profit?: number;
+}
+
+const INITIAL_FUNDS = 10000;
+const MAX_HISTORY = 40;
+
+// 3D Data Stream visualization
+const DataStream = ({ tickers }: { tickers: Ticker[] }) => {
+    const groupRef = useRef<THREE.Group>(null);
+
     useFrame((state) => {
-        if (meshRef.current) {
-            meshRef.current.rotation.x = state.clock.elapsedTime * 0.5;
-            meshRef.current.rotation.y = state.clock.elapsedTime * 0.3;
+        if (groupRef.current) {
+            groupRef.current.position.z = (state.clock.elapsedTime * 2) % 2; // Moving forward effect
         }
     });
 
     return (
-        <Float speed={2} floatIntensity={1} rotationIntensity={isActive ? 2 : 0.5}>
-            <Icosahedron ref={meshRef} args={[1.5, 0]} scale={isActive ? 1.2 : 1}>
-                <MeshDistortMaterial
-                    color={new THREE.Color().setHSL(0.1, 0.8, isActive ? 0.6 : 0.3)}
-                    envMapIntensity={1}
-                    clearcoat={1}
-                    clearcoatRoughness={0}
-                    metalness={0.8}
-                    roughness={0.2}
-                    distort={isActive ? 0.4 : 0.1}
-                    speed={isActive ? 5 : 1}
-                />
-            </Icosahedron>
-        </Float>
+        <group ref={groupRef} position={[0, -2, -10]}>
+            {tickers.map((ticker, i) => {
+                const xPos = (i - 1.5) * 4;
+
+                // Create line points from history
+                const points = ticker.history.map((val, idx) => {
+                    const normalizedVal = (val - 100) * 0.05; // Base 100 roughly
+                    return new THREE.Vector3(xPos, normalizedVal, -idx * 0.5);
+                });
+
+                if (points.length < 2) return null;
+
+                return (
+                    <group key={ticker.symbol}>
+                        {/* The trend line */}
+                        <Line
+                            points={points}
+                            color={ticker.color}
+                            lineWidth={3}
+                            dashed={false}
+                        />
+
+                        {/* Current price indicator node */}
+                        <mesh position={points[0]}>
+                            <sphereGeometry args={[0.2, 16, 16]} />
+                            <meshStandardMaterial color={ticker.color} emissive={ticker.color} emissiveIntensity={2} />
+                        </mesh>
+
+                        {/* Faux Data Particles streaming along the line */}
+                        <Sparkles
+                            count={30}
+                            scale={[1, 1, 20]}
+                            position={[xPos, points[0].y, -10]}
+                            size={2}
+                            speed={2}
+                            opacity={0.5}
+                            color={ticker.color}
+                        />
+                    </group>
+                );
+            })}
+        </group>
     );
 };
 
 export const WallStreetWar: React.FC<WallStreetWarProps> = ({ onComplete, difficulty, t }) => {
+    const [gameState, setGameState] = useState<'IDLE' | 'PLAYING' | 'SUCCESS' | 'FAILED'>('IDLE');
     const [score, setScore] = useState(0);
     const [timeLeft, setTimeLeft] = useState(60);
-    const [gameState, setGameState] = useState<'PLAYING' | 'SUCCESS' | 'FAILED'>('PLAYING');
-    const [activeNode, setActiveNode] = useState(false);
-    
-    // Multi-Agent Flow Logic State
-    const [advisorMsg, setAdvisorMsg] = useState('Analyzing parameters...');
-    const [adversaryMsg, setAdversaryMsg] = useState('System vulnerable.');
-    const [glitchActive, setGlitchActive] = useState(false);
 
-    // Multi-Agent Simulation Loop
+    // Trading State
+    const [funds, setFunds] = useState(INITIAL_FUNDS);
+    const [portfolio, setPortfolio] = useState<Record<string, number>>({ 'NRO': 0, 'QNT': 0, 'SYN': 0, 'AYI': 0 });
+    const [activeTrades, setActiveTrades] = useState<Trade[]>([]);
+    const [flashCrashWarning, setFlashCrashWarning] = useState(false);
+
+    // Market Data
+    const [tickers, setTickers] = useState<Ticker[]>([
+        { symbol: 'NRO', price: 150, history: Array(MAX_HISTORY).fill(150), volatility: 2.5, trend: 1, color: '#3b82f6' },
+        { symbol: 'QNT', price: 80, history: Array(MAX_HISTORY).fill(80), volatility: 4.0, trend: -0.5, color: '#8b5cf6' },
+        { symbol: 'SYN', price: 210, history: Array(MAX_HISTORY).fill(210), volatility: 1.5, trend: 0.2, color: '#10b981' },
+        { symbol: 'AYI', price: 45, history: Array(MAX_HISTORY).fill(45), volatility: 6.0, trend: 0, color: '#f59e0b' },
+    ]);
+
+    const startGame = () => {
+        setFunds(INITIAL_FUNDS);
+        setPortfolio({ 'NRO': 0, 'QNT': 0, 'SYN': 0, 'AYI': 0 });
+        setScore(0);
+        setTimeLeft(difficulty === 'Elite' ? 45 : 60);
+        setActiveTrades([]);
+        setGameState('PLAYING');
+        audio.playSystemMessage({ type: 'success' });
+    };
+
+    // Market Simulation Engine
     useEffect(() => {
         if (gameState !== 'PLAYING') return;
 
-        const advisorLines = [
-            'Maintain focus. Logic structures are stabilizing.',
-            'Optimization detected. Keep routing data.',
-            'Adversary is adapting. We need to shift protocols.',
-            'Energy levels holding. Good work.'
-        ];
+        const tickRate = difficulty === 'Elite' ? 300 : 500; // ms per tick
 
-        const adversaryLines = [
-            'Your defenses are pitiful.',
-            'I am bypassing the mainframe context.',
-            'Entropy always wins.',
-            'You cannot sustain this compute load.'
-        ];
+        const marketInterval = setInterval(() => {
+            setTickers(prevTickers => {
+                const isFlashCrash = Math.random() < 0.05; // 5% chance of crash/spike event per tick globally
 
-        const agentInterval = setInterval(() => {
-            const isAdversary = Math.random() > 0.6;
-            if (isAdversary) {
-                setAdversaryMsg(adversaryLines[Math.floor(Math.random() * adversaryLines.length)]);
-                audio.playSystemMessage({ type: 'warning' });
-                setGlitchActive(true);
-                setTimeout(() => setGlitchActive(false), 500);
-            } else {
-                setAdvisorMsg(advisorLines[Math.floor(Math.random() * advisorLines.length)]);
-                audio.playSystemMessage({ type: 'success' });
-            }
-        }, 5000);
+                if (isFlashCrash) {
+                    setFlashCrashWarning(true);
+                    audio.playSystemMessage({ type: 'warning' });
+                    setTimeout(() => setFlashCrashWarning(false), 1000);
+                }
 
-        return () => clearInterval(agentInterval);
-    }, [gameState]);
+                return prevTickers.map(t => {
+                    // Random walk with drift
+                    let changePercent = (Math.random() - 0.5) * t.volatility;
+                    changePercent += t.trend * 0.1; // Apply slight trend
+
+                    if (isFlashCrash) {
+                        // Massive swing event
+                        changePercent += (Math.random() > 0.5 ? 1 : -1) * t.volatility * 5;
+                    }
+
+                    let newPrice = t.price * (1 + changePercent / 100);
+                    newPrice = Math.max(1, newPrice); // Don't go below 1
+
+                    // Update trailing history
+                    const newHistory = [newPrice, ...t.history.slice(0, MAX_HISTORY - 1)];
+
+                    // Slight mean reversion for trend over time
+                    const newTrend = t.trend + (Math.random() - 0.5) * 0.05;
+
+                    return { ...t, price: newPrice, history: newHistory, trend: newTrend };
+                });
+            });
+        }, tickRate);
+
+        return () => clearInterval(marketInterval);
+    }, [gameState, difficulty]);
+
 
     // Timer Loop
     useEffect(() => {
@@ -92,100 +171,254 @@ export const WallStreetWar: React.FC<WallStreetWarProps> = ({ onComplete, diffic
         const timer = setInterval(() => {
             setTimeLeft((prev) => {
                 if (prev <= 1) {
-                    clearInterval(timer);
-                    const finalScore = score >= 500 ? score : 0;
-                    setGameState(finalScore >= 500 ? 'SUCCESS' : 'FAILED');
-                    onComplete(finalScore, { completionTime: 60 - prev, difficulty });
+                    endGame();
                     return 0;
                 }
                 return prev - 1;
             });
         }, 1000);
         return () => clearInterval(timer);
-    }, [gameState, score, onComplete, difficulty]);
+    }, [gameState, funds, portfolio, tickers]);
 
-    const handleInteract = () => {
+    const calculateNetWorth = () => {
+        let nw = funds;
+        tickers.forEach(t => {
+            nw += portfolio[t.symbol] * t.price;
+        });
+        return nw;
+    };
+
+    const endGame = () => {
+        const finalNetWorth = calculateNetWorth();
+        const profit = finalNetWorth - INITIAL_FUNDS;
+
+        const isWin = profit >= 5000; // Require 50% profit to "win" the sim
+
+        setScore(profit > 0 ? Math.floor(profit / 10) : 0);
+        setGameState(isWin ? 'SUCCESS' : 'FAILED');
+        setTimeout(() => onComplete(profit > 0 ? Math.floor(profit / 10) : 0, { netWorth: finalNetWorth, profit }), 3000);
+    };
+
+    const executeTrade = (symbol: string, type: 'BUY' | 'SELL') => {
         if (gameState !== 'PLAYING') return;
-        audio.playTyping();
-        setActiveNode(true);
-        setScore(s => s + 50);
-        setTimeout(() => setActiveNode(false), 300);
-        
-        if (score + 50 >= 1000) {
-            setGameState('SUCCESS');
-            onComplete(1000, { completionTime: 60 - timeLeft, difficulty });
+
+        const ticker = tickers.find(t => t.symbol === symbol);
+        if (!ticker) return;
+
+        const amount = 10; // Fixed block size for simplicity in this fast game
+        const cost = ticker.price * amount;
+
+        if (type === 'BUY') {
+            if (funds >= cost) {
+                audio.playClick();
+                setFunds(f => f - cost);
+                setPortfolio(p => ({ ...p, [symbol]: p[symbol] + amount }));
+                addTradeLog({ id: Math.random().toString(), symbol, type, price: ticker.price, amount });
+            } else {
+                audio.playError();
+            }
+        } else {
+            if (portfolio[symbol] >= amount) {
+                audio.playClick(); // Maybe a different sound for sell
+                setFunds(f => f + cost);
+                setPortfolio(p => ({ ...p, [symbol]: p[symbol] - amount }));
+
+                // Logic to calculate if this specific sale was profitable vs avg cost would go here
+                // For now, simplistically log it
+                addTradeLog({ id: Math.random().toString(), symbol, type, price: ticker.price, amount });
+            } else {
+                audio.playError();
+            }
         }
     };
 
+    const addTradeLog = (trade: Trade) => {
+        setActiveTrades(prev => [trade, ...prev].slice(0, 5)); // Keep last 5
+    };
+
+    const netWorth = calculateNetWorth();
+    const isProfitable = netWorth > INITIAL_FUNDS;
+
     return (
-        <div className="relative w-full h-[600px] rounded-xl overflow-hidden border border-white/10 bg-black shadow-2xl">
-            {/* UI Overlay */}
-            <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-start z-10 pointer-events-none">
-                <div className="flex flex-col gap-4">
-                    <div className="bg-black/40 backdrop-blur-md rounded-lg p-3 border border-indigo-500/30">
-                        <div className="flex items-center gap-2 text-indigo-400 mb-1">
-                            <Activity className="w-4 h-4" />
-                            <span className="text-xs uppercase tracking-widest font-bold">Signal</span>
-                        </div>
-                        <div className="text-2xl font-mono text-white">{score} / 1000</div>
-                    </div>
-                </div>
+        <div className="relative w-full h-[600px] rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 font-sans select-none shadow-[0_0_60px_rgba(0,0,0,0.8)]">
 
-                <div className="bg-black/40 backdrop-blur-md rounded-lg p-3 border border-blue-500/30 flex flex-col items-end">
-                     <div className="flex items-center gap-2 text-blue-400 mb-1">
-                        <AlertTriangle className="w-4 h-4" />
-                        <span className="text-xs uppercase tracking-widest font-bold">Time</span>
-                    </div>
-                    <div className="text-3xl font-mono text-white tracking-widest">{timeLeft}s</div>
-                </div>
-            </div>
+            {/* 3D Canvas Background */}
+            <div className="absolute inset-0 z-0">
+                <Canvas camera={{ position: [0, 5, 12], fov: 50 }}>
+                    <ambientLight intensity={0.2} color="#ffffff" />
+                    <pointLight position={[0, 10, 0]} intensity={2} color="#ffffff" />
 
-            {/* Multi-Agent Comm Panel */}
-            <div className="absolute bottom-6 left-6 right-6 flex gap-4 z-10 pointer-events-none">
-                <div className="flex-1 bg-black/60 backdrop-blur-md rounded-lg p-4 border-l-4 border-indigo-500">
-                    <div className="text-xs text-indigo-400 mb-1 uppercase tracking-widest font-bold flex items-center gap-2"><Shield className="w-3 h-3"/> Advisor Agent</div>
-                    <div className="text-sm text-indigo-100 font-mono tracking-wide">{advisorMsg}</div>
-                </div>
-                <div className="flex-1 bg-black/60 backdrop-blur-md rounded-lg p-4 border-l-4 border-red-500">
-                    <div className="text-xs text-red-500 mb-1 uppercase tracking-widest font-bold flex items-center gap-2"><Zap className="w-3 h-3"/> Adversary AI</div>
-                    <div className="text-sm text-red-200 font-mono tracking-wide">{adversaryMsg}</div>
-                </div>
-            </div>
+                    {/* Grid floor */}
+                    <gridHelper args={[50, 50, '#333333', '#111111']} position={[0, -5, 0]} />
 
-            {/* Game Over States */}
-            {gameState !== 'PLAYING' && (
-                <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-                    <div className="text-center">
-                        <div className={`text-6xl font-black uppercase tracking-widest mb-4 ${gameState === 'SUCCESS' ? 'text-green-500' : 'text-red-500'}`}>
-                            {gameState === 'SUCCESS' ? 'SYSTEM SECURED' : 'BREACH DETECTED'}
-                        </div>
-                        <div className="text-xl text-white/60 font-mono">Final Score: {score}</div>
-                    </div>
-                </div>
-            )}
+                    {gameState !== 'IDLE' && <DataStream tickers={tickers} />}
 
-            {/* Interaction Layer */}
-            <div className="absolute inset-0 z-0 cursor-crosshair" onClick={handleInteract}>
-                <Canvas camera={{ position: [0, 0, 10], fov: 60 }}>
-                    <ambientLight intensity={0.5} />
-                    <pointLight position={[10, 10, 10]} intensity={1} color={new THREE.Color().setHSL(0.1, 1, 0.5)} />
-                    <pointLight position={[-10, -10, -10]} intensity={0.5} color="#4f46e5" />
-                    
-                    <Sparkles count={200} scale={12} size={2} speed={0.4} opacity={0.5} color={new THREE.Color().setHSL(0.1, 1, 0.8)} />
-                    
-                    <CoreEntity isActive={activeNode} />
-                    
-                    <OrbitControls enableZoom={false} enablePan={false} autoRotate autoRotateSpeed={0.5} />
-                    
+                    <OrbitControls enableZoom={false} enablePan={false} autoRotate={false} maxPolarAngle={Math.PI / 2 - 0.1} />
+
                     <EffectComposer>
-                        <Bloom luminanceThreshold={0.2} luminanceSmoothing={0.9} height={300} intensity={1.5} />
-                        <ChromaticAberration blendFunction={BlendFunction.NORMAL} offset={new THREE.Vector2(0.002, 0.002)} />
-                        {glitchActive && (
-                            <Glitch delay={new THREE.Vector2(0, 0)} duration={new THREE.Vector2(0.1, 0.3)} mode={GlitchMode.SPORADIC} active ratio={0.5} />
+                        <Bloom luminanceThreshold={0.2} mipmapBlur intensity={1.5} />
+                        <Scanline density={100} opacity={0.1} blendFunction={BlendFunction.OVERLAY} />
+                        {flashCrashWarning && (
+                            <Glitch delay={new THREE.Vector2(0, 0)} duration={new THREE.Vector2(0.1, 0.3)} active ratio={0.8} />
                         )}
                     </EffectComposer>
                 </Canvas>
             </div>
+
+            {/* UI Overlay */}
+            {gameState !== 'IDLE' && (
+                <div className="absolute top-0 left-0 w-full h-full pointer-events-none flex flex-col justify-between p-6 z-10">
+
+                    {/* Top HUD: Portfolio & Timer */}
+                    <div className="flex justify-between items-start gap-4">
+
+                        <div className="bg-black/80 backdrop-blur-xl rounded-xl p-4 border border-zinc-700 shadow-2xl flex gap-6">
+                            <div className="flex flex-col">
+                                <span className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold mb-1">Net Worth</span>
+                                <div className="flex items-center gap-2">
+                                    <DollarSign className={`w-5 h-5 ${isProfitable ? 'text-emerald-500' : 'text-red-500'}`} />
+                                    <span className={`text-3xl font-mono font-black ${isProfitable ? 'text-white' : 'text-red-500'}`}>
+                                        {netWorth.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="w-px h-12 bg-zinc-800" />
+                            <div className="flex flex-col">
+                                <span className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold mb-1">Liquid Funds</span>
+                                <span className="text-xl font-mono font-bold text-zinc-300">${Math.floor(funds).toLocaleString()}</span>
+                            </div>
+                        </div>
+
+                        <div className="bg-black/80 backdrop-blur-xl rounded-xl p-4 border border-zinc-700 flex flex-col items-end shadow-2xl">
+                            <div className="flex items-center gap-2 text-zinc-400 mb-1">
+                                <AlertOctagon className="w-4 h-4" />
+                                <span className="text-[10px] uppercase tracking-widest font-bold">Market Close</span>
+                            </div>
+                            <div className={`text-4xl font-mono ${timeLeft <= 10 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
+                                0:{timeLeft.toString().padStart(2, '0')}
+                            </div>
+                        </div>
+                    </div>
+
+                    {flashCrashWarning && (
+                        <div className="absolute top-24 left-1/2 -translate-x-1/2 bg-red-600/90 text-white font-black uppercase tracking-[0.3em] px-8 py-2 rounded-full border-2 border-red-400 animate-pulse text-xl drop-shadow-[0_0_20px_rgba(220,38,38,1)]">
+                            VOLATILITY SPIKE DETECTED
+                        </div>
+                    )}
+
+                    {/* Middle: Trade History Overlay (Subtle) */}
+                    <div className="absolute left-6 top-1/2 -translate-y-1/2 flex flex-col gap-2 opacity-60">
+                        {activeTrades.map(trade => (
+                            <div key={trade.id} className="text-xs font-mono bg-black/50 px-2 py-1 rounded border border-zinc-800 flex items-center gap-2">
+                                <span className={trade.type === 'BUY' ? 'text-blue-400' : 'text-red-400'}>{trade.type}</span>
+                                <span className="text-white">{trade.amount} {trade.symbol}</span>
+                                <span className="text-zinc-500">@ ${trade.price.toFixed(2)}</span>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Bottom HUD: Trading Terminal */}
+                    <div className="w-full pointer-events-auto">
+                        <div className="bg-black/90 backdrop-blur-2xl rounded-2xl p-4 border border-zinc-700 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+                            <div className="flex items-center gap-2 text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-4 border-b border-zinc-800 pb-2">
+                                <BarChart2 className="w-4 h-4" /> HFT Execution Terminal v9.2
+                            </div>
+
+                            <div className="grid grid-cols-4 gap-4">
+                                {tickers.map(ticker => {
+                                    const pnlColor = ticker.trend >= 0 ? 'text-emerald-400' : 'text-red-400';
+                                    const PnlIcon = ticker.trend >= 0 ? TrendingUp : TrendingDown;
+                                    const qtyOwned = portfolio[ticker.symbol];
+
+                                    return (
+                                        <div key={ticker.symbol} className="bg-zinc-900/50 rounded-xl p-3 border border-zinc-800 flex flex-col relative overflow-hidden group">
+                                            {/* Accent banner */}
+                                            <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: ticker.color }} />
+
+                                            <div className="flex justify-between items-start mb-2 mt-1">
+                                                <span className="text-lg font-black tracking-wider text-white">{ticker.symbol}</span>
+                                                <div className={`flex items-center gap-1 text-xs font-bold ${pnlColor}`}>
+                                                    <PnlIcon className="w-3 h-3" />
+                                                    {(Math.abs(ticker.trend) * 10).toFixed(1)}%
+                                                </div>
+                                            </div>
+
+                                            <div className="text-2xl font-mono text-white mb-1">
+                                                ${ticker.price.toFixed(2)}
+                                            </div>
+
+                                            <div className="text-xs text-zinc-500 font-mono mb-4">
+                                                POS: <span className={qtyOwned > 0 ? 'text-white font-bold' : ''}>{qtyOwned} units</span>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-2 mt-auto">
+                                                <button
+                                                    onClick={() => executeTrade(ticker.symbol, 'SELL')}
+                                                    disabled={qtyOwned < 10}
+                                                    className="bg-red-500/20 hover:bg-red-500/40 text-red-200 border border-red-500/30 py-2 rounded font-bold text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                                >
+                                                    SELL 10
+                                                </button>
+                                                <button
+                                                    onClick={() => executeTrade(ticker.symbol, 'BUY')}
+                                                    disabled={funds < ticker.price * 10}
+                                                    className="bg-blue-500/20 hover:bg-blue-500/40 text-blue-200 border border-blue-500/30 py-2 rounded font-bold text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                                >
+                                                    BUY 10
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Start/End Screen Overlays */}
+            <AnimatePresence>
+                {gameState === 'IDLE' && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-50 flex items-center justify-center bg-zinc-950/90 p-8 text-center backdrop-blur-xl">
+                        <div className="max-w-md border border-zinc-800 p-10 rounded-3xl bg-black shadow-2xl">
+                            <Activity className="w-16 h-16 text-blue-500 mx-auto mb-6" />
+                            <h2 className="text-3xl font-black text-white mb-4 tracking-widest uppercase">Wall Street War</h2>
+                            <p className="text-zinc-400 text-sm mb-8 leading-relaxed">
+                                High-Frequency Trading algorithmic override required.<br /><br />
+                                <span className="text-white font-bold">Goal:</span> Generate $5,000 profit before the market closes.<br />
+                                <span className="text-red-400 font-bold">Warning:</span> Markets are highly volatile. Flash crashes are imminent. Buy low, sell high.
+                            </p>
+                            <button onClick={startGame} className="w-full py-4 bg-zinc-100 hover:bg-white text-black font-black uppercase tracking-widest rounded-xl transition-colors shadow-lg shadow-white/10">
+                                Open Terminal
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+
+                {gameState === 'SUCCESS' && (
+                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-emerald-950/90 backdrop-blur-xl border-8 border-emerald-900">
+                        <TrendingUp className="w-24 h-24 text-emerald-400 mb-6 drop-shadow-[0_0_30px_rgba(52,211,153,0.5)]" />
+                        <h2 className="text-5xl font-black text-white mb-4 tracking-widest uppercase">Target Reached</h2>
+                        <p className="text-emerald-200 text-xl font-mono mb-8 opacity-90 uppercase tracking-widest">Alpha Generated.</p>
+                        <div className="text-emerald-400 text-4xl font-black font-mono bg-black/50 px-8 py-4 rounded-xl border border-emerald-900">
+                            +${(calculateNetWorth() - INITIAL_FUNDS).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </div>
+                    </motion.div>
+                )}
+
+                {gameState === 'FAILED' && (
+                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-zinc-950/90 backdrop-blur-xl">
+                        <TrendingDown className="w-24 h-24 text-red-500 mb-6 opacity-80" />
+                        <h2 className="text-5xl font-black text-white mb-4 tracking-widest uppercase">Margin Call</h2>
+                        <p className="text-zinc-400 text-xl font-sans mb-8">Failed to meet profit targets.</p>
+                        <div className="text-white text-3xl font-bold font-mono bg-black/50 px-8 py-4 rounded-xl border border-zinc-800 flex flex-col items-center gap-2">
+                            <span>Net Worth: ${calculateNetWorth().toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                            <span className="text-sm text-red-500 font-sans tracking-widest uppercase">Target was ${INITIAL_FUNDS + 5000}</span>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
         </div>
     );
 };

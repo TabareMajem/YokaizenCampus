@@ -53,5 +53,5 @@ export const COMMON = {
     'difficulty.elite': 'ELITE',
     'leaderboard.global': 'GLOBAL',
     'leaderboard.squad': 'SQUAD',
+    'settings.title': 'PENGATURAN', 'settings.language': 'Bahasa', 'settings.audio': 'Audio', 'settings.haptics': 'Haptic', 'settings.test': 'UJI', 'settings.toggle': 'ALIH', 'settings.admin_console': 'KONSOL ADMIN', 'settings.close': 'TUTUP', 'nav.growth': 'Pertumbuhan',
 };
-

@@ -655,15 +655,108 @@ export class GraphService {
     });
   }
 
-  // --- STUBS FOR GRAPH CONTROLLER SYNC ---
-  async getUserSessions(userId: string, filters: any) { return []; }
-  async performNodeAction(sessionId: string, userId: string, actionData: any) { return true; }
-  async completeSession(sessionId: string, userId: string) { return true; }
-  async forkSession(sessionId: string, userId: string, newName: string) { return null; }
-  async getSessionHistory(sessionId: string, userId: string, limit: number) { return []; }
-  async createSnapshot(sessionId: string, userId: string, name: string, description?: string) { return null; }
-  async restoreSnapshot(sessionId: string, snapshotId: string, userId: string) { return null; }
-  async getUserStats(userId: string) { return {}; }
+  // --- REAL IMPLEMENTATIONS FOR GRAPH CONTROLLER SYNC ---
+
+  async getUserSessions(userId: string, filters: any) {
+    return this.getGraphHistory(userId, filters?.limit || 50);
+  }
+
+  async performNodeAction(sessionId: string, userId: string, actionData: any) {
+    const session = await this.getSession(sessionId, userId);
+    const nodes = session.nodes as GraphNode[];
+
+    // Find node and perform action
+    const nodeIndex = nodes.findIndex(n => n.id === actionData.nodeId);
+    if (nodeIndex === -1) throw new NotFoundError('Node not found');
+
+    // Example: updating input data
+    nodes[nodeIndex].data = { ...nodes[nodeIndex].data, ...actionData.data };
+
+    await this.syncGraph({
+      userId,
+      classroomId: 'classroomId' in session ? session.classroomId || undefined : undefined,
+      nodes,
+      connections: session.connections as GraphConnection[]
+    });
+
+    return true;
+  }
+
+  async completeSession(sessionId: string, userId: string) {
+    // Mark session as completed
+    const session = await prisma.graphSession.update({
+      where: { id: sessionId },
+      data: { status: GraphStatus.COMPLETED }
+    });
+
+    // Clear cache
+    await redis.del(`${this.GRAPH_CACHE_PREFIX}${sessionId}`);
+
+    await gamificationService.awardXP(userId, 'GRAPH_EXECUTE', 100);
+    return true;
+  }
+
+  async forkSession(sessionId: string, userId: string, newName: string) {
+    const clone = await this.cloneSession(userId, sessionId);
+    return prisma.graphSession.update({
+      where: { id: clone.id },
+      data: { title: newName }
+    });
+  }
+
+  async getSessionHistory(sessionId: string, userId: string, limit: number) {
+    // Fetch audit logs for this specific graph session
+    return prisma.auditLog.findMany({
+      where: {
+        userId,
+        actionType: 'GRAPH_UPDATE',
+        meta: { path: ['sessionId'], equals: sessionId }
+      },
+      orderBy: { timestamp: 'desc' },
+      take: limit
+    });
+  }
+
+  async createSnapshot(sessionId: string, userId: string, name: string, description?: string) {
+    // We create a clone to act as a Snapshot
+    const snapshot = await this.cloneSession(userId, sessionId);
+    return prisma.graphSession.update({
+      where: { id: snapshot.id },
+      data: { title: `[Snapshot] ${name}` }
+    });
+  }
+
+  async restoreSnapshot(sessionId: string, snapshotId: string, userId: string) {
+    // Overwrite current session with snapshot's nodes and connections
+    const snapshot = await this.getSession(snapshotId, userId);
+
+    await prisma.graphSession.update({
+      where: { id: sessionId },
+      data: {
+        nodes: snapshot.nodes as any,
+        connections: snapshot.connections as any
+      }
+    });
+
+    await redis.del(`${this.GRAPH_CACHE_PREFIX}${sessionId}`);
+    return true;
+  }
+
+  async getUserStats(userId: string) {
+    const sessions = await prisma.graphSession.findMany({
+      where: { userId },
+      select: { status: true, sentimentScore: true }
+    });
+
+    const completed = sessions.filter(s => s.status === GraphStatus.COMPLETED).length;
+    const avgSentiment = sessions.reduce((acc, s) => acc + s.sentimentScore, 0) / (sessions.length || 1);
+
+    return {
+      totalGraphs: sessions.length,
+      completedGraphs: completed,
+      averageSentiment: Math.round(avgSentiment)
+    };
+  }
 }
 
 export const graphService = new GraphService();

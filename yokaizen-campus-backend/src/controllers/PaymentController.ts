@@ -63,7 +63,7 @@ export class PaymentController {
 
     const session = await paymentService.createPortalSession(
       req.user!.userId,
-      validation.data.returnUrl
+      validation.data.returnUrl || `${config.app.frontendUrl}/profile/subscription`
     );
 
     res.json({
@@ -153,7 +153,8 @@ export class PaymentController {
     const result = await paymentService.purchaseCredits(
       req.user!.userId,
       validation.data.amount,
-      validation.data.paymentMethodId
+      `${config.app.frontendUrl}/payment/success`,
+      `${config.app.frontendUrl}/payment/cancel`
     );
 
     res.json({
@@ -229,7 +230,9 @@ export class PaymentController {
     const result = await paymentService.sponsorStudent(
       req.user!.userId,
       validation.data.studentId,
-      validation.data.credits
+      validation.data.credits,
+      `${config.app.frontendUrl}/payment/success`,
+      `${config.app.frontendUrl}/payment/cancel`
     );
 
     res.json({
@@ -264,9 +267,7 @@ export class PaymentController {
     }
 
     await paymentService.addPaymentMethod(
-      req.user!.userId,
-      paymentMethodId,
-      setAsDefault
+      req.user!.userId
     );
 
     res.json({

@@ -5,7 +5,7 @@ import { EffectComposer, Bloom, Glitch, ChromaticAberration, DepthOfField } from
 import { GlitchMode, BlendFunction } from 'postprocessing';
 import * as THREE from 'three';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Zap, Lock, ScanLine, Brain, TriangleAlert, Share2, Twitter, MessageCircle, Copy, Check } from 'lucide-react';
+import { Shield, Zap, Lock, ScanLine, Brain, TriangleAlert, Share2, Twitter, MessageCircle, Copy, Check, Skull } from 'lucide-react';
 import { useDialogue } from '../../contexts/DialogueContext';
 import { audio } from '../../services/audioService';
 
@@ -14,9 +14,10 @@ interface GameProps {
 }
 
 const CONSTANTS = {
-    NODES_COUNT: 15,
+    NODES_COUNT: 20,
     MAX_CONNECTIONS: 6,
-    WIN_CONDITION: 5,
+    WIN_CONDITION: 7,
+    HACK_TIME_MS: 30000, // 30 seconds to hack
 };
 
 const BackgroundText = () => {
@@ -166,23 +167,49 @@ const NeuralNetwork = ({ onHackComplete }: { onHackComplete: () => void }) => {
 
 export const ViralNeuralHack: React.FC<GameProps> = ({ onComplete }) => {
     const { queueDialogue } = useDialogue();
-    const [gameState, setGameState] = useState<'playing' | 'hacked'>('playing');
+    const [gameState, setGameState] = useState<'intro' | 'playing' | 'hacked' | 'failed'>('intro');
+    const [traceProgress, setTraceProgress] = useState(0);
 
     useEffect(() => {
-        queueDialogue([
-            {
-                id: 'nh-intro-1',
-                character: 'BYTE',
-                text: "Incoming connection from... wait... a flesh-being? Hey! Don't touch that core logic layer!",
-                isGlitchy: true
-            },
-            {
-                id: 'nh-intro-2',
-                character: 'BYTE',
-                text: `Connect ${CONSTANTS.WIN_CONDITION} neural nodes to bypass the firewall before the security trace hits 100%. Don't cross the streams.`
+        // Trace timer logic
+        if (gameState !== 'playing') return;
+
+        const startTime = Date.now();
+        const interval = setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(100, Math.floor((elapsed / CONSTANTS.HACK_TIME_MS) * 100));
+            setTraceProgress(progress);
+
+            if (progress > 80 && progress % 5 === 0) {
+                audio.playError(); // Play warning sound when close to failure
             }
-        ]);
-    }, [queueDialogue]);
+
+            if (progress >= 100) {
+                setGameState('failed');
+                clearInterval(interval);
+            }
+        }, 100);
+
+        return () => clearInterval(interval);
+    }, [gameState]);
+
+    useEffect(() => {
+        if (gameState === 'playing') {
+            queueDialogue([
+                {
+                    id: 'nh-intro-1',
+                    character: 'BYTE',
+                    text: "Incoming connection from... wait... a flesh-being? Hey! Don't touch that core logic layer!",
+                    isGlitchy: true
+                },
+                {
+                    id: 'nh-intro-2',
+                    character: 'BYTE',
+                    text: `Connect ${CONSTANTS.WIN_CONDITION} neural nodes to bypass the firewall before the security trace hits 100%. Fast!`
+                }
+            ]);
+        }
+    }, [gameState, queueDialogue]);
 
     const handleHackComplete = () => {
         setGameState('hacked');
@@ -221,17 +248,21 @@ export const ViralNeuralHack: React.FC<GameProps> = ({ onComplete }) => {
 
             {/* UI Overlay */}
             <div className="absolute top-0 left-0 w-full p-4 md:p-8 pointer-events-none flex flex-col md:flex-row justify-between items-start gap-4 md:gap-0 mt-[10vh] md:mt-0">
-                <div>
+                <div className="bg-black/40 backdrop-blur-md border border-cyan-500/30 p-4 rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.2)]">
                     <h2 className="text-cyan-400 font-bold tracking-widest flex items-center gap-2 text-sm md:text-base">
                         <Lock size={16} /> SECURE CORE INTERFACE
                     </h2>
-                    <p className="text-gray-400 text-xs md:text-sm mt-1 max-w-[80vw] md:max-w-none">Gaining root access... Connect {CONSTANTS.WIN_CONDITION} neural nodes to bypass firewall.</p>
+                    <p className="text-gray-400 text-xs md:text-sm mt-1 max-w-[80vw] md:max-w-[300px]">Gaining root access... Connect <span className="text-white font-bold">{CONSTANTS.WIN_CONDITION}</span> neural nodes to bypass firewall.</p>
                 </div>
-                <div className="text-left md:text-right w-full md:w-auto bg-black/50 md:bg-transparent p-2 md:p-0 rounded-lg md:rounded-none backdrop-blur-sm md:backdrop-blur-none border border-red-500/20 md:border-none">
-                    <div className="flex items-center gap-2 text-red-500 animate-pulse font-bold text-sm md:text-base">
+
+                <div className={`text-left md:text-right w-full md:w-auto p-4 rounded-xl backdrop-blur-md border transition-all ${traceProgress > 80 ? 'bg-red-900/40 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'bg-black/50 border-red-500/20'}`}>
+                    <div className="flex items-center md:justify-end gap-2 text-red-500 animate-pulse font-bold text-sm md:text-base">
                         <TriangleAlert size={16} /> INTRUSION DETECTED
                     </div>
-                    <p className="text-gray-500 text-xs mt-1">TRACE IN PROGRESS: {Math.floor(Math.random() * 99)}%</p>
+                    <div className="mt-2 w-full md:w-48 h-2 bg-red-950 rounded-full overflow-hidden border border-red-900">
+                        <div className="h-full bg-red-500 transition-all duration-100 shadow-[0_0_10px_rgba(239,68,68,0.8)]" style={{ width: `${traceProgress}%` }}></div>
+                    </div>
+                    <p className="text-red-400 font-bold text-xs mt-1 tabular-nums">TRACE LIKELIHOOD: {traceProgress}%</p>
                 </div>
             </div>
 
@@ -240,15 +271,65 @@ export const ViralNeuralHack: React.FC<GameProps> = ({ onComplete }) => {
                 <ScanLine size={48} className="text-cyan-500" />
             </div>
 
-            {/* Success Modal */}
+            {/* Modals */}
             <AnimatePresence>
+                {/* Intro Modal */}
+                {gameState === 'intro' && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md overflow-y-auto"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9 }}
+                            animate={{ scale: 1 }}
+                            className="max-w-md w-full h-fit my-auto border border-cyan-500/30 bg-black/80 p-6 md:p-8 rounded-2xl text-left relative shadow-[0_0_50px_rgba(6,182,212,0.15)]"
+                        >
+                            <div className="w-16 h-16 bg-cyan-500/10 border border-cyan-500/30 rounded-xl flex items-center justify-center mb-6">
+                                <Brain className="text-cyan-400 w-8 h-8" />
+                            </div>
+                            <h2 className="text-2xl md:text-3xl font-black text-white mb-4 tracking-tight">WELCOME TO <span className="text-cyan-400">AI LABS</span></h2>
+
+                            <div className="space-y-4 text-sm text-gray-300 leading-relaxed mb-8">
+                                <p>
+                                    The AGI transition is accelerating. By 2027, over 68% of current cognitive tasks will be fully automated. The previous generation's skills are already obsolete.
+                                </p>
+                                <p>
+                                    <strong className="text-white">Yokaizen AI Labs</strong> is a gamified training facility designed to forge your cognitive resilience. Here, you don't just use AI—you command autonomous swarms, master prompt engineering, and defend against deepfakes.
+                                </p>
+                                <p>
+                                    Our mission is to evolve you from a mere "Doer" to an <strong className="text-cyan-400">Orchestrator</strong> of intelligences.
+                                </p>
+                                <div className="bg-cyan-900/20 border border-cyan-500/30 p-4 rounded-lg flex gap-3 items-start mt-4">
+                                    <Zap className="w-6 h-6 text-cyan-400 shrink-0 mt-0.5" />
+                                    <p className="text-xs text-cyan-100">
+                                        Before you enter the Campus Core, we must test your cognitive processing speed. Connect the neural nodes to bypass the outer firewall.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => setGameState('playing')}
+                                className="w-full py-4 bg-cyan-500 hover:bg-cyan-400 text-black font-black uppercase tracking-widest rounded transition-all hover:shadow-[0_0_30px_rgba(34,211,238,0.5)] flex items-center justify-center gap-2 group"
+                            >
+                                <ScanLine size={20} className="group-hover:animate-spin" /> Initialize Sandbox
+                            </button>
+                        </motion.div>
+                    </motion.div>
+                )}
+
+                {/* Success Modal */}
                 {gameState === 'hacked' && (
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="fixed inset-0 z-50 flex justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto"
                     >
-                        <div className="max-w-[90vw] md:max-w-md w-full p-6 md:p-8 border border-cyan-500/30 bg-black/50 rounded-2xl text-center relative overflow-hidden">
+                        <motion.div
+                            initial={{ scale: 0.9 }}
+                            animate={{ scale: 1 }}
+                            className="max-w-[90vw] md:max-w-md w-full h-fit my-auto p-6 md:p-8 border border-cyan-500/30 bg-black/80 rounded-2xl text-center relative"
+                        >
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
 
                             <div className="w-16 h-16 md:w-20 md:h-20 mx-auto bg-cyan-500/20 rounded-full flex items-center justify-center mb-4 md:mb-6">
@@ -256,9 +337,17 @@ export const ViralNeuralHack: React.FC<GameProps> = ({ onComplete }) => {
                             </div>
 
                             <h2 className="text-3xl md:text-4xl font-black text-white mb-2 tracking-tight">ROOT ACCESS<br /><span className="text-cyan-400">GRANTED</span></h2>
-                            <p className="text-sm md:text-base text-gray-300 mb-4 border-y border-white/10 py-4">
+                            <p className="text-sm md:text-base text-gray-300 mb-4 border-t border-white/10 pt-4">
                                 You have successfully bypassed the perimeter firewall. Your AI Survivability Rating: <span className="text-cyan-400 font-black text-xl">S-TIER</span>
                             </p>
+
+                            <div className="bg-cyan-950/30 border border-cyan-500/20 rounded-xl p-4 mb-6 text-left relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-1 h-full bg-cyan-500"></div>
+                                <h3 className="text-cyan-400 font-bold mb-1 text-sm flex items-center gap-2"><TriangleAlert size={14} /> REALITY CHECK</h3>
+                                <p className="text-xs md:text-sm text-gray-300 leading-relaxed">
+                                    The AGI transition has begun. By 2027, over 68% of current cognitive tasks will be fully automated. The previous generation's skills are already obsolete. <span className="text-white font-bold">Yokaizen AI Labs is not just a game.</span> It is the premier training ground for the next generation to master human-AI collaboration, prompt engineering, and cognitive survivability. Adapt now, or be replaced.
+                                </p>
+                            </div>
 
                             {/* VIRAL SHARE BUTTONS */}
                             <div className="flex flex-col sm:flex-row gap-2 mb-6">
@@ -280,9 +369,58 @@ export const ViralNeuralHack: React.FC<GameProps> = ({ onComplete }) => {
                                 onClick={onComplete}
                                 className="w-full py-4 px-6 bg-cyan-500 hover:bg-cyan-400 text-black font-black uppercase tracking-widest rounded transition-all hover:shadow-[0_0_30px_rgba(34,211,238,0.5)] flex items-center justify-center gap-2 group"
                             >
-                                <Zap size={20} className="group-hover:animate-bounce" /> Proceed to Onboarding
+                                <Zap size={20} className="group-hover:animate-bounce" /> Proceed to Hub
                             </button>
-                        </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+
+                {/* Failed Modal */}
+                {gameState === 'failed' && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="fixed inset-0 z-50 flex justify-center p-4 bg-black/90 backdrop-blur-md overflow-y-auto"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9 }}
+                            animate={{ scale: 1 }}
+                            className="max-w-[90vw] md:max-w-md w-full h-fit my-auto p-6 md:p-8 border border-red-500/50 bg-black/80 rounded-2xl text-center relative"
+                        >
+                            <div className="w-16 h-16 md:w-20 md:h-20 mx-auto bg-red-500/20 rounded-full flex items-center justify-center mb-4 md:mb-6">
+                                <Skull className="text-red-500 w-8 h-8 md:w-10 md:h-10 animate-pulse" />
+                            </div>
+
+                            <h2 className="text-3xl md:text-4xl font-black text-white mb-2 tracking-tight">TRACE <span className="text-red-500">COMPLETE</span></h2>
+                            <p className="text-sm md:text-base text-gray-300 mb-4 border-t border-white/10 pt-4">
+                                The firewall intercepted your connection. You lack the cognitive processing speed for root access.
+                            </p>
+
+                            <div className="bg-red-950/30 border border-red-500/20 rounded-xl p-4 mb-6 text-left relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
+                                <h3 className="text-red-400 font-bold mb-1 text-sm flex items-center gap-2"><TriangleAlert size={14} /> SYSTEM WARNING</h3>
+                                <p className="text-xs md:text-sm text-gray-300 leading-relaxed">
+                                    Failing here is safe. Failing out there is not. The AI revolution is accelerating, and the skills you rely on today will be obsolete tomorrow. <span className="text-white font-bold">AI Labs</span> is the hyperbolic time chamber where the next generation learns to survive and command the neural nets of the future. Do not fall behind.
+                                </p>
+                            </div>
+
+                            <button
+                                onClick={() => {
+                                    setGameState('playing');
+                                    setTraceProgress(0);
+                                }}
+                                className="w-full py-4 px-6 bg-transparent border border-red-500 text-red-500 hover:bg-red-500 hover:text-white font-black uppercase tracking-widest rounded transition-all mb-3 flex items-center justify-center gap-2"
+                            >
+                                Reboot Sandbox
+                            </button>
+
+                            <button
+                                onClick={onComplete}
+                                className="text-xs text-gray-500 hover:text-white transition-colors underline"
+                            >
+                                Enter AI Labs anyway
+                            </button>
+                        </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
